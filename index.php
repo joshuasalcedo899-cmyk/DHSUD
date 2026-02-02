@@ -6,7 +6,7 @@
     <title>Document</title>
 </head>
 <body>
-    <h1>Hello, World</h1>
-    <h2>Kim</h2>
+    <h1>DHSUD - MAIL TRACKER</h1>
+    <h2>ADMIN</h2>
 </body>
 </html>
