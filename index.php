@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
 </head>
-<body>
+<body><center>
     <h1>DHSUD - MAIL TRACKER</h1>
     <h2>ADMIN</h2>
     <BUtton>ADMIN</BUtton>
