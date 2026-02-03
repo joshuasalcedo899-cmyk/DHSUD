@@ -1,3 +1,81 @@
+.admin-home-bg {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	background: url('assets/ADMIN%27s%20HOME%20PAGE_BG.svg') no-repeat top center fixed;
+	background-size: cover;
+	background-attachment: fixed;
+}
+.admin-table-container {
+	max-width: 1200px;
+	margin: 0 auto;
+	background: rgba(255,255,255,0.92);
+	border-radius: 12px;
+	box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+	padding: 2rem 2rem 2rem 2rem;
+}
+.admin-home-container {
+	max-width: 1200px;
+	margin: 0 auto;
+	background: rgba(255,255,255,0.92);
+	padding: 2rem 2rem 2rem 2rem;
+}
+
+.statistics-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-bottom: 2rem;
+}
+.statistics-title {
+	font-weight: 700;
+	color: #22336a;
+	font-size: 1.3rem;
+	margin-bottom: 1rem;
+	letter-spacing: 0.04em;
+}
+.statistics-bar {
+	display: flex;
+	gap: 1.2rem;
+	flex-wrap: wrap;
+	margin-bottom: 0.5rem;
+}
+.stat-box {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 1rem;
+	font-weight: 500;
+	border-radius: 6px;
+	padding: 0.3rem 1.1rem 0.3rem 0.5rem;
+	background: #eee;
+	min-width: 120px;
+	border: 1.5px solid #bbb;
+}
+.stat-box .color {
+	display: inline-block;
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 4px;
+	margin-right: 0.5em;
+	border: 1.5px solid #bbb;
+}
+.stat-rtos { background: #b71c1c; color: #fff; border: none; }
+.stat-rtos .color { background: #b71c1c; border: none; }
+.stat-ongoing { background: #fffde7; color: #bfa800; border: 1.5px solid #bfa800; }
+.stat-ongoing .color { background: #fffde7; border: 1.5px solid #bfa800; }
+.stat-delivered { background: #e8f5e9; color: #388e3c; border: 1.5px solid #388e3c; }
+.stat-delivered .color { background: #43a047; border: 1.5px solid #388e3c; }
+.stat-total { background: #e0e0e0; color: #444; border: 1.5px solid #aaa; }
+.stat-total .color { background: #e0e0e0; border: 1.5px solid #aaa; }
+.stat-ndr { background: #8e24aa; color: #fff; border: none; }
+.stat-ndr .color { background: #8e24aa; border: none; }
+.admin-home-bg {
+	background: url('assets/ADMIN%27s%20HOME%20PAGE_BG.svg') no-repeat top center fixed;
+	background-size: cover;
+}
 .admin-login-bg {
 	background: url('assets/ADMIN%27s%20LOG%20IN%20PAGE_BG.svg') no-repeat center center fixed;
 	background-size: cover;
