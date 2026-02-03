@@ -1,8 +1,47 @@
+.admin-login-bg {
+	background: url('assets/ADMIN%27s%20LOG%20IN%20PAGE_BG.svg') no-repeat center center fixed;
+	background-size: cover;
+}
+.bottom-container {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	justify-content: center;
+	align-items: flex-end;
+	min-height: 0;
+	padding-bottom: 8rem;
+	z-index: 10;
+}
+.listview-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: rgba(255,255,255,0.95);
+	font-size: 1rem;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+.listview-table th, .listview-table td {
+	border: 1px solid #d1d5db;
+	padding: 0.75rem 0.5rem;
+	text-align: left;
+}
+.listview-table th {
+	background: #f3f4f6;
+	font-weight: 500;
+	letter-spacing: 0.05em;
+}
+.listview-table tr {
+	transition: background 0.2s;
+}
+.listview-table tbody tr:hover {
+	background: #e5e7eb;
+}
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
 body {
-	background: url('assets/BACKGROUND_DHSUD.svg') no-repeat center center fixed;
+	background: url('assets/LANDING PAGE_BG.svg') no-repeat center center fixed;
 	background-size: cover;
     font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
@@ -52,12 +91,13 @@ body {
 	padding: 2rem;
 	border-radius: 8px;
 	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-	min-width: 300px;
+	min-width: 525px;
 }
 
 .login-form h2 {
 	text-align: center;
 	margin-bottom: 1.5rem;
+    font-weight: 800;
     font-size: 1.2rem;
     color: #23409A;
 }
@@ -66,7 +106,7 @@ body {
 	display: block;
 	margin-bottom: 0.25rem;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 800;
     color: #23409A;
 }
 
@@ -88,5 +128,6 @@ body {
 	border: none;
 	border-radius: 4px;
 	font-size: 1rem;
+    font-weight: 600;
 	cursor: pointer;
 }
