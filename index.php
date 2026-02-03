@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link rel="stylesheet" href="main.css">
 </head>
-<body><center>
-    <h1>DHSUD REGION IV-A - MAIL TRACKER</h1>
-    <h2>ADMIN</h2>
-    <BUtton>ADMIN</BUtton>
-    <h2>ENGINEER TRACKING ORDER</h2>
-    <BUtton>ENGINEER TRACKING ORDER</BUtton>
+<body>
+    <div class="button-container">
+        <a href="Admin_LogIn.php"><button>ADMIN</button></a>
+        <button>ENGINEER'S TRACKING ORDER</button>
+    </div>
 </body>
 </html>
