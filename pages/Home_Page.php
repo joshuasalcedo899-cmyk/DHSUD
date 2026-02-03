@@ -40,17 +40,17 @@ try {
 // Column order to render (matches table header in UI)
 $columns = [
     'Notice/Order Code',
-    'Date Released to AFD',
+    'Date released to AFD',
     'Parcel No.',
-    'RECIPIENT DETAILS',
-    'PARCEL DETAILS',
-    'SENDER DETAILS',
-    'FILE NAME (PDF)',
+    'Recipient Details',
+    'Parcel Details',
+    'Sender Details',
+    'File Name (PDF)',
     'Tracking No.',
-    'STATUS',
-    'TRANSMITTAL REMARKS / RECEIVED BY',
-    'DATE',
-    'EVALUATOR',
+    'Status',
+    'Transmital Remarks/Received By',
+    'Date',
+    'Evaluator',
 ];
 
 // Status options
@@ -176,6 +176,9 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+        <div>
+            <a href="/../api/Add.php"><button>Add</button></a>
         </div>
     
         <script>
