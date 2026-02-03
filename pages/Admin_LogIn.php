@@ -19,7 +19,7 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="Enter your Password"required>
             </div>
-            <button type="submit">Log In</button>
+            <a href="pages/Home_Page.php"><button type="submit">Log In</button></a>
         </form>
     </div>
 </body>

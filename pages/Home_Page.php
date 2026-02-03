@@ -2,80 +2,169 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Insert data from one table into mailtracking
-// Example: pull from a 'staging_parcels' table and insert into 'mailtracking'
+// Handle status update when submitted per-row
+$message = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['notice_code']) && isset($_POST['status'])) {
+    $notice = trim($_POST['notice_code']);
+    $status = trim($_POST['status']);
+    if ($notice === '') {
+        $message = 'Missing Notice/Order Code.';
+    } else {
+        try {
+            $sql = 'UPDATE mailtracking SET `STATUS` = :status WHERE `Notice/Order Code` = :notice';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':status' => $status, ':notice' => $notice]);
+            $message = 'Status updated for ' . htmlspecialchars($notice) . '.';
+        } catch (PDOException $e) {
+            $message = 'Update failed: ' . $e->getMessage();
+        }
+    }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        // INSERT INTO ... SELECT with duplicate key check
-        // Notice/Order Code is the primary key, so we avoid duplicates
-        $sql = '
-            INSERT INTO mailtracking (`Notice/Order Code`) 
-            SELECT `Notice/Order Code`
-            FROM mailtrackdb.mailtracking
-            WHERE `Notice/Order Code` IS NOT NULL
-            AND `Notice/Order Code` NOT IN (SELECT `Notice/Order Code` FROM mailtracking)
-        ';
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute();
-        $rowsInserted = $stmt->rowCount();
-        
-        $success = "Inserted {$rowsInserted} records from database.";
-    } catch (PDOException $e) {
-        $error = 'Insert from DB failed: ' . $e->getMessage();
+    // If AJAX request, return JSON and exit early
+    if (!empty($_POST['ajax'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['message' => $message]);
+        exit;
     }
 }
 
-// Show available data from source table
+// Fetch all rows to display
 try {
-    $sourceData = $pdo->query('SELECT * FROM mailtracking LIMIT 10')->fetchAll();
+    $rows = $pdo->query('SELECT * FROM mailtracking')->fetchAll();
 } catch (Exception $e) {
-    $sourceData = [];
+    $rows = [];
+    $message = 'Failed to load records: ' . $e->getMessage();
 }
 
+// Column order to render (matches table header in UI)
+$columns = [
+    'Notice/Order Code',
+    'Date Released to AFD',
+    'Parcel No.',
+    'RECIPIENT DETAILS',
+    'PARCEL DETAILS',
+    'SENDER DETAILS',
+    'FILE NAME (PDF)',
+    'Tracking No.',
+    'STATUS',
+    'TRANSMITTAL REMARKS / RECEIVED BY',
+    'DATE',
+    'EVALUATOR',
+];
+
+// Status options
+$statusOptions = ['DELIVERED','RETURNED TO SENDER','ON GOING DELIVERY', 'PERSONALLY RECEIVED'];
+
 ?>
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Insert From DB</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+    <link rel="stylesheet" href="../main.css">
     <style>
-        body { font-family: Arial; margin: 2rem; }
-        table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #f0f0f0; }
+        table { width:100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 8px; }
+        th { background:#f7f7f7; }
+        form.inline { margin:0; }
+        select { padding:4px; }
+        button.save { padding:4px 8px; }
+        .message { padding:8px; margin:10px 0; }
     </style>
 </head>
 <body>
-    <!--Insert Data From Database-->
-    <?php if (!empty($error)): ?>
-        <div style="color:darkred; padding:10px; background:#fee;"><?= htmlspecialchars($error) ?></div>
-    <?php elseif (!empty($success)): ?>
-        <div style="color:green; padding:10px; background:#efe;"><?= htmlspecialchars($success) ?></div>
-    <?php endif; ?>
-
-    <!--Source Data (from staging_parcels)-->
-    <?php if (!empty($sourceData)): ?>
-        <table>
+    <div style="overflow-x:auto; padding: 2rem;">
+        <?php if ($message): ?>
+            <div class="message"><?= htmlspecialchars($message) ?></div>
+        <?php endif; ?>
+        <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
             <thead>
                 <tr>
-                    <?php foreach (array_keys($sourceData[0]) as $col): ?>
-                        <th><?= htmlspecialchars($col) ?></th>
+                    <?php foreach ($columns as $h): ?>
+                        <th><?= htmlspecialchars($h) ?></th>
                     <?php endforeach; ?>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($sourceData as $row): ?>
-                    <tr>
-                        <?php foreach ($row as $val): ?>
-                            <td><?= htmlspecialchars($val) ?></td>
-                        <?php endforeach; ?>
-                    </tr>
-                <?php endforeach; ?>
+                <?php if (empty($rows)): ?>
+                    <tr><td colspan="<?= count($columns) ?>">No records found.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($rows as $row): ?>
+                        <tr>
+                            <?php foreach ($columns as $idx => $colName): ?>
+                                <?php if ($idx === 8): // STATUS column (9th)
+                                ?>
+                                    <td>
+                                        <input type="hidden" class="notice-code" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
+                                        <select class="status-select">
+                                            <?php
+                                            $current = $row['STATUS'] ?? '';
+                                            // placeholder option
+                                            $phSelected = ($current === '') ? ' selected' : '';
+                                            echo '<option value="" disabled' . $phSelected . '>-- Select status --</option>';
+                                            // if current not in options, show it next so user can keep it
+                                            if ($current !== '' && !in_array($current, $statusOptions, true)) {
+                                                echo '<option value="' . htmlspecialchars($current) . '" selected>' . htmlspecialchars($current) . '</option>';
+                                            }
+                                            foreach ($statusOptions as $opt) {
+                                                $sel = ($opt === $current) ? ' selected' : '';
+                                                echo '<option value="' . htmlspecialchars($opt) . '"' . $sel . '>' . htmlspecialchars($opt) . '</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                        <span class="save-state" style="margin-left:8px; font-size:0.9em; color:#666"></span>
+                                    </td>
+                                <?php else: ?>
+                                    <td><?= htmlspecialchars($row[$colName] ?? '') ?></td>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
-    <?php endif; ?>
-
+    </div>
 </body>
 </html>
+<script>
+// Attach change listeners to all status selects and send AJAX POST to save
+document.addEventListener('DOMContentLoaded', function () {
+    const selects = document.querySelectorAll('.status-select');
+    selects.forEach(function (sel) {
+        sel.addEventListener('change', function () {
+            const value = sel.value;
+            if (!value) return; // ignore placeholder
+            const row = sel.closest('tr');
+            const noticeInput = row.querySelector('.notice-code');
+            const notice = noticeInput ? noticeInput.value : '';
+            const stateSpan = row.querySelector('.save-state');
+            if (!notice) {
+                if (stateSpan) stateSpan.textContent = 'Missing notice code';
+                return;
+            }
+            // show saving
+            if (stateSpan) stateSpan.textContent = 'Saving...';
+            // prepare form data
+            const fd = new FormData();
+            fd.append('notice_code', notice);
+            fd.append('status', value);
+            fd.append('ajax', '1');
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin'
+            }).then(r => r.json())
+              .then(data => {
+                  if (stateSpan) stateSpan.textContent = data.message || 'Saved';
+                  setTimeout(() => { if (stateSpan) stateSpan.textContent = ''; }, 2500);
+              }).catch(err => {
+                  if (stateSpan) stateSpan.textContent = 'Save failed';
+                  console.error('Save error', err);
+                  setTimeout(() => { if (stateSpan) stateSpan.textContent = ''; }, 2500);
+              });
+        });
+    });
+});
+</script>
