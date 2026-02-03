@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/../config.php';
 
 $searchResult = null;
 $searchError = '';
@@ -92,22 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </tbody>
             </table>
         <?php endif; ?>
-    </div>
-
-    <!-- Insert Section -->
-    <div class="section">
-        <h2>Insert New Record</h2>
-        <?php if (!empty($error)): ?>
-            <div class="error"><?= htmlspecialchars($error) ?></div>
-        <?php elseif (!empty($success)): ?>
-            <div class="success"><?= htmlspecialchars($success) ?></div>
-        <?php endif; ?>
-
-        <form method="post" action="">
-            <label>Notice/Order Code: <input type="text" name="notice" required></label><br><br>
-            <label>Tracking No.: <input type="text" name="tracking" required></label><br><br>
-            <button type="submit">Insert Record</button>
-        </form>
     </div>
 </body>
 </html>
