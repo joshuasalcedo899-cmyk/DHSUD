@@ -48,15 +48,14 @@ try {
     </style>
 </head>
 <body>
-    <h1>Insert Data From Database</h1>
-    
+    <!--Insert Data From Database-->
     <?php if (!empty($error)): ?>
         <div style="color:darkred; padding:10px; background:#fee;"><?= htmlspecialchars($error) ?></div>
     <?php elseif (!empty($success)): ?>
         <div style="color:green; padding:10px; background:#efe;"><?= htmlspecialchars($success) ?></div>
     <?php endif; ?>
 
-    <h2>Source Data (from staging_parcels)</h2>
+    <!--Source Data (from staging_parcels)-->
     <?php if (!empty($sourceData)): ?>
         <table>
             <thead>
