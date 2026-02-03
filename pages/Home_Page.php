@@ -1,36 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
+<?php
+require_once __DIR__ . '/../config.php';
+
+// Insert data from one table into mailtracking
+// Example: pull from a 'staging_parcels' table and insert into 'mailtracking'
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        // INSERT INTO ... SELECT with duplicate key check
+        // Notice/Order Code is the primary key, so we avoid duplicates
+        $sql = '
+            INSERT INTO mailtracking (`Notice/Order Code`) 
+            SELECT `Notice/Order Code`
+            FROM mailtrackdb.mailtracking
+            WHERE `Notice/Order Code` IS NOT NULL
+            AND `Notice/Order Code` NOT IN (SELECT `Notice/Order Code` FROM mailtracking)
+        ';
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $rowsInserted = $stmt->rowCount();
+        
+        $success = "Inserted {$rowsInserted} records from database.";
+    } catch (PDOException $e) {
+        $error = 'Insert from DB failed: ' . $e->getMessage();
+    }
+}
+
+// Show available data from source table
+try {
+    $sourceData = $pdo->query('SELECT * FROM mailtracking LIMIT 10')->fetchAll();
+} catch (Exception $e) {
+    $sourceData = [];
+}
+
+?>
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home Page</title>
-    <link rel="stylesheet" href="main.css">
+    <meta charset="utf-8">
+    <title>Insert From DB</title>
+    <style>
+        body { font-family: Arial; margin: 2rem; }
+        table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f0f0f0; }
+    </style>
 </head>
 <body>
-    <div style="overflow-x:auto; padding: 2rem;">
-        <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
+    <h1>Insert Data From Database</h1>
+    
+    <?php if (!empty($error)): ?>
+        <div style="color:darkred; padding:10px; background:#fee;"><?= htmlspecialchars($error) ?></div>
+    <?php elseif (!empty($success)): ?>
+        <div style="color:green; padding:10px; background:#efe;"><?= htmlspecialchars($success) ?></div>
+    <?php endif; ?>
+
+    <h2>Source Data (from staging_parcels)</h2>
+    <?php if (!empty($sourceData)): ?>
+        <table>
             <thead>
                 <tr>
-                    <th>a</th>
-                    <th>b</th>
-                    <th>c</th>
-                    <th>d</th>
-                    <th>e</th>
-                    <th>f</th>
-                    <th>g</th>
-                    <th>h</th>
-                    <th>i</th>
-                    <th>j</th>
-                    <th>k</th>
-                    <th>l</th>
+                    <?php foreach (array_keys($sourceData[0]) as $col): ?>
+                        <th><?= htmlspecialchars($col) ?></th>
+                    <?php endforeach; ?>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-                </tr>
+                <?php foreach ($sourceData as $row): ?>
+                    <tr>
+                        <?php foreach ($row as $val): ?>
+                            <td><?= htmlspecialchars($val) ?></td>
+                        <?php endforeach; ?>
+                    </tr>
+                <?php endforeach; ?>
             </tbody>
         </table>
-    </div>
+    <?php endif; ?>
+
 </body>
 </html>
