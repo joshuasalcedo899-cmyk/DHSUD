@@ -1,3 +1,31 @@
+.admin-home-header {
+	width: 100vw;
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 1000;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.admin-home-header-img {
+	margin-top: 1.5rem;
+	max-width: 700px;
+	width: 100%;
+	height: auto;
+	display: block;
+}
+.admin-home-header-border {
+	width: 100vw;
+	height: 6px;
+	background: #22336a;
+	margin-top: 1.2rem;
+	margin-bottom: 1.5rem;
+}
+.admin-home-container {
+	margin-top: 120px;
+}
 .stat-count {
 	background: #fff;
 	border: 2px solid #bbb;
@@ -111,9 +139,30 @@
 .stat-ndr { background: #9B4F9F; color: #fff; border: none; }
 .stat-ndr .color { background: #9B4F9F; border: none; }
 .admin-home-bg {
-	background: url('assets/EngineerModule.svg') no-repeat top center fixed;
-	background-size: cover;
+	background: #fff !important;
 }
+
+	.admin-home-header {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin-bottom: 1.5rem;
+	}
+	.admin-home-header-img {
+		margin-top: 1.5rem;
+		max-width: 700px;
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+	.admin-home-header-border {
+		width: 100vw;
+		height: 6px;
+		background: #22336a;
+		margin-top: 1.2rem;
+		margin-bottom: 1.5rem;
+	}
 .admin-login-bg {
 	background: url('assets/ADMIN%27s%20LOG%20IN%20PAGE_BG.svg') no-repeat center center fixed;
 	background-size: cover;
