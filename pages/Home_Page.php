@@ -40,7 +40,7 @@ try {
 // Column order to render (matches table header in UI)
 $columns = [
     'Notice/Order Code',
-    'Date r eleased to AFD',
+    'Date released to AFD',
     'Parcel No.',
     'Recipient Details',
     'Parcel Details',
@@ -200,12 +200,31 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         </div>
     
         <script>
-        // Track parcel using JRS Express
+        // Track parcel using JRS Express and copy tracking number to clipboard
         function trackJRS(trackingNo) {
             if (!trackingNo || trackingNo === '0') {
                 alert('No valid tracking number found');
                 return;
             }
+            
+            // Copy tracking number to clipboard
+            navigator.clipboard.writeText(trackingNo).then(function() {
+                // Show success notification
+                const notification = document.createElement('div');
+                notification.textContent = 'Tracking # ' + trackingNo + ' copied to clipboard!';
+                notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#4CAF50;color:white;padding:15px 20px;border-radius:4px;z-index:10000;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+                document.body.appendChild(notification);
+                
+                // Remove notification after 3 seconds
+                setTimeout(function() {
+                    notification.style.transition = 'opacity 0.3s ease';
+                    notification.style.opacity = '0';
+                    setTimeout(function() { document.body.removeChild(notification); }, 300);
+                }, 3000);
+            }).catch(function(err) {
+                alert('Failed to copy tracking number: ' + err);
+            });
+            
             // JRS Express tracking URL
             const jrsUrl = 'https://www.jrs-express.com/TRACK?TN=' + encodeURIComponent(trackingNo);
             console.log('Opening tracking URL:', jrsUrl);
