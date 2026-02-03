@@ -101,6 +101,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     </style>
 </head>
 <body class="admin-home-bg">
+    <div class="admin-home-header">
+        <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
+        <div class="admin-home-header-border"></div>
+    </div>
     <div class="admin-home-container">
         <div class="statistics-section">
             <div class="statistics-title">STATISTICS</div>
