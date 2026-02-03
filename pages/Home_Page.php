@@ -37,14 +37,27 @@ try {
 <!doctype html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home Page</title>
-    <link rel="stylesheet" href="main.css">
+    <meta charset="utf-8">
+    <title>Insert From DB</title>
+    <style>
+        body { font-family: Arial; margin: 2rem; }
+        table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f0f0f0; }
+    </style>
 </head>
 <body>
-    <div style="overflow-x:auto; padding: 2rem;">
-        <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
+    <h1>Insert Data From Database</h1>
+    
+    <?php if (!empty($error)): ?>
+        <div style="color:darkred; padding:10px; background:#fee;"><?= htmlspecialchars($error) ?></div>
+    <?php elseif (!empty($success)): ?>
+        <div style="color:green; padding:10px; background:#efe;"><?= htmlspecialchars($success) ?></div>
+    <?php endif; ?>
+
+    <h2>Source Data (from staging_parcels)</h2>
+    <?php if (!empty($sourceData)): ?>
+        <table>
             <thead>
                 <tr>
                     <?php foreach (array_keys($sourceData[0]) as $col): ?>
