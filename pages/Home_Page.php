@@ -40,7 +40,7 @@ try {
 // Column order to render (matches table header in UI)
 $columns = [
     'Notice/Order Code',
-    'Date released to AFD',
+    'Date r eleased to AFD',
     'Parcel No.',
     'Recipient Details',
     'Parcel Details',
@@ -98,6 +98,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
         .stats { margin-bottom:10px; }
         .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
+        .btn-track { padding:6px 12px; background-color:#2196F3; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
+        .btn-track:hover { background-color:#0b7dda; }
     </style>
 </head>
 <body class="admin-home-bg">
@@ -136,6 +138,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         <?php foreach ($columns as $h): ?>
                             <th><?= htmlspecialchars($h) ?></th>
                         <?php endforeach; ?>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -175,6 +178,17 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                         <td><?= htmlspecialchars($row[$colName] ?? '') ?></td>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
+                                <td>
+                                    <?php 
+                                    // Try different column name variations
+                                    $trackingNo = trim($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? '');
+                                    ?>
+                                    <?php if (!empty($trackingNo) && $trackingNo !== '0'): ?>
+                                        <button class="btn-track" onclick="trackJRS('<?= htmlspecialchars($trackingNo) ?>')">Track</button>
+                                    <?php else: ?>
+                                        <span style="color:#999; font-size:12px;">No tracking #</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -182,10 +196,22 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             </table>
         </div>
         <div>
-            <a href="/../api/Add.php"><button>Add</button></a>
+            <a href="../api/Add.php"><button>Add</button></a>
         </div>
     
         <script>
+        // Track parcel using JRS Express
+        function trackJRS(trackingNo) {
+            if (!trackingNo || trackingNo === '0') {
+                alert('No valid tracking number found');
+                return;
+            }
+            // JRS Express tracking URL
+            const jrsUrl = 'https://www.jrs-express.com/TRACK?TN=' + encodeURIComponent(trackingNo);
+            console.log('Opening tracking URL:', jrsUrl);
+            window.open(jrsUrl, '_blank');
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.row-message').forEach(function(el) {
                 setTimeout(function() {
