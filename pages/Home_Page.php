@@ -105,25 +105,26 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <div class="statistics-section">
             <div class="statistics-title">STATISTICS</div>
             <div class="statistics-bar">
-                <div class="stat-box stat-rtos"><span class="color"></span>Returned to Sender
+                <div class="stat-box stat-rtos">Returned to Sender
                     <div class="stat-count"><?= $rts ?></div>
                 </div>
-                <div class="stat-box stat-ongoing"><span class="color"></span>Ongoing Delivery
+                <div class="stat-box stat-ongoing">Ongoing Delivery
                     <div class="stat-count"><?= $ogd?></div>
                 </div>
-                <div class="stat-box stat-delivered"><span class="color"></span>Delivered
+                <div class="stat-box stat-delivered">Delivered
                     <div class="stat-count"><?= $del ?></div>
                 </div>
-                <div class="stat-box stat-total"><span class="color"></span>Total
+                <div class="stat-box stat-total">Total
                     <div class="stat-count"><?= (int)$totalCount ?></div>
                 </div>
-                <div class="stat-box stat-ndr"><span class="color"></span>Non-delivery Rate
+                <div class="stat-box stat-ndr">Non-delivery Rate
                     <div class="stat-count"><?= htmlspecialchars($ndrPercent) ?>%</div>
                 </div>
             </div>
         </div>
     </div>
     <div class="admin-table-container">
+        <div class="table-title">MAIL TRACKING RECORDS</div>
         <div style="overflow-x:auto; padding: 2rem;">
             <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
                 <thead>
