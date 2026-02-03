@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Log-In Page</title>
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="../main.css">
 </head>
 <body>
-    <div class="centered-container">
+    <body class="admin-login-bg">
+    <div class="bottom-container">
         <form class="login-form" method="post" action="#">
             <h2>Log in to your account  </h2>
             <div style="margin-bottom: 1rem;">
@@ -18,7 +19,7 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="Enter your Password"required>
             </div>
-            <a href="pages/Home_Page.php"><button type="submit">Log In</button></a>
+            <button type="submit">Log In</button>
         </form>
     </div>
 </body>
