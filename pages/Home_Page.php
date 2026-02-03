@@ -56,6 +56,29 @@ $columns = [
 // Status options
 $statusOptions = ['DELIVERED','RETURNED TO SENDER','ON GOING DELIVERY', 'PERSONALLY RECEIVED',];
 
+// Compute counts per status
+$statusCounts = array_fill_keys($statusOptions, 0);
+$statusCounts['Unassigned'] = 0;
+$statusCounts['Other'] = 0;
+foreach ($rows as $r) {
+    $s = trim($r['Status'] ?? '');
+    if ($s === '') {
+        $statusCounts['Unassigned']++;
+    } elseif (in_array($s, $statusOptions, true)) {
+        $statusCounts[$s]++;
+    } else {
+        $statusCounts['Other']++;
+    }
+}
+
+$del = (int)($statusCounts['DELIVERED'] ?? 0);
+$rts = (int)$statusCounts['RETURNED TO SENDER'] ?? 0;
+$ogd = (int)$statusCounts['ON GOING DELIVERY'] ?? 0;
+
+// Totals and non-delivery rate
+$totalCount = count($rows);
+$ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) : 0;
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -73,6 +96,8 @@ $statusOptions = ['DELIVERED','RETURNED TO SENDER','ON GOING DELIVERY', 'PERSONA
         button.save { padding:4px 8px; }
         .message { padding:8px; margin:10px 0; }
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
+        .stats { margin-bottom:10px; }
+        .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
     </style>
 </head>
 <body class="admin-home-bg">
@@ -80,11 +105,21 @@ $statusOptions = ['DELIVERED','RETURNED TO SENDER','ON GOING DELIVERY', 'PERSONA
         <div class="statistics-section">
             <div class="statistics-title">STATISTICS</div>
             <div class="statistics-bar">
-                <div class="stat-box stat-rtos"><span class="color"></span>Returned to Sender</div>
-                <div class="stat-box stat-ongoing"><span class="color"></span>Ongoing Delivery</div>
-                <div class="stat-box stat-delivered"><span class="color"></span>Delivered</div>
-                <div class="stat-box stat-total"><span class="color"></span>Total</div>
-                <div class="stat-box stat-ndr"><span class="color"></span>Non-delivery Rate</div>
+                <div class="stat-box stat-rtos"><span class="color"></span>Returned to Sender
+                    <div class="stat-count"><?= $rts ?></div>
+                </div>
+                <div class="stat-box stat-ongoing"><span class="color"></span>Ongoing Delivery
+                    <div class="stat-count"><?= $ogd?></div>
+                </div>
+                <div class="stat-box stat-delivered"><span class="color"></span>Delivered
+                    <div class="stat-count"><?= $del ?></div>
+                </div>
+                <div class="stat-box stat-total"><span class="color"></span>Total
+                    <div class="stat-count"><?= (int)$totalCount ?></div>
+                </div>
+                <div class="stat-box stat-ndr"><span class="color"></span>Non-delivery Rate
+                    <div class="stat-count"><?= htmlspecialchars($ndrPercent) ?>%</div>
+                </div>
             </div>
         </div>
     </div>
