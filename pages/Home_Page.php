@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Page</title>
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="../main.css">
 </head>
 <body>
     <div style="overflow-x:auto; padding: 2rem;">
-        <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
+        <table class="listview-table">
             <thead>
                 <tr>
                     <th>a</th>
