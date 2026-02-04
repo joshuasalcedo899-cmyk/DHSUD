@@ -105,6 +105,97 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
         .btn-track { padding:6px 12px; background-color:#2196F3; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
         .btn-track:hover { background-color:#0b7dda; }
+
+        /* Modal Form UI - Two Column Grid */
+        .edit-modal {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+            padding: 32px 32px 24px 32px;
+            max-width: 540px;
+            width: 100%;
+            margin: 40px auto;
+            position: relative;
+        }
+        .edit-modal h2 {
+            text-align: center;
+            color: #1a237e;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 18px;
+            letter-spacing: 1px;
+        }
+        .edit-modal form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 24px;
+        }
+        .edit-modal label {
+            font-size: 0.98em;
+            color: #1a237e;
+            margin-bottom: 6px;
+            font-weight: 500;
+            display: block;
+        }
+        .edit-modal input,
+        .edit-modal select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #bdbdbd;
+            border-radius: 4px;
+            font-size: 1em;
+            background: #f7f8fa;
+            margin-bottom: 18px;
+            display: block;
+        }
+        .edit-modal select {
+            background: #b6bed3;
+        }
+        .edit-modal input[type="date"] {
+            padding-right: 30px;
+        }
+        .edit-modal .modal-actions {
+            grid-column: 1 / span 2;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1em;
+            margin-top: 10px;
+            margin-bottom: 0;
+        }
+        .edit-modal .modal-btn {
+            padding: 8px 22px;
+            border-radius: 4px;
+            font-size: 1em;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .edit-modal .modal-btn.save {
+            background: #1a237e;
+            color: #fff;
+        }
+        .edit-modal .modal-btn.save:hover {
+            background: #3949ab;
+        }
+        .edit-modal .modal-btn.cancel {
+            background: #e3e3e3;
+            color: #1a237e;
+        }
+        .edit-modal .modal-btn.cancel:hover {
+            background: #bdbdbd;
+        }
+        .edit-modal .modal-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: none;
+            border: none;
+            font-size: 2em;
+            color: #1a237e;
+            cursor: pointer;
+            z-index: 2;
+        }
     </style>
 </head>
 <body class="admin-home-bg">
@@ -115,35 +206,63 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 <h2>Edit Mail Record</h2>
                 <form id="editForm" autocomplete="off">
                     <input type="hidden" name="Notice/Order Code" id="editNoticeCode">
-                    <label for="editDateAfd">Date released to AFD</label>
-                    <input type="text" name="Date released to AFD" id="editDateAfd" required>
-                    <label for="editParcelNo">Parcel No.</label>
-                    <input type="text" name="Parcel No." id="editParcelNo">
-                    <label for="editRecipient">Recipient Details</label>
-                    <input type="text" name="Recipient Details" id="editRecipient">
-                    <label for="editParcelDetails">Parcel Details</label>
-                    <input type="text" name="Parcel Details" id="editParcelDetails">
-                    <label for="editSender">Sender Details</label>
-                    <input type="text" name="Sender Details" id="editSender">
-                    <label for="editFileName">File Name (PDF)</label>
-                    <input type="text" name="File Name (PDF)" id="editFileName">
-                    <label for="editTrackingNo">Tracking No.</label>
-                    <input type="text" name="Tracking No." id="editTrackingNo">
-                    <label for="editStatus">Status</label>
-                    <select name="Status" id="editStatus">
-                        <option value="">Select status</option>
-                        <?php foreach ($statusOptions as $opt): ?>
-                            <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <label for="editTransmital">Transmital Remarks/Received By</label>
-                    <input type="text" name="Transmital Remarks/Received By" id="editTransmital">
-                    <label for="editDate">Date</label>
-                    <input type="text" name="Date" id="editDate">
-                    <label for="editEvaluator">Evaluator</label>
-                    <input type="text" name="Evaluator" id="editEvaluator">
-                    <div class="modal-actions" style="display:flex;justify-content:flex-end;gap:1em;">
-                        <button type="button" class="modal-btn cancel" onclick="closeEditModal()">Close</button>
+                    <div style="display:contents">
+                        <div>
+                            <label for="editNoticeCodeDisplay">Notice/Order Code*</label>
+                            <input type="text" name="Notice/Order Code" id="editNoticeCodeDisplay" style="background:#f7f8fa;" required />
+                        </div>
+                        <div>
+                            <label for="editDateAfd">Date Released to AFD*</label>
+                            <input type="date" name="Date released to AFD" id="editDateAfd" required>
+                        </div>
+                        <div>
+                            <label for="editParcelNo">Parcel No.</label>
+                            <input type="text" name="Parcel No." id="editParcelNo">
+                        </div>
+                        <div>
+                            <label for="editTrackingNo">Tracking No.</label>
+                            <input type="text" name="Tracking No." id="editTrackingNo">
+                        </div>
+                        <div>
+                            <label for="editRecipient">Recipient Details</label>
+                            <input type="text" name="Recipient Details" id="editRecipient">
+                        </div>
+                        <div>
+                            <label for="editParcelDetails">Parcel Details</label>
+                            <input type="text" name="Parcel Details" id="editParcelDetails">
+                        </div>
+                        <div>
+                            <label for="editSender">Sender Details</label>
+                            <input type="text" name="Sender Details" id="editSender">
+                        </div>
+                        <div>
+                            <label for="editFileName">File Name (PDF)</label>
+                            <input type="text" name="File Name (PDF)" id="editFileName">
+                        </div>
+                        <div>
+                            <label for="editStatus">Status</label>
+                            <select name="Status" id="editStatus">
+                                <option value="">Select Status</option>
+                                <?php foreach ($statusOptions as $opt): ?>
+                                    <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="editDate">Date</label>
+                            <input type="date" name="Date" id="editDate">
+                        </div>
+                        <div style="grid-column:1/span 2;">
+                            <label for="editTransmital">Transmittal Remarks / Received By</label>
+                            <input type="text" name="Transmital Remarks/Received By" id="editTransmital">
+                        </div>
+                        <div style="grid-column:1/span 2;">
+                            <label for="editEvaluator">Evaluator</label>
+                            <input type="text" name="Evaluator" id="editEvaluator">
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="modal-btn cancel" onclick="clearEditForm()">Clear Form</button>
                         <button type="submit" class="modal-btn save">Save</button>
                     </div>
                 </form>
@@ -293,6 +412,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                             document.getElementById('editModalOverlay').style.display = 'flex';
                             // Fill form fields
                             document.getElementById('editNoticeCode').value = rowData['Notice/Order Code'] || '';
+                            document.getElementById('editNoticeCodeDisplay').value = rowData['Notice/Order Code'] || '';
                             document.getElementById('editDateAfd').value = rowData['Date released to AFD'] || '';
                             document.getElementById('editParcelNo').value = rowData['Parcel No.'] || '';
                             document.getElementById('editRecipient').value = rowData['Recipient Details'] || '';
@@ -308,6 +428,14 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
 
                         function closeEditModal() {
                             document.getElementById('editModalOverlay').style.display = 'none';
+                        }
+
+                        // Clear form fields
+                        function clearEditForm() {
+                            var form = document.getElementById('editForm');
+                            form.reset();
+                            // Also clear disabled display field
+                            document.getElementById('editNoticeCodeDisplay').value = '';
                         }
 
                         // Attach to edit icon
