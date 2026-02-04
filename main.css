@@ -1,3 +1,43 @@
+.table-sort-select {
+	padding: 0.5em 1em;
+	border: 1.5px solid #22336a;
+	border-radius: 20px;
+	font-size: 0.8rem;
+	outline: none;
+	background: #fff;
+	color: #22336a;
+	margin-right: 0.5em;
+	min-width: 90px;
+	cursor: pointer;
+	transition: border 0.2s;
+}
+.table-sort-select:invalid {
+	color: #b0b8c9;
+}
+.table-sort-bar {
+	display: flex;
+	align-items: center;
+	margin-right: 1rem;
+}
+.table-sort-select {
+	padding: 0.5em 1em;
+	border: 1.5px solid #22336a;
+	border-radius: 20px;
+	font-size: 0.8rem;
+	outline: none;
+	background: #fff;
+	color: #22336a;
+	margin-right: 0.5em;
+	min-width: 90px;
+	cursor: pointer;
+	transition: border 0.2s;
+}
+.table-sort-label {
+	font-size: 1rem;
+	color: #22336a;
+	font-weight: 600;
+	margin-right: 0.5em;
+}
 .table-search-bar {
 	display: flex;
 	align-items: center;
@@ -7,7 +47,7 @@
 }
 .table-search-input {
 	padding: 0.5em 1em;
-	border: 1.5px solid #23409A;
+	border: 1.5px solid #22336a;
 	border-radius: 20px 0 0 20px;
 	font-size: 0.8rem;
 	outline: none;

@@ -132,6 +132,27 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <div class="admin-table-container">
         <div class="table-title">MAIL TRACKING RECORDS</div>
         <div class="table-search-bar">
+            <div class="table-sort-bar">
+                <select id="tableSortYear" class="table-sort-select" required style="min-width:110px;" aria-label="Year">
+                    <option value="" disabled selected hidden>Year</option>
+                    <option value="all">All</option>
+                    <?php
+                    // Collect unique years from the 'Date released to AFD' column
+                    $years = [];
+                    foreach ($rows as $row) {
+                        $dateAfd = $row['Date released to AFD'] ?? '';
+                        if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
+                            $years[] = $m[1];
+                        }
+                    }
+                    $years = array_unique($years);
+                    rsort($years);
+                    foreach ($years as $year) {
+                        echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
+                    }
+                    ?>
+                </select>
+            </div>
             <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
             <button class="table-search-btn" id="tableSearchBtn" title="Search">
                 <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
@@ -237,21 +258,30 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             window.open(jrsUrl, '_blank');
         }
 
-        // Table search functionality (filter by Notice/Order Code only)
+        // Table search and sort functionality (filter by Notice/Order Code and year)
         function filterTableRows() {
             const input = document.getElementById('tableSearchInput');
             const filter = input.value.toLowerCase();
+            const yearSelect = document.getElementById('tableSortYear');
+            let selectedYear = yearSelect.value;
+            if (selectedYear === 'all' || !selectedYear) selectedYear = '';
             const table = document.querySelector('.admin-table-container table');
             const trs = table.querySelectorAll('tbody tr');
             trs.forEach(tr => {
-                // The first td is Notice/Order Code
-                const firstTd = tr.querySelector('td');
-                if (!firstTd) {
+                const tds = tr.querySelectorAll('td');
+                if (!tds.length) {
                     tr.style.display = '';
                     return;
                 }
-                const code = firstTd.textContent.toLowerCase();
-                tr.style.display = code.indexOf(filter) > -1 ? '' : 'none';
+                // Notice/Order Code is first td, Date released to AFD is 2nd td (index 1)
+                const code = tds[0].textContent.toLowerCase();
+                const dateAfd = tds[1] ? tds[1].textContent : '';
+                let yearMatch = true;
+                if (selectedYear) {
+                    yearMatch = dateAfd.indexOf(selectedYear) > -1;
+                }
+                const codeMatch = code.indexOf(filter) > -1;
+                tr.style.display = (codeMatch && yearMatch) ? '' : 'none';
             });
         }
         document.addEventListener('DOMContentLoaded', function() {
@@ -261,14 +291,16 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
                 }, 2000);
             });
-            // Search bar events
+            // Search and sort bar events
             const searchInput = document.getElementById('tableSearchInput');
             const searchBtn = document.getElementById('tableSearchBtn');
+            const yearSelect = document.getElementById('tableSortYear');
             searchInput.addEventListener('input', filterTableRows);
             searchBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 filterTableRows();
             });
+            yearSelect.addEventListener('change', filterTableRows);
         });
         </script>
     </div>
