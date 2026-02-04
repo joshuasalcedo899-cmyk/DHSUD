@@ -139,6 +139,7 @@
 	border: 1.5px solid #22336a;
 	border-radius: 20px;
 	font-size: 0.8rem;
+    font-weight: 600;
 	outline: none;
 	background: #fff;
 	color: #22336a;
@@ -148,7 +149,7 @@
 	transition: border 0.2s;
 }
 .table-sort-select:invalid {
-	color: #b0b8c9;
+	color: #22336a7b;
 }
 .table-sort-bar {
 	display: flex;
@@ -186,6 +187,7 @@
 	border: 1.5px solid #22336a;
 	border-radius: 20px 0 0 20px;
 	font-size: 0.8rem;
+    font-weight: 600;
 	outline: none;
 	width: 180px;
 	transition: border 0.2s;

@@ -302,7 +302,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <div class="table-title">MAIL TRACKING RECORDS</div>
         <div class="table-search-bar">
             <div class="table-sort-bar">
-                <select id="tableSortYear" class="table-sort-select" required style="min-width:110px;" aria-label="Year">
+                <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;" aria-label="Year">
                     <option value="" disabled selected hidden>Year</option>
                     <option value="all">All</option>
                     <?php
