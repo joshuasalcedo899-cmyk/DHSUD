@@ -53,7 +53,7 @@ $columns = [
     'File Name (PDF)',
     'Tracking No.',
     'Status',
-    'Transmital Remarks/Received By',
+    'Transmittal Remarks/Received By',
     'Date',
     'Evaluator',
 ];
@@ -205,7 +205,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 <button class="modal-close" onclick="closeEditModal()" title="Close">&times;</button>
                 <h2>Edit Mail Record</h2>
                 <form id="editForm" autocomplete="off">
-                    <input type="hidden" name="Notice/Order Code" id="editNoticeCode">
+                    <input type="hidden" name="original_notice_code" id="editNoticeCode">
                     <div style="display:contents">
                         <div>
                             <label for="editNoticeCodeDisplay">Notice/Order Code*</label>
@@ -253,8 +253,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                             <input type="date" name="Date" id="editDate">
                         </div>
                         <div style="grid-column:1/span 2;">
-                            <label for="editTransmital">Transmittal Remarks / Received By</label>
-                            <input type="text" name="Transmital Remarks/Received By" id="editTransmital">
+                            <label for="editTransmittal">Transmittal Remarks / Received By</label>
+                            <input type="text" name="Transmittal Remarks/Received By" id="editTransmittal">
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editEvaluator">Evaluator</label>
@@ -421,7 +421,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                             document.getElementById('editFileName').value = rowData['File Name (PDF)'] || '';
                             document.getElementById('editTrackingNo').value = rowData['Tracking No.'] || '';
                             document.getElementById('editStatus').value = rowData['Status'] || '';
-                            document.getElementById('editTransmital').value = rowData['Transmital Remarks/Received By'] || '';
+                            document.getElementById('editTransmittal').value = rowData['Transmittal Remarks/Received By'] || '';
                             document.getElementById('editDate').value = rowData['Date'] || '';
                             document.getElementById('editEvaluator').value = rowData['Evaluator'] || '';
                         }
