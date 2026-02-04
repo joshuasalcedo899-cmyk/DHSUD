@@ -108,6 +108,47 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     </style>
 </head>
 <body class="admin-home-bg">
+        <!-- Edit Modal (hidden by default) -->
+        <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;">
+            <div class="edit-modal" id="editModal">
+                <button class="modal-close" onclick="closeEditModal()" title="Close">&times;</button>
+                <h2>Edit Mail Record</h2>
+                <form id="editForm" autocomplete="off">
+                    <input type="hidden" name="Notice/Order Code" id="editNoticeCode">
+                    <label for="editDateAfd">Date released to AFD</label>
+                    <input type="text" name="Date released to AFD" id="editDateAfd" required>
+                    <label for="editParcelNo">Parcel No.</label>
+                    <input type="text" name="Parcel No." id="editParcelNo">
+                    <label for="editRecipient">Recipient Details</label>
+                    <input type="text" name="Recipient Details" id="editRecipient">
+                    <label for="editParcelDetails">Parcel Details</label>
+                    <input type="text" name="Parcel Details" id="editParcelDetails">
+                    <label for="editSender">Sender Details</label>
+                    <input type="text" name="Sender Details" id="editSender">
+                    <label for="editFileName">File Name (PDF)</label>
+                    <input type="text" name="File Name (PDF)" id="editFileName">
+                    <label for="editTrackingNo">Tracking No.</label>
+                    <input type="text" name="Tracking No." id="editTrackingNo">
+                    <label for="editStatus">Status</label>
+                    <select name="Status" id="editStatus">
+                        <option value="">Select status</option>
+                        <?php foreach ($statusOptions as $opt): ?>
+                            <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <label for="editTransmital">Transmital Remarks/Received By</label>
+                    <input type="text" name="Transmital Remarks/Received By" id="editTransmital">
+                    <label for="editDate">Date</label>
+                    <input type="text" name="Date" id="editDate">
+                    <label for="editEvaluator">Evaluator</label>
+                    <input type="text" name="Evaluator" id="editEvaluator">
+                    <div class="modal-actions" style="display:flex;justify-content:flex-end;gap:1em;">
+                        <button type="button" class="modal-btn cancel" onclick="closeEditModal()">Close</button>
+                        <button type="submit" class="modal-btn save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     <div style="position: absolute; top: 10px; right: 10px; z-index: 100;">
         <span style="margin-right: 10px;">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
         <a href="logout.php" style="padding: 8px 12px; background-color: #d32f2f; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">Logout</a>
@@ -183,7 +224,18 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     <?php else: ?>
                         <?php foreach ($rows as $row): ?>
                             <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.3em;">
+                                        <div class="row-menu-container">
+                                            <button class="row-menu-btn" type="button" tabindex="0" aria-label="Edit row" onclick="editRow('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')">
+                                                <span style="font-size:1.5em;line-height:1;">&#8942;</span>
+                                            </button>
+                                        </div>
+                                        <span><?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?></span>
+                                    </div>
+                                </td>
                                 <?php foreach ($columns as $idx => $colName): ?>
+                                    <?php if ($idx === 0) continue; // skip Notice/Order Code, already rendered ?>
                                     <?php if ($idx === 8): // STATUS column (9th)
                                     ?>
                                         <td>
@@ -236,6 +288,62 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         </div>
     
         <script>
+                        // Modal logic
+                        function openEditModal(rowData) {
+                            document.getElementById('editModalOverlay').style.display = 'flex';
+                            // Fill form fields
+                            document.getElementById('editNoticeCode').value = rowData['Notice/Order Code'] || '';
+                            document.getElementById('editDateAfd').value = rowData['Date released to AFD'] || '';
+                            document.getElementById('editParcelNo').value = rowData['Parcel No.'] || '';
+                            document.getElementById('editRecipient').value = rowData['Recipient Details'] || '';
+                            document.getElementById('editParcelDetails').value = rowData['Parcel Details'] || '';
+                            document.getElementById('editSender').value = rowData['Sender Details'] || '';
+                            document.getElementById('editFileName').value = rowData['File Name (PDF)'] || '';
+                            document.getElementById('editTrackingNo').value = rowData['Tracking No.'] || '';
+                            document.getElementById('editStatus').value = rowData['Status'] || '';
+                            document.getElementById('editTransmital').value = rowData['Transmital Remarks/Received By'] || '';
+                            document.getElementById('editDate').value = rowData['Date'] || '';
+                            document.getElementById('editEvaluator').value = rowData['Evaluator'] || '';
+                        }
+
+                        function closeEditModal() {
+                            document.getElementById('editModalOverlay').style.display = 'none';
+                        }
+
+                        // Attach to edit icon
+                        function editRow(noticeCode) {
+                            if (!noticeCode) return;
+                            // Find row data in JS (from PHP array rendered as JS object)
+                            var row = window.mailRows.find(r => r['Notice/Order Code'] === noticeCode);
+                            if (row) openEditModal(row);
+                        }
+
+                        // Save handler (AJAX)
+                        document.addEventListener('DOMContentLoaded', function() {
+                            document.getElementById('editForm').addEventListener('submit', function(e) {
+                                e.preventDefault();
+                                var form = e.target;
+                                var formData = new FormData(form);
+                                fetch('api/EditMail.php', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                .then(resp => resp.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        closeEditModal();
+                                        location.reload();
+                                    } else {
+                                        alert(data.message || 'Failed to save changes.');
+                                    }
+                                })
+                                .catch(() => alert('Failed to save changes.'));
+                            });
+                        });
+
+                        // Expose PHP rows as JS array for modal
+                        window.mailRows = <?php echo json_encode($rows, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
+
         // Track parcel using JRS Express and copy tracking number to clipboard
         function trackJRS(trackingNo) {
             if (!trackingNo || trackingNo === '0') {
