@@ -94,8 +94,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <link rel="stylesheet" href="../main.css">
     <style>
         table { width:100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; }
-        th { background:#f7f7f7; }
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem}
+        th { background:#22336A; color: #ffffffff}
         form.inline { margin:0; }
         select { padding:4px; }
         button.save { padding:4px 8px; }
@@ -268,10 +268,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 </form>
             </div>
         </div>
-    <div style="position: absolute; top: 10px; right: 10px; z-index: 100;">
-        <span style="margin-right: 10px;">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
-        <a href="logout.php" style="padding: 8px 12px; background-color: #d32f2f; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">Logout</a>
-    </div>
+    
     <div class="admin-home-header">
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
         <div class="admin-home-header-border"></div>
@@ -405,7 +402,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <div>
             <a href="../api/Add.php"><button>Add</button></a>
         </div>
-    
+        <div style="position: absolute; top: 10px; right: 10px; z-index: 100;">
+            <span style="margin-right: 10px;">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+            <a href="logout.php" style="padding: 8px 12px; background-color: #d32f2f; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">Logout</a>
+        </div>
         <script>
                         // Modal logic
                         function openEditModal(rowData) {

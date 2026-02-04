@@ -149,7 +149,7 @@
 	transition: border 0.2s;
 }
 .table-sort-select:invalid {
-	color: #22336a7b;
+	color: #22336ac0;
 }
 .table-sort-bar {
 	display: flex;
@@ -203,7 +203,6 @@
 	font-size: 0.5rem;
 	display: flex;
 	align-items: center;
-	transition: background 0.2s;
 }
 .table-search-icon {
 	width: 20px;
@@ -512,7 +511,7 @@ body {
     color: #23409A;
 }
 
-.login-form input[type="email"],
+.login-form input[type="text"],
 .login-form input[type="password"] {
 	width: 100%;
 	padding: 0.8rem;

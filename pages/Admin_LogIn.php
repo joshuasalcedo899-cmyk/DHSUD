@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
             
             <div style="margin-bottom: 1rem;">
-                <label for="user">User Name</label>
+                <label for="username">User Name</label>
                 <input type="text" id="username" name="username" placeholder="Enter your user name" required>
             </div>
             <div style="margin-bottom: 1.5rem;">
