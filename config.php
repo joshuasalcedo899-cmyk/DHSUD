@@ -2,7 +2,7 @@
 // config.php — PDO MySQL connection
 // Update these values for your environment
 $DB_HOST = '127.0.0.1';
-$DB_NAME = 'mailtrackdb';
+$DB_NAME = 'dshudmail_db';
 $DB_USER = 'root';
 $DB_PASS = '';
 $DB_CHARSET = 'utf8mb4';

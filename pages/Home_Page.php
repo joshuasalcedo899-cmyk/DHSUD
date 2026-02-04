@@ -1,6 +1,11 @@
 
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../auth.php';
+
+// Require login to access this page
+requireLogin();
+
 // Handle status update when submitted per-row
 $message = '';
 $updatedNotice = '';
@@ -103,6 +108,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     </style>
 </head>
 <body class="admin-home-bg">
+    <div style="position: absolute; top: 10px; right: 10px; z-index: 100;">
+        <span style="margin-right: 10px;">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+        <a href="logout.php" style="padding: 8px 12px; background-color: #d32f2f; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">Logout</a>
+    </div>
     <div class="admin-home-header">
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
         <div class="admin-home-header-border"></div>
