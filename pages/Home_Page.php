@@ -217,11 +217,11 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         </div>
                         <div>
                             <label for="editParcelNo">Parcel No.</label>
-                            <input type="text" name="Parcel No." id="editParcelNo">
+                            <input type="number" name="Parcel No." id="editParcelNo">
                         </div>
                         <div>
                             <label for="editTrackingNo">Tracking No.</label>
-                            <input type="text" name="Tracking No." id="editTrackingNo">
+                            <input type="number" name="Tracking No." id="editTrackingNo">
                         </div>
                         <div>
                             <label for="editRecipient">Recipient Details</label>
@@ -410,9 +410,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         // Modal logic
                         function openEditModal(rowData) {
                             document.getElementById('editModalOverlay').style.display = 'flex';
-                            // Fill form fields
-                            document.getElementById('editNoticeCode').value = rowData['Notice/Order Code'] || '';
-                            document.getElementById('editNoticeCodeDisplay').value = rowData['Notice/Order Code'] || '';
+                            // Fill form fields - CRITICAL: original_notice_code must be set for lookup
+                            var noticeCode = (rowData['Notice/Order Code'] || '').trim();
+                            document.getElementById('editNoticeCode').value = noticeCode;
+                            document.getElementById('editNoticeCodeDisplay').value = noticeCode;
                             document.getElementById('editDateAfd').value = rowData['Date released to AFD'] || '';
                             document.getElementById('editParcelNo').value = rowData['Parcel No.'] || '';
                             document.getElementById('editRecipient').value = rowData['Recipient Details'] || '';
@@ -424,6 +425,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                             document.getElementById('editTransmittal').value = rowData['Transmittal Remarks/Received By'] || '';
                             document.getElementById('editDate').value = rowData['Date'] || '';
                             document.getElementById('editEvaluator').value = rowData['Evaluator'] || '';
+                            console.log('Modal opened for Notice Code: "' + noticeCode + '"');
                         }
 
                         function closeEditModal() {
@@ -452,12 +454,20 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                 e.preventDefault();
                                 var form = e.target;
                                 var formData = new FormData(form);
-                                fetch('api/EditMail.php', {
+                                
+                                // Debug: Log what's being sent
+                                console.log('Submitting form with:');
+                                for (let [key, value] of formData.entries()) {
+                                    console.log('  ' + key + ': "' + value + '"');
+                                }
+                                
+                                fetch('../api/EditMail.php', {
                                     method: 'POST',
                                     body: formData
                                 })
                                 .then(resp => resp.json())
                                 .then(data => {
+                                    console.log('Response:', data);
                                     if (data.success) {
                                         closeEditModal();
                                         location.reload();
@@ -465,7 +475,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                         alert(data.message || 'Failed to save changes.');
                                     }
                                 })
-                                .catch(() => alert('Failed to save changes.'));
+                                .catch(err => {
+                                    console.error('Error:', err);
+                                    alert('Failed to save changes.');
+                                });
                             });
                         });
 

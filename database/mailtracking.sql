@@ -33,7 +33,7 @@ CREATE TABLE `mailtracking` (
   `Parcel No.` int(11) NOT NULL,
   `Recipient Details` text NOT NULL,
   `Parcel Details` text NOT NULL,
-  `Sender Details.` text NOT NULL,
+  `Sender Details` text NOT NULL,
   `File Name (PDF)` text NOT NULL,
   `Tracking No.` int(11) NOT NULL,
   `Status` text NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE `mailtracking` (
 -- Dumping data for table `mailtracking`
 --
 
-INSERT INTO `mailtracking` (`Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, `Parcel Details`, `Sender Details.`, `File Name (PDF)`, `Tracking No.`, `Status`, `Transmittal Remarks/Received By`, `Date`, `Evaluator`) VALUES
+INSERT INTO `mailtracking` (`Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, `Parcel Details`, `Sender Details`, `File Name (PDF)`, `Tracking No.`, `Status`, `Transmittal Remarks/Received By`, `Date`, `Evaluator`) VALUES
 ('', '0000-00-00', 0, '', '', '', '', 2000, '', '0', '0000-00-00', ''),
 ('asd', '0000-00-00', 0, '', '', '', '', 123, '', '0', '0000-00-00', ''),
 ('V123', '0000-00-00', 0, '', '', '', '', 200, '', '0', '0000-00-00', '');

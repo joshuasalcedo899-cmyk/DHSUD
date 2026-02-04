@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $sql = 'INSERT INTO mailtracking 
                     (`Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, 
-                     `Parcel Details`, `Sender Details.`, `File Name (PDF)`, `Tracking No.`, 
+                     `Parcel Details`, `Sender Details`, `File Name (PDF)`, `Tracking No.`, 
                      `Status`, `Transmittal Remarks/Received By`, `Date`, `Evaluator`) 
                     VALUES (:notice_code, :date_released, :parcel_no, :recipient_details, 
                             :parcel_details, :sender_details, :file_name, :tracking_no, 
