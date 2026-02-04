@@ -131,7 +131,13 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     </div>
     <div class="admin-table-container">
         <div class="table-title">MAIL TRACKING RECORDS</div>
-        <div style="overflow-x:auto; padding: 2rem;">
+        <div class="table-search-bar">
+            <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
+            <button class="table-search-btn" id="tableSearchBtn" title="Search">
+                <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
+            </button>
+        </div>
+        <div class="table-scroll-area">
             <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
                 <thead>
                     <tr>
@@ -212,12 +218,37 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             window.open(jrsUrl, '_blank');
         }
 
+        // Table search functionality (filter by Notice/Order Code only)
+        function filterTableRows() {
+            const input = document.getElementById('tableSearchInput');
+            const filter = input.value.toLowerCase();
+            const table = document.querySelector('.admin-table-container table');
+            const trs = table.querySelectorAll('tbody tr');
+            trs.forEach(tr => {
+                // The first td is Notice/Order Code
+                const firstTd = tr.querySelector('td');
+                if (!firstTd) {
+                    tr.style.display = '';
+                    return;
+                }
+                const code = firstTd.textContent.toLowerCase();
+                tr.style.display = code.indexOf(filter) > -1 ? '' : 'none';
+            });
+        }
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.row-message').forEach(function(el) {
                 setTimeout(function() {
                     el.style.opacity = '0';
                     setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
                 }, 2000);
+            });
+            // Search bar events
+            const searchInput = document.getElementById('tableSearchInput');
+            const searchBtn = document.getElementById('tableSearchBtn');
+            searchInput.addEventListener('input', filterTableRows);
+            searchBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                filterTableRows();
             });
         });
         </script>

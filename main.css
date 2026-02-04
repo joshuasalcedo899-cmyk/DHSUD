@@ -1,3 +1,70 @@
+.table-search-bar {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	margin-bottom: 1rem;
+	width: 100%;
+}
+.table-search-input {
+	padding: 0.5em 1em;
+	border: 1.5px solid #23409A;
+	border-radius: 20px 0 0 20px;
+	font-size: 0.8rem;
+	outline: none;
+	width: 180px;
+	transition: border 0.2s;
+}
+.table-search-btn {
+	background: #fff;
+	border: 1.5px solid #23409A;
+	border-left: none;
+	border-radius: 0 20px 20px 0;
+	padding: 0.5em 1em;
+	cursor: pointer;
+	color: #23409A;
+	font-size: 0.5rem;
+	display: flex;
+	align-items: center;
+	transition: background 0.2s;
+}
+.table-search-icon {
+	width: 20px;
+	height: 20px;
+	margin-left: 0.2em;
+	display: inline-block;
+	vertical-align: middle;
+}
+.admin-home-container, .admin-table-container {
+	position: fixed;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100;
+	width: 1200px;
+	max-width: 98vw;
+	background: rgba(255,255,255,0.92);
+	border-radius: 12px;
+	box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+.admin-home-container {
+	top: 130px;
+	padding: 2rem 2rem 1.5rem 2rem;
+}
+.admin-table-container {
+	top: 320px;
+	padding: 2rem 2rem 2rem 2rem;
+	height: calc(100vh - 430px);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+.admin-table-container .table-title {
+	flex: 0 0 auto;
+}
+.admin-table-container .table-scroll-area {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	min-height: 0;
+}
 .admin-home-header {
 	width: 100vw;
 	position: fixed;
@@ -8,13 +75,6 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-}
-.admin-home-header-img {
-	margin-top: 1.5rem;
-	max-width: 700px;
-	width: 100%;
-	height: auto;
-	display: block;
 }
 .admin-home-header-border {
 	width: 100vw;
@@ -48,7 +108,7 @@
 	border-color: #388e3c;
 }
 .stat-total .stat-count {
-	border-color: #aaa;
+	border-color: #2c2c2c;
 }
 .stat-ndr .stat-count {
 	border-color: #8e24aa;
@@ -58,8 +118,7 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	min-height: 100vh;
-	background: url('assets/EngineerModule.svg Module.svg') no-repeat top center fixed;
+	min-height: 95vh;
 	background-size: cover;
 	background-attachment: fixed;
 }
@@ -111,9 +170,8 @@
 	font-size: 1rem;
 	font-weight: 600;
 	border-radius: 6px;
-	padding: 0.3rem 1.1rem 0.3rem 0.5rem;
+	padding: 0.3rem 0.5rem 0.3rem 0.5rem;
 	background: #eee;
-	min-width: 120px;
 	border: 1.5px solid #bbb;
 }
 .stat-box .color {
@@ -151,7 +209,7 @@
 	}
 	.admin-home-header-img {
 		margin-top: 1.5rem;
-		max-width: 700px;
+		max-width: 500px;
 		width: 100%;
 		height: auto;
 		display: block;
