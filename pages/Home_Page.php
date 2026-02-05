@@ -94,7 +94,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <link rel="stylesheet" href="../main.css">
     <style>
         table { width:100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem}
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center;}
         @media (max-width: 768px) {
             table { font-size: 0.65rem; }
             th, td { padding: 6px; }

@@ -23,15 +23,14 @@
 	background: #22336A;
 	color: #fff;
 	text-align: center;
-	font-size: 0.8rem;
+	font-size: 0.7rem;
 	font-weight: 700;
 	padding: 0.8rem 0.5rem;
 	letter-spacing: 0.03em;
-	text-transform: uppercase;
 }
 .tracking-table td {
 	text-align: center;
-	font-size: 0.8rem;
+	font-size: 0.7rem;
 	padding: 0.7rem 0.5rem;
 	background: #fff;
 	color: #222;
