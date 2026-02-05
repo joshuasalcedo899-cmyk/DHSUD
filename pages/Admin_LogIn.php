@@ -50,6 +50,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 1rem;
             border-left: 4px solid #388e3c;
         }
+        @media (max-width: 768px) {
+            .login-form {
+                min-width: 85vw !important;
+                max-width: 85vw !important;
+            }
+            .bottom-container {
+                padding-bottom: 2rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .login-form {
+                min-width: 90vw !important;
+                max-width: 90vw !important;
+                padding: 1.5rem !important;
+            }
+            .login-form h2 {
+                font-size: 1rem;
+            }
+            .login-form label {
+                font-size: 0.9rem;
+            }
+            .login-form input,
+            .login-form button {
+                font-size: 0.95rem;
+            }
+            .bottom-container {
+                padding-bottom: 1rem;
+            }
+        }
     </style>
 </head>
 <body>

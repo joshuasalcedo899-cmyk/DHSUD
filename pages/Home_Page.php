@@ -95,6 +95,14 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <style>
         table { width:100%; border-collapse: collapse; }
         th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem}
+        @media (max-width: 768px) {
+            table { font-size: 0.65rem; }
+            th, td { padding: 6px; }
+        }
+        @media (max-width: 480px) {
+            table { font-size: 0.6rem; }
+            th, td { padding: 4px; }
+        }
         th { background:#22336A; color: #ffffffff}
         form.inline { margin:0; }
         select { padding:4px; }
@@ -116,6 +124,19 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             width: 100%;
             margin: 40px auto;
             position: relative;
+            box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+            .edit-modal {
+                padding: 20px 20px 16px 20px;
+                max-width: 90vw;
+            }
+        }
+        @media (max-width: 480px) {
+            .edit-modal {
+                padding: 16px 16px 12px 16px;
+                max-width: 95vw;
+            }
         }
         .edit-modal h2 {
             text-align: center;
@@ -129,6 +150,12 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0 24px;
+        }
+        @media (max-width: 768px) {
+            .edit-modal form {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
         }
         .edit-modal label {
             font-size: 0.98em;
@@ -196,6 +223,19 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             cursor: pointer;
             z-index: 2;
         }
+        .edit-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
     </style>
 </head>
 <body class="admin-home-bg">
@@ -223,43 +263,23 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                             <label for="editTrackingNo">Tracking No.</label>
                             <input type="text" name="Tracking No." id="editTrackingNo">
                         </div>
-                        <div>
+                        <div style="grid-column:1/span 2;">
                             <label for="editRecipient">Recipient Details</label>
                             <input type="text" name="Recipient Details" id="editRecipient">
                         </div>
-                        <div>
+                        <div style="grid-column:1/span 2;">
                             <label for="editParcelDetails">Parcel Details</label>
                             <input type="text" name="Parcel Details" id="editParcelDetails">
                         </div>
-                        <div>
+                        <div style="grid-column:1/span 2;">
                             <label for="editSender">Sender Details</label>
                             <input type="text" name="Sender Details" id="editSender">
                         </div>
-                        <div>
+                        <div style="grid-column:1/span 2;">
                             <label for="editFileName">File Name (PDF)</label>
                             <input type="text" name="File Name (PDF)" id="editFileName">
                         </div>
-                        <div>
-                            <label for="editStatus">Status</label>
-                            <select name="Status" id="editStatus">
-                                <option value="">Select Status</option>
-                                <?php foreach ($statusOptions as $opt): ?>
-                                    <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="editDate">Date</label>
-                            <input type="date" name="Date" id="editDate">
-                        </div>
-                        <div style="grid-column:1/span 2;">
-                            <label for="editTransmittal">Transmittal Remarks / Received By</label>
-                            <input type="text" name="Transmittal Remarks/Received By" id="editTransmittal">
-                        </div>
-                        <div style="grid-column:1/span 2;">
-                            <label for="editEvaluator">Evaluator</label>
-                            <input type="text" name="Evaluator" id="editEvaluator">
-                        </div>
+                        
                     </div>
                     <div class="modal-actions">
                         <button type="button" class="modal-btn cancel" onclick="clearEditForm()">Clear Form</button>
@@ -402,9 +422,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <div>
             <a href="../api/Add.php"><button>Add</button></a>
         </div>
-        <div style="position: absolute; top: 10px; right: 10px; z-index: 100;">
-            <span style="margin-right: 10px;">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
-            <a href="logout.php" style="padding: 8px 12px; background-color: #d32f2f; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">Logout</a>
+        <div style="position: absolute; top: 10px; left: 5px; z-index: 100;">
+            <a href="logout.php" style="text-decoration: none; color: #726868;">Logout</a>
         </div>
         <script>
                         // Modal logic
@@ -431,6 +450,16 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         function closeEditModal() {
                             document.getElementById('editModalOverlay').style.display = 'none';
                         }
+
+                        // Close modal when clicking outside
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const overlay = document.getElementById('editModalOverlay');
+                            overlay.addEventListener('click', function(e) {
+                                if (e.target === overlay) {
+                                    closeEditModal();
+                                }
+                            });
+                        });
 
                         // Clear form fields
                         function clearEditForm() {
@@ -511,7 +540,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             });
             
             // JRS Express tracking URL
-            const jrsUrl = 'https://www.jrs-express.com/TRACK?TN=' + encodeURIComponent(trackingNo);
+            const jrsUrl = 'https://www.jrs-express.com/track?tracking=' + encodeURIComponent(trackingNo);
             console.log('Opening tracking URL:', jrsUrl);
             window.open(jrsUrl, '_blank');
         }

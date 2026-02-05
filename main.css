@@ -532,3 +532,134 @@ body {
     font-weight: 600;
 	cursor: pointer;
 }
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Mobile (0px - 480px) */
+@media (max-width: 480px) {
+	.admin-home-container, .admin-table-container {
+		width: 95vw !important;
+		max-width: 95vw !important;
+		padding: 1rem !important;
+		top: auto !important;
+		left: 50% !important;
+		transform: translateX(-50%) !important;
+		position: relative !important;
+		height: auto !important;
+	}
+	.admin-table-container {
+		height: auto !important;
+		overflow: visible !important;
+	}
+	.admin-table-container .table-scroll-area {
+		overflow-x: auto !important;
+	}
+	table {
+		font-size: 0.65rem !important;
+	}
+	th, td {
+		padding: 4px !important;
+	}
+	.statistics-bar {
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.stat-box {
+		width: 100%;
+	}
+	.stat-count {
+		font-size: 0.9em !important;
+	}
+	.table-search-bar {
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+	.table-search-input {
+		width: 90vw !important;
+		max-width: 90vw !important;
+	}
+	.table-sort-bar {
+		width: 100%;
+		margin-bottom: 0.5rem;
+	}
+	.login-form {
+		min-width: 90vw !important;
+		padding: 1.5rem !important;
+	}
+	.button-container button {
+		width: 90vw !important;
+	}
+	.edit-modal {
+		padding: 1.5rem !important;
+		min-width: 90vw !important;
+	}
+	.edit-modal form {
+		grid-template-columns: 1fr !important;
+	}
+	.edit-modal .modal-actions {
+		grid-column: auto !important;
+	}
+	.admin-home-header-img {
+		max-width: 95vw !important;
+	}
+}
+
+/* Tablet (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+	.admin-home-container, .admin-table-container {
+		width: 90vw !important;
+		max-width: 90vw !important;
+		padding: 1.5rem !important;
+		top: auto !important;
+		position: relative !important;
+		height: auto !important;
+	}
+	.admin-table-container {
+		height: auto !important;
+		overflow: visible !important;
+	}
+	.admin-table-container .table-scroll-area {
+		overflow-x: auto !important;
+	}
+	table {
+		font-size: 0.8rem !important;
+	}
+	th, td {
+		padding: 6px !important;
+	}
+	.statistics-bar {
+		gap: 0.8rem;
+		flex-wrap: wrap;
+	}
+	.stat-box {
+		flex: 0 1 calc(50% - 0.4rem);
+	}
+	.table-search-input {
+		width: 150px !important;
+	}
+	.login-form {
+		min-width: 85vw !important;
+		padding: 1.5rem !important;
+	}
+	.button-container button {
+		width: 250px !important;
+	}
+	.edit-modal {
+		padding: 1.5rem !important;
+		min-width: 85vw !important;
+	}
+	.edit-modal form {
+		grid-template-columns: 1fr !important;
+	}
+}
+
+/* Desktop (769px and above) */
+@media (min-width: 769px) {
+	.admin-home-container, .admin-table-container {
+		width: 1200px;
+		max-width: 95vw;
+	}
+	.edit-modal form {
+		grid-template-columns: 1fr 1fr;
+	}
+}

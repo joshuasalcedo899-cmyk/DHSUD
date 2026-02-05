@@ -48,15 +48,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <style>
         body { font-family: Arial; margin: 2rem; }
         .section { margin: 2rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 4px; }
-        .search-box { display: flex; gap: 0.5rem; }
-        .search-box input { flex: 1; padding: 0.5rem; }
+        .search-box { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .search-box input { flex: 1; padding: 0.5rem; min-width: 150px; }
         .search-box button { padding: 0.5rem 1rem; background: #007bff; color: white; border: none; cursor: pointer; }
         .success { color: green; background: #efe; padding: 10px; margin: 1rem 0; }
         .error { color: darkred; background: #fee; padding: 10px; margin: 1rem 0; }
-        table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1rem 0; overflow-x: auto; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background: #f0f0f0; }
         .edit-btn { padding: 0.5rem 1rem; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        @media (max-width: 768px) {
+            body { margin: 1rem; }
+            .section { padding: 0.75rem; }
+            table { font-size: 0.9rem; }
+            th, td { padding: 6px; }
+            .search-box { flex-direction: column; }
+            .search-box input { min-width: 100%; }
+            .search-box button { width: 100%; }
+        }
+        @media (max-width: 480px) {
+            body { margin: 0.5rem; }
+            .section { padding: 0.5rem; margin: 1rem 0; }
+            h1 { font-size: 1.3rem; }
+            h2 { font-size: 1.1rem; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 4px; }
+            .edit-btn { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
+        }
     </style>
 </head>
 <body>
