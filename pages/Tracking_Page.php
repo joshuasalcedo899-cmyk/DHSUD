@@ -150,17 +150,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <?php foreach (array_keys($searchResult) as $col): ?>
                                     <th><?= htmlspecialchars($col) ?></th>
                                 <?php endforeach; ?>
-                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <?php foreach ($searchResult as $key => $val): ?>
-                                    <td><?= htmlspecialchars($val ?? '') ?></td>
-                                <?php endforeach; ?>
-                                <td>
-                                    <button class="edit-btn tracking-edit-btn" onclick="openEditForm()">Edit</button>
-                                </td>
+                                <?php
+                                $colKeys = array_keys($searchResult);
+                                foreach ($colKeys as $key):
+                                    echo '<td>';
+                                    // Place edit icon inside Transmittal Remarks/Received By column
+                                    if (strtolower($key) === 'transmittal remarks/received by' || strtolower($key) === 'transmittal remarks / received by') {
+                                        echo htmlspecialchars($searchResult[$key] ?? '');
+                                        echo ' ';
+                                        ?>
+                                        <button class="edit-btn tracking-edit-btn" onclick="openEditForm()" style="background: none; border: none; padding: 0; margin-left: 0.3em; vertical-align: middle; box-shadow: none;">
+                                            <img src="../assets/Edit_Icon.svg" alt="Edit" style="width: 22px; height: 22px; display: inline-block; vertical-align: middle; filter: none;">
+                                        </button>
+                                        <?php
+                                    } else {
+                                        echo htmlspecialchars($searchResult[$key] ?? '');
+                                    }
+                                    echo '</td>';
+                                endforeach;
+                                // Remove the separate Actions column
+                                ?>
                             </tr>
                         </tbody>
                     </table>
