@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
+
 $searchResult = null;
 $searchError = '';
+
 
 // Handle search
 if (!empty($_GET['search'])) {
@@ -20,10 +22,12 @@ if (!empty($_GET['search'])) {
     }
 }
 
+
 // Handle insert
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tracking = trim($_POST['tracking'] ?? '');
     $notice = trim($_POST['notice'] ?? '');
+
 
     if ($tracking === '' || $notice === '') {
         $error = 'Tracking number and notice are required.';
@@ -39,7 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+
 ?>
+
 
 <!doctype html>
 <html>
@@ -48,34 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Mail Tracking System</title>
     <link rel="stylesheet" href="../main.css">
     <style>
-        body { font-family: Arial; margin: 2rem; }
-        .section { margin: 2rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 4px; }
-        .search-box { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-        .search-box input { flex: 1; padding: 0.5rem; min-width: 150px; }
-        .search-box button { padding: 0.5rem 1rem; background: #007bff; color: white; border: none; cursor: pointer; }
-        .success { color: green; background: #efe; padding: 10px; margin: 1rem 0; }
-        .error { color: darkred; background: #fee; padding: 10px; margin: 1rem 0; }
-        table { border-collapse: collapse; width: 100%; margin: 1rem 0; overflow-x: auto; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #f0f0f0; }
-        .edit-btn { padding: 0.5rem 1rem; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        @media (max-width: 768px) {
-            body { margin: 1rem; }
-            .section { padding: 0.75rem; }
-            table { font-size: 0.9rem; }
-            th, td { padding: 6px; }
-            .search-box { flex-direction: column; }
-            .search-box input { min-width: 100%; }
-            .search-box button { width: 100%; }
-        }
-        @media (max-width: 480px) {
-            body { margin: 0.5rem; }
-            .section { padding: 0.5rem; margin: 1rem 0; }
-            h1 { font-size: 1.3rem; }
-            h2 { font-size: 1.1rem; }
-            table { font-size: 0.8rem; }
-            th, td { padding: 4px; }
-            .edit-btn { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
         body {
             background: #fff !important;
             font-family: 'Inter', Arial, Helvetica, sans-serif;
@@ -134,11 +112,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="admin-home-header-border"></div>
     </div>
 
+
     <div style="width: 100vw; max-width: 100vw; margin: 0; padding: 0;">
         <h1 style="text-align:center; color:#22336a; font-size:1.3rem; font-weight:700; margin-top:1rem; margin-bottom:1rem; letter-spacing:0.04em;">MAIL TRACKING RECORDS</h1>
 
 
+
+
     <!-- Search Section -->
+
 
     <div class="section" style="background: #fff; box-shadow: none; border: none; padding: 0; margin-bottom: 2.5rem;">
         <div style="display: flex; flex-direction: column; align-items: center;">
@@ -152,6 +134,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
             </div>
         </div>
+
+
 
 
         <?php if ($searchError): ?>
@@ -184,6 +168,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
 
+
+
             <!-- Edit Form Modal -->
             <div id="editModal" style="display: none; margin-top: 2rem; padding: 2rem 2.5rem 1.5rem 2.5rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 24px rgba(0,0,0,0.18); min-width: 350px; max-width: 95vw;">
                 <h3 style="color: #22336a; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.2rem; text-align: center;">Edit Record</h3>
@@ -196,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?= htmlspecialchars($searchResult['Notice/Order Code'] ?? '') ?>
                         </div>
                     </div>
-                    <?php 
+                    <?php
                     $editableColumns = [
                         'Date released to AFD',
                         'Parcel No.',
@@ -210,16 +196,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'Date',
                         'Evaluator'
                     ];
-                    foreach ($editableColumns as $col): 
+                    foreach ($editableColumns as $col):
                         $val = $searchResult[$col] ?? '';
                     ?>
                         <div style="margin-bottom: 1rem;">
                             <label for="<?= htmlspecialchars(str_replace(' ', '_', $col)) ?>" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #22336a;">
                                 <?= htmlspecialchars($col) ?>
                             </label>
-                            <input type="text" 
-                                   id="<?= htmlspecialchars(str_replace(' ', '_', $col)) ?>" 
-                                   name="<?= htmlspecialchars($col) ?>" 
+                            <input type="text"
+                                   id="<?= htmlspecialchars(str_replace(' ', '_', $col)) ?>"
+                                   name="<?= htmlspecialchars($col) ?>"
                                    value="<?= htmlspecialchars($val ?? '') ?>"
                                    style="width: 100%; padding: 0.5rem 0.8em; border: 1.5px solid #bbb; border-radius: 6px; font-size: 1em; box-sizing: border-box;">
                         </div>
@@ -232,26 +218,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="editMessage" style="margin-top: 1rem;"></div>
             </div>
 
+
             <script>
                 function openEditForm() {
                     document.getElementById('editModal').style.display = 'block';
                 }
+
 
                 function closeEditForm() {
                     document.getElementById('editModal').style.display = 'none';
                     document.getElementById('editMessage').innerHTML = '';
                 }
 
+
                 function submitEditForm(event) {
                     event.preventDefault();
                     const formData = new FormData(document.getElementById('editForm'));
                     const messageDiv = document.getElementById('editMessage');
-                    
+                   
                     // Log form data for debugging
                     console.log('Submitting form data:');
                     for (let [key, value] of formData.entries()) {
                         console.log(key + ':', value);
                     }
+
 
                     fetch('/DHSUD/api/EditMail.php', {
                         method: 'POST',
@@ -291,6 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 }
 
+
                 function escapeHtml(text) {
                     const map = {
                         '&': '&amp;',
@@ -308,3 +299,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 </body>
 </html>
+
+
+
