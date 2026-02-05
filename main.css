@@ -279,9 +279,9 @@
 	padding: 2rem 2rem 1.5rem 2rem;
 }
 .admin-table-container {
-	top: 300px;
+	top: 270px;
 	padding: 2rem 2rem 2rem 2rem;
-	height: calc(100vh - 430px);
+	height: calc(100vh - 380px);
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
