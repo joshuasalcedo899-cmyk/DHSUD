@@ -367,10 +367,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                                 <span style="font-size:1.5em;line-height:1;">&#8942;</span>
                                             </button>
                                             <div class="row-menu-dropdown" style="display:none; position:absolute; left:0; top:32px; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
-                                                <button class="row-menu-item" onclick="editRow('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;text-align:left;">
+                                                <button class="row-menu-item" onclick="editRow('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
                                                     <img src="../assets/Edit_Icon.svg" alt="Edit" style="width:20px;height:20px;"> Edit
                                                 </button>
-                                                <button class="row-menu-item" onclick="deleteRecord('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;text-align:left;">
+                                                <button class="row-menu-item" onclick="deleteRecord('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
                                                     <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
                                                 </button>
                                             </div>
