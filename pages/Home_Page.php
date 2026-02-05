@@ -395,8 +395,20 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                             }
                                             function deleteRecord(noticeCode) {
                                                 if (confirm('Are you sure you want to delete this record?')) {
-                                                    // Implement AJAX delete logic here
-                                                    alert('Delete function not yet implemented for Notice/Order Code: ' + noticeCode);
+                                                   if (!noticeCode) return;
+                                                        // Redirect to PHP delete handler via POST using a form
+                                                        const form = document.createElement('form');
+                                                        form.method = 'POST';
+                                                        form.action = '../api/Delete.php'; // your PHP file that handles deletion
+
+                                                        const input = document.createElement('input');
+                                                        input.type = 'hidden';
+                                                        input.name = 'noticeCode';       // the field name your table uses
+                                                        input.value = noticeCode;
+
+                                                        form.appendChild(input);
+                                                        document.body.appendChild(form);
+                                                        form.submit();
                                                 }
                                             }
                                         </script>
