@@ -52,8 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
-<body>
-    <body class="admin-login-bg">
+<body class="admin-login-bg">
     <div class="bottom-container">
         <form class="login-form" method="post" action="Admin_LogIn.php">
             <h2>Log in to your account</h2>

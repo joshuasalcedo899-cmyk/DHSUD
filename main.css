@@ -1,3 +1,52 @@
+/* Tracking Page custom styles */
+.tracking-table-container {
+	background: #d9d9d984;
+	box-shadow: 0 2px 8px rgba(34,51,106,0.07);
+	padding: 0.5rem 1.8vw;
+	margin: 0 0 2.5rem 0;
+	width: 95vw;
+	max-width: 100vw;
+	position: relative;
+	left: 50%;
+	right: 50%;
+	transform: translateX(-50%);
+	box-sizing: border-box;
+}
+.tracking-table-scroll {
+	overflow-x: auto;
+	width: 100%;
+}
+.tracking-table {
+	min-width: 1800px;
+}
+.tracking-table th {
+	background: #22336A;
+	color: #fff;
+	text-align: center;
+	font-size: 0.8rem;
+	font-weight: 700;
+	padding: 0.8rem 0.5rem;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
+.tracking-table td {
+	text-align: center;
+	font-size: 0.8rem;
+	padding: 0.7rem 0.5rem;
+	background: #fff;
+	color: #222;
+	font-weight: 500;
+}
+.tracking-edit-btn {
+	background: #23409A;
+	color: #fff;
+	font-weight: 600;
+	border-radius: 6px;
+	padding: 0.5em 1.5em;
+	border: none;
+	font-size: 0.8em;
+	cursor: pointer;
+}
 .edit-modal-overlay {
 	position: fixed;
 	top: 0;
@@ -184,10 +233,10 @@
 }
 .table-search-input {
 	padding: 0.5em 1em;
-	border: 1.5px solid #22336a;
-	border-radius: 20px 0 0 20px;
+	border: 1.5px solid #22336a59;
+	border-radius: 5px;
 	font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 500;
 	outline: none;
 	width: 180px;
 	transition: border 0.2s;
@@ -399,7 +448,7 @@
 		margin-bottom: 1.5rem;
 	}
 .admin-login-bg {
-	background: url('assets/ADMIN%27s%20LOG%20IN%20PAGE_BG.svg') no-repeat center center fixed;
+	background: url('assets/ADMIN\ LOG\ IN\ PAGE_BG.svg') no-repeat center center fixed;
 	background-size: cover;
 }
 .bottom-container {
@@ -423,12 +472,12 @@
 }
 .listview-table th, .listview-table td {
 	border: 1px solid #d1d5db;
-	padding: 0.75rem 0.5rem;
-	text-align: left;
+	padding: 0.2rem 0.5rem;
+	text-align: center;
 }
 .listview-table th {
-	background: #f3f4f6;
-	font-weight: 500;
+	background: #22336A;
+	font-weight: 700;
 	letter-spacing: 0.05em;
 }
 .listview-table tr {
