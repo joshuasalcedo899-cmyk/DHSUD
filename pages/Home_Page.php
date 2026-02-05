@@ -265,15 +265,15 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editRecipient">Recipient Details</label>
-                            <input type="text" name="Recipient Details" id="editRecipient">
+                            <textarea name="Recipient Details" row="3" id="editRecipient"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editParcelDetails">Parcel Details</label>
-                            <input type="text" name="Parcel Details" id="editParcelDetails">
+                            <textarea name="Parcel Details" row="3" id="editParcelDetails"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editSender">Sender Details</label>
-                            <input type="text" name="Sender Details" id="editSender">
+                            <textarea name="Sender Details" row="3" id="editSender"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editFileName">File Name (PDF)</label>
