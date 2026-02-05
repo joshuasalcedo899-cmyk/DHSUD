@@ -565,8 +565,15 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             
             // Copy tracking number to clipboard
             navigator.clipboard.writeText(trackingNo).then(function() {
+                // Remove any existing notification first to prevent duplicates
+                const existingNotification = document.querySelector('.tracking-notification');
+                if (existingNotification) {
+                    existingNotification.remove();
+                }
+                
                 // Show success notification
                 const notification = document.createElement('div');
+                notification.className = 'tracking-notification';
                 notification.textContent = 'Tracking # ' + trackingNo + ' copied to clipboard!';
                 notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#4CAF50;color:white;padding:15px 20px;border-radius:4px;z-index:10000;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
                 document.body.appendChild(notification);
@@ -575,7 +582,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 setTimeout(function() {
                     notification.style.transition = 'opacity 0.3s ease';
                     notification.style.opacity = '0';
-                    setTimeout(function() { document.body.removeChild(notification); }, 300);
+                    setTimeout(function() { if (notification.parentNode) document.body.removeChild(notification); }, 300);
                 }, 3000);
             }).catch(function(err) {
                 alert('Failed to copy tracking number: ' + err);
@@ -584,7 +591,14 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             // JRS Express tracking URL
             const jrsUrl = 'https://www.jrs-express.com/track?tracking=' + encodeURIComponent(trackingNo);
             console.log('Opening tracking URL:', jrsUrl);
-            window.open(jrsUrl, '_blank');
+            
+            // Open as a popup window (like Gmail auth)
+            const popupWidth = 900;
+            const popupHeight = 700;
+            const left = (screen.width - popupWidth) / 2;
+            const top = (screen.height - popupHeight) / 2;
+            
+            window.open(jrsUrl, 'jrsTrackingWindow', `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`);
         }
 
         // Table search and sort functionality (filter by Notice/Order Code and year)
