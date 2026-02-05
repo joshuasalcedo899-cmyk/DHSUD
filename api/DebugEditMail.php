@@ -71,7 +71,7 @@ try {
         'Parcel Details' => 'text',
         'Sender Details' => 'text',
         'File Name (PDF)' => 'text',
-        'Tracking No.' => 'int',
+        'Tracking No.' => 'text',
         'Status' => 'text',
         'Transmittal Remarks/Received By' => 'text',
         'Date' => 'date',
@@ -252,7 +252,7 @@ try {
                     'value' => $postValue,
                     'trimmed' => trim((string)$postValue),
                     'expected_type' => $expectedType,
-                    'conversion_needed' => in_array($colName, ['Parcel No.', 'Tracking No.']) ? 'int' : 'string'
+                    'conversion_needed' => in_array($colName, ['Parcel No.']) ? 'int' : 'string'
                 ];
                 $requestAnalysis['analysis'][] = $analysis;
             }

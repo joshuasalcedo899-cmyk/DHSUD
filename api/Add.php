@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':parcel_details' => $parcelDetails,
                 ':sender_details' => $senderDetails,
                 ':file_name' => $fileName,
-                ':tracking_no' => $trackingNo ? (int)$trackingNo : 0,
+                ':tracking_no' => $trackingNo,
                 ':status' => $status,
                 ':transmittal_remarks' => $transmittalRemarks,
                 ':date' => $date,
@@ -122,7 +122,7 @@ $statusOptions = ['DELIVERED', 'RETURNED TO SENDER', 'ON GOING DELIVERY', 'PERSO
                 </div>
                 <div class="form-group">
                     <label for="tracking_no">Tracking No.</label>
-                    <input type="number" id="tracking_no" name="tracking_no" value="<?= htmlspecialchars($_POST['tracking_no'] ?? '') ?>">
+                    <input type="text" id="tracking_no" name="tracking_no" value="<?= htmlspecialchars($_POST['tracking_no'] ?? '') ?>">
                 </div>
             </div>
 
