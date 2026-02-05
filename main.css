@@ -1,3 +1,12 @@
+.edit-icon-btn {
+	background: none;
+	border: none;
+	padding: 0;
+	margin-left: 0.3em;
+	vertical-align: middle;
+	box-shadow: none;
+	cursor: pointer;
+}
 /* Tracking Page custom styles */
 .tracking-table-container {
 	background: #d9d9d984;
@@ -397,7 +406,7 @@
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	font-size: 1rem;
+	font-size: 0.8rem;
 	font-weight: 600;
 	border-radius: 6px;
 	padding: 0.3rem 0.5rem 0.3rem 0.5rem;
@@ -435,7 +444,6 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		margin-bottom: 1.5rem;
 	}
 	.admin-home-header-img {
 		margin-top: 1.5rem;
