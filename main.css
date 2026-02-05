@@ -1,12 +1,3 @@
-.edit-icon-btn {
-	background: none;
-	border: none;
-	padding: 0;
-	margin-left: 0.3em;
-	vertical-align: middle;
-	box-shadow: none;
-	cursor: pointer;
-}
 /* Tracking Page custom styles */
 .tracking-table-container {
 	background: #d9d9d984;
@@ -336,6 +327,7 @@
 	margin-left: 0.7em;
 	box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 	display: inline-block;
+	margin-left: auto;
 }
 .stat-rtos .stat-count {
 	border-color: #b71c1c;
@@ -406,7 +398,7 @@
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	font-size: 0.8rem;
+	font-size: 1rem;
 	font-weight: 600;
 	border-radius: 6px;
 	padding: 0.3rem 0.5rem 0.3rem 0.5rem;
@@ -444,6 +436,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		margin-bottom: 1.5rem;
 	}
 	.admin-home-header-img {
 		margin-top: 1.5rem;
@@ -617,6 +610,8 @@ body {
 	}
 	table {
 		font-size: 0.65rem !important;
+		table-layout: auto;
+		width: 100% !important
 	}
 	th, td {
 		padding: 4px !important;
@@ -717,7 +712,7 @@ body {
 /* Desktop (769px and above) */
 @media (min-width: 769px) {
 	.admin-home-container, .admin-table-container {
-		width: 1200px;
+		width: 1375px;
 		max-width: 95vw;
 	}
 	.edit-modal form {
