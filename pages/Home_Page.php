@@ -361,15 +361,45 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         <?php foreach ($rows as $row): ?>
                             <tr>
                                 <td>
-                                    <div style="display: flex; align-items: center; gap: 0.3em;">
-                                        <div class="row-menu-container">
-                                            <button class="row-menu-btn" type="button" tabindex="0" aria-label="Edit row" onclick="editRow('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')">
+                                    <div style="display: flex; align-items: center; gap: 0.3em; position: relative;">
+                                        <div class="row-menu-container" style="position: relative;">
+                                            <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, '<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')">
                                                 <span style="font-size:1.5em;line-height:1;">&#8942;</span>
                                             </button>
+                                            <div class="row-menu-dropdown" style="display:none; position:absolute; left:0; top:32px; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
+                                                <button class="row-menu-item" onclick="editRow('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;text-align:left;">
+                                                    <img src="../assets/Edit_Icon.svg" alt="Edit" style="width:20px;height:20px;"> Edit
+                                                </button>
+                                                <button class="row-menu-item" onclick="deleteRecord('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;text-align:left;">
+                                                    <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
+                                                </button>
+                                            </div>
                                         </div>
                                         <span><?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?></span>
                                     </div>
                                 </td>
+                                        <script>
+                                            function toggleRowMenu(event, noticeCode) {
+                                                event.stopPropagation();
+                                                var btn = event.currentTarget;
+                                                var dropdown = btn.parentElement.querySelector('.row-menu-dropdown');
+                                                var allDropdowns = document.querySelectorAll('.row-menu-dropdown');
+                                                allDropdowns.forEach(function(dd) { if (dd !== dropdown) dd.style.display = 'none'; });
+                                                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+                                                document.addEventListener('click', function hideMenu(e) {
+                                                    if (!dropdown.contains(e.target) && e.target !== btn) {
+                                                        dropdown.style.display = 'none';
+                                                        document.removeEventListener('click', hideMenu);
+                                                    }
+                                                });
+                                            }
+                                            function deleteRecord(noticeCode) {
+                                                if (confirm('Are you sure you want to delete this record?')) {
+                                                    // Implement AJAX delete logic here
+                                                    alert('Delete function not yet implemented for Notice/Order Code: ' + noticeCode);
+                                                }
+                                            }
+                                        </script>
                                 <?php foreach ($columns as $idx => $colName): ?>
                                     <?php if ($idx === 0) continue; // skip Notice/Order Code, already rendered ?>
                                     <?php if ($idx === 8): // STATUS column (9th)

@@ -215,9 +215,9 @@
 	margin-right: 1rem;
 }
 .table-sort-select {
-	padding: 0.5em 1em;
+	padding: 0.38rem 0.45rem;
 	border: 1.5px solid #22336a;
-	border-radius: 20px;
+	border-radius: 4px;
 	font-size: 0.8rem;
 	outline: none;
 	background: #fff;
@@ -252,9 +252,9 @@
 }
 .table-search-btn {
 	background: #fff;
-	border: 1.5px solid #23409A;
+	border: 1.5px solid #22336a59;
 	border-left: none;
-	border-radius: 0 20px 20px 0;
+	border-radius: 4px;
 	padding: 0.5em 1em;
 	cursor: pointer;
 	color: #23409A;
