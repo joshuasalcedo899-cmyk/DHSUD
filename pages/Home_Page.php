@@ -221,7 +221,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         </div>
                         <div>
                             <label for="editTrackingNo">Tracking No.</label>
-                            <input type="number" name="Tracking No." id="editTrackingNo">
+                            <input type="text" name="Tracking No." id="editTrackingNo">
                         </div>
                         <div>
                             <label for="editRecipient">Recipient Details</label>

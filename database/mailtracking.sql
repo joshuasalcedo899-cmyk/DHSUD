@@ -35,7 +35,7 @@ CREATE TABLE `mailtracking` (
   `Parcel Details` text NOT NULL,
   `Sender Details` text NOT NULL,
   `File Name (PDF)` text NOT NULL,
-  `Tracking No.` int(11) NOT NULL,
+  `Tracking No.` varchar(255) NOT NULL,
   `Status` text NOT NULL,
   `Transmittal Remarks/Received By` text NOT NULL,
   `Date` date NOT NULL,

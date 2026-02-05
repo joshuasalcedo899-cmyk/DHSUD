@@ -92,10 +92,11 @@ try {
         $val = trim((string)$postValue);
         
         // Convert numeric fields to proper types
-        if (in_array($col, ['Parcel No.', 'Tracking No.'])) {
-            // Convert to int, default to 0 if empty
+        if (in_array($col, ['Parcel No.'])) {
+            // Convert Parcel No. to int, default to 0 if empty
             $val = !empty($val) ? (int)$val : 0;
         }
+        // Tracking No. stays as varchar/string
         
         // Create parameter name
         $pname = ':p_' . preg_replace('/[^a-z0-9_]/i', '_', $col);
