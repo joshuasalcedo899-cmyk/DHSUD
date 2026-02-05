@@ -91,6 +91,10 @@
 	border-radius: 6px;
 	font-size: 1em;
 	box-sizing: border-box;
+	white-space: normal;     /* allow line breaks */
+    overflow: visible;       /* don't hide text */
+    text-overflow: clip;     /* remove ... */
+    word-wrap: break-word; 
 }
 .edit-modal .modal-actions {
 	display: flex;
