@@ -288,6 +288,52 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 </form>
             </div>
         </div>
+        <div id="addModalOverlay" class="edit-modal-overlay" style="display:none;">
+            <div class="edit-modal" id="addModal">
+                <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
+                <h2 style="text-align:center;color:#1a237e;font-size:1.3em;font-weight:bold;margin-bottom:18px;letter-spacing:1px;">ADD NEW RECORD</h2>
+                <form id="addForm" autocomplete="off">
+                    <div style="display:contents">
+                        <div>
+                            <label for="addNoticeCode">Notice/Order Code*</label>
+                            <input type="text" name="Notice/Order Code" id="addNoticeCode" required />
+                        </div>
+                        <div>
+                            <label for="addDateAfd">Date Released to AFD*</label>
+                            <input type="date" name="Date released to AFD" id="addDateAfd" required>
+                        </div>
+                        <div>
+                            <label for="addParcelNo">Parcel No.</label>
+                            <input type="number" name="Parcel No." id="addParcelNo">
+                        </div>
+                        <div>
+                            <label for="addTrackingNo">Tracking No.</label>
+                            <input type="text" name="Tracking No." id="addTrackingNo">
+                        </div>
+                        <div style="grid-column:1/span 2;">
+                            <label for="addRecipient">Recipient Details</label>
+                            <textarea name="Recipient Details" rows="3" id="addRecipient"></textarea>
+                        </div>
+                        <div style="grid-column:1/span 2;">
+                            <label for="addParcelDetails">Parcel Details</label>
+                            <textarea name="Parcel Details" rows="3" id="addParcelDetails"></textarea>
+                        </div>
+                        <div style="grid-column:1/span 2;">
+                            <label for="addSender">Sender Details</label>
+                            <textarea name="Sender Details" rows="3" id="addSender"></textarea>
+                        </div>
+                        <div style="grid-column:1/span 2;">
+                            <label for="addFileName">File Name (PDF)</label>
+                            <input type="text" name="File Name (PDF)" id="addFileName">
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="modal-btn save" style="background:#22336A; color:#fff;" onclick="submitAddForm(event)">Add Record</button>
+                        <button type="button" class="modal-btn cancel" style="background:#b94a48; color:#fff;" onclick="clearAddForm()">Clear Form</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     
     <div class="admin-home-header">
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
@@ -461,13 +507,60 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 </tbody>
             </table>
         </div>
+        <!-- Add New Record Modal (hidden by default) -->
+        
         <div>
-            <a href="../api/Add.php"><button>Add</button></a>
+            <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 18px;border:none;border-radius:4px;font-weight:600;font-size:1em;cursor:pointer;">Add</button>
         </div>
         <div style="position: absolute; top: 10px; left: 5px; z-index: 100;">
             <a href="logout.php" style="text-decoration: none; color: #726868;">Logout</a>
         </div>
         <script>
+        // Add Modal logic
+        function openAddModal() {
+            document.getElementById('addModalOverlay').style.display = 'flex';
+        }
+        function closeAddModal() {
+            document.getElementById('addModalOverlay').style.display = 'none';
+        }
+        // Close modal when clicking outside
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('addModalOverlay');
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) {
+                        closeAddModal();
+                    }
+                });
+            }
+        });
+        // Clear form fields
+        function clearAddForm() {
+            var form = document.getElementById('addForm');
+            if (form) form.reset();
+        }
+        // Submit handler (AJAX)
+        function submitAddForm(event) {
+            event.preventDefault();
+            var form = document.getElementById('addForm');
+            var formData = new FormData(form);
+            fetch('../api/Add.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    closeAddModal();
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to add record.');
+                }
+            })
+            .catch(err => {
+                alert('Failed to add record.');
+            });
+        }
                         // Modal logic
                         function openEditModal(rowData) {
                             document.getElementById('editModalOverlay').style.display = 'flex';
