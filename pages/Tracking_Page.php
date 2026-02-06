@@ -183,65 +183,117 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 
-            <!-- Edit Form Modal -->
-            <div id="editModal" style="display: none; margin-top: 2rem; padding: 2rem 2.5rem 1.5rem 2.5rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 24px rgba(0,0,0,0.18); min-width: 350px; max-width: 95vw;">
-                <h3 style="color: #22336a; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.2rem; text-align: center;">Edit Record</h3>
-                <form id="editForm" onsubmit="submitEditForm(event)">
-                    <input type="hidden" name="original_notice_code" value="<?= htmlspecialchars($searchResult['Notice/Order Code'] ?? '') ?>">
-                    <!-- Display Notice/Order Code as read-only -->
-                    <div style="margin-bottom: 1rem; padding: 0.5rem; background: #e9ecef; border: 1px solid #dee2e6; border-radius: 4px;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: #22336a;">Notice/Order Code (Read-Only)</label>
-                        <div style="padding: 0.5rem; color: #22336a; font-weight: 600;">
-                            <?= htmlspecialchars($searchResult['Notice/Order Code'] ?? '') ?>
+
+            <!-- Edit Form Modal as Pop-up Overlay (UI-matched, only Date, Transmittal Remarks, Evaluator editable) -->
+            <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;position:fixed;z-index:2000;top:0;left:0;width:100vw;height:100vh;background:rgba(34,51,106,0.13);align-items:center;justify-content:center;">
+                <div class="edit-modal" id="editModal" style="position:relative;border: 6px solid #22336A; border-radius: 12px; max-width: 800px; width: 98vw; background: #fff; box-shadow:0 8px 32px rgba(34,51,106,0.13); padding: 2rem 2.5rem 1rem 2.5rem;">
+                    <button class="modal-close" onclick="closeEditForm()" title="Close" style="position:absolute;top:18px;right:18px;font-size:2em;background:none;border:none;color:#22336A;cursor:pointer;z-index:2;">&times;</button>
+                    <h2 style="text-align:center;color:#22336A;font-size:1.3em;font-weight:bold;margin-bottom:18px;letter-spacing:1px;">MAIL RECORD</h2>
+                    <form id="editForm" onsubmit="submitEditForm(event)" autocomplete="off" style="display:grid;grid-template-columns:1fr 1fr;gap:0 32px;">
+                        <input type="hidden" name="original_notice_code" value="<?= htmlspecialchars($searchResult['Notice/Order Code'] ?? '') ?>">
+                        <!-- Row 1: Notice/Order Code & Date Released to AFD -->
+                        <div style="margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Notice/Order Code*</div>
+                            <div style="font-size:1em;line-height:1.5;"><?= htmlspecialchars($searchResult['Notice/Order Code'] ?? '') ?></div>
                         </div>
-                    </div>
-                    <?php
-                    $editableColumns = [
-                        'Date released to AFD',
-                        'Parcel No.',
-                        'Recipient Details',
-                        'Parcel Details',
-                        'Sender Details',
-                        'File Name (PDF)',
-                        'Tracking No.',
-                        'Status',
-                        'Transmittal Remarks/Received By',
-                        'Date',
-                        'Evaluator'
-                    ];
-                    foreach ($editableColumns as $col):
-                        $val = $searchResult[$col] ?? '';
-                    ?>
-                        <div style="margin-bottom: 1rem;">
-                            <label for="<?= htmlspecialchars(str_replace(' ', '_', $col)) ?>" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #22336a;">
-                                <?= htmlspecialchars($col) ?>
-                            </label>
-                            <input type="text"
-                                   id="<?= htmlspecialchars(str_replace(' ', '_', $col)) ?>"
-                                   name="<?= htmlspecialchars($col) ?>"
-                                   value="<?= htmlspecialchars($val ?? '') ?>"
-                                   style="width: 100%; padding: 0.5rem 0.8em; border: 1.5px solid #bbb; border-radius: 6px; font-size: 1em; box-sizing: border-box;">
+                        <div style="margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Date Released to AFD*</div>
+                            <div style="font-size:1em;line-height:1.5;"><?= htmlspecialchars($searchResult['Date released to AFD'] ?? '') ?></div>
                         </div>
-                    <?php endforeach; ?>
-                    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                        <button type="submit" class="modal-btn" style="background: #22336a; color: #fff; font-weight: 600; border-radius: 6px; padding: 0.5em 1.5em; border: none; font-size: 1em; cursor: pointer;">Save Changes</button>
-                        <button type="button" class="modal-btn cancel" onclick="closeEditForm()" style="background: #bbb; color: #222; border-radius: 6px; padding: 0.5em 1.5em; border: none; font-size: 1em; cursor: pointer;">Cancel</button>
-                    </div>
-                </form>
-                <div id="editMessage" style="margin-top: 1rem;"></div>
+                        <!-- Row 2: Parcel No. & Tracking No. -->
+                        <div style="margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Parcel No.</div>
+                            <div style="font-size:1em;line-height:1.5;"><?= htmlspecialchars($searchResult['Parcel No.'] ?? '') ?></div>
+                        </div>
+                        <div style="margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Tracking No.</div>
+                            <div style="font-size:1em;line-height:1.5;"><?= htmlspecialchars($searchResult['Tracking No.'] ?? '') ?></div>
+                        </div>
+                        <!-- Row 3: Recipient Details (full width) -->
+                        <div style="grid-column:1/span 2;margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Recipient Details</div>
+                            <div style="font-size:1em;line-height:1.5;"><?= nl2br(htmlspecialchars($searchResult['Recipient Details'] ?? '')) ?></div>
+                        </div>
+                        <!-- Row 4: Parcel Details (full width) -->
+                        <div style="grid-column:1/span 2;margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Parcel Details</div>
+                            <div style="font-size:1em;line-height:1.5;white-space:pre-line;"><?= nl2br(htmlspecialchars($searchResult['Parcel Details'] ?? '')) ?></div>
+                        </div>
+                        <!-- Row 5: Sender Details (full width) -->
+                        <div style="grid-column:1/span 2;margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Sender Details</div>
+                            <div style="font-size:1em;line-height:1.5;white-space:pre-line;"><?= nl2br(htmlspecialchars($searchResult['Sender Details'] ?? '')) ?></div>
+                        </div>
+                        <!-- Row 6: File Name (PDF) (full width) -->
+                        <div style="grid-column:1/span 2;margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">File Name (PDF)</div>
+                            <div style="font-size:1em;line-height:1.5;"><?= htmlspecialchars($searchResult['File Name (PDF)'] ?? '') ?></div>
+                        </div>
+                        <!-- Row 7: Status & Date (Date is editable) -->
+                        <div style="margin-bottom:0.5rem;display:flex;flex-direction:column;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Status</div>
+                            <div style="font-size:1em;line-height:1.5;">
+                                <?php $status = $searchResult['Status'] ?? ''; ?>
+                                <?php if (strtolower($status) === 'delivered'): ?>
+                                    <span style="display:inline-block;background:#4cd137;color:#fff;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;">DELIVERED</span>
+                                <?php elseif (strtolower($status) === 'pending'): ?>
+                                    <span style="display:inline-block;background:#fbc531;color:#22336A;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;">PENDING</span>
+                                <?php else: ?>
+                                    <span style="display:inline-block;background:#eee;color:#22336A;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;"><?= htmlspecialchars($status) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:0.5rem;display:flex;flex-direction:column;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Date</div>
+                            <input type="date" id="Date" name="Date" value="<?= htmlspecialchars($searchResult['Date'] ?? '') ?>" style="width:100%;padding:0.5rem 0.8em;border:1.5px solid #bbb;border-radius:6px;font-size:1em;box-sizing:border-box;">
+                        </div>
+                        <!-- Row 8: Transmittal Remarks/Received By (editable, full width, icon inside textbox) -->
+                        <div style="grid-column:1/span 2;margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Transmittal Remarks / Received By</div>
+                            <div style="position:relative;width:100%;">
+                                <input type="text" id="Transmittal_Remarks_Received_By" name="Transmittal Remarks/Received By" value="<?= htmlspecialchars($searchResult['Transmittal Remarks/Received By'] ?? '') ?>" style="width:100%;padding:0.5rem 2.2em 0.5rem 0.8em;border:1.5px solid #bbb;border-radius:6px;font-size:1em;box-sizing:border-box;">
+                                <img src="../assets/Edit_Icon.svg" alt="Edit" style="position:absolute;right:0.6em;top: 33%;transform:translateY(-50%);width:22px;height:22px;pointer-events:none;filter:none;opacity:0.7;">
+                            </div>
+                        </div>
+                        <!-- Row 9: Evaluator (editable, full width, icon inside textbox) -->
+                        <div style="grid-column:1/span 2;margin-bottom:0.5rem;">
+                            <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Evaluator</div>
+                            <div style="position:relative;width:100%;">
+                                <input type="text" id="Evaluator" name="Evaluator" value="<?= htmlspecialchars($searchResult['Evaluator'] ?? '') ?>" style="width:100%;padding:0.5rem 2.2em 0.5rem 0.8em;border:1.5px solid #bbb;border-radius:6px;font-size:1em;box-sizing:border-box;">
+                                <img src="../assets/Edit_Icon.svg" alt="Edit" style="position:absolute;right:0.6em;top:33%;transform:translateY(-50%);width:22px;height:22px;pointer-events:none;filter:none;opacity:0.7;">
+                            </div>
+                        </div>
+                        <div class="modal-actions" style="grid-column:1/span 2;display:flex;justify-content:center;gap:1em;margin-top:10px;margin-bottom:0;">
+                            <button type="submit" class="modal-btn save" style="background:#22336A;color:#fff;font-weight:600;border-radius:6px;padding:0.5em 1.5em;border:none;font-size:1em;cursor:pointer;">Update</button>
+                            <button type="button" class="modal-btn cancel" onclick="closeEditForm()" style="background:#AA4444;color:#fff;border-radius:6px;padding:0.5em 1.5em;border:none;font-size:1em;cursor:pointer;">Cancel</button>
+                        </div>
+                    </form>
+                    <div id="editMessage" style="margin-top:1rem;"></div>
+                </div>
             </div>
 
 
             <script>
                 function openEditForm() {
-                    document.getElementById('editModal').style.display = 'block';
+                    document.getElementById('editModalOverlay').style.display = 'flex';
                 }
-
 
                 function closeEditForm() {
-                    document.getElementById('editModal').style.display = 'none';
+                    document.getElementById('editModalOverlay').style.display = 'none';
                     document.getElementById('editMessage').innerHTML = '';
                 }
+
+                // Close modal when clicking outside
+                document.addEventListener('DOMContentLoaded', function() {
+                    const overlay = document.getElementById('editModalOverlay');
+                    if (overlay) {
+                        overlay.addEventListener('click', function(e) {
+                            if (e.target === overlay) {
+                                closeEditForm();
+                            }
+                        });
+                    }
+                });
 
 
                 function submitEditForm(event) {
