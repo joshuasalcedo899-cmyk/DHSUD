@@ -94,7 +94,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <link rel="stylesheet" href="../main.css">
     <style>
         table { width:100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center;}
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center; white-space: pre-wrap;}
         @media (max-width: 768px) {
             table { font-size: 0.65rem; }
             th, td { padding: 6px; }
@@ -274,15 +274,15 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editRecipient">Recipient Details</label>
-                            <textarea name="Recipient Details" row="3" id="editRecipient"></textarea>
+                            <textarea name="Recipient Details" row="5" id="editRecipient"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editParcelDetails">Parcel Details</label>
-                            <textarea name="Parcel Details" row="3" id="editParcelDetails"></textarea>
+                            <textarea name="Parcel Details" row="5" id="editParcelDetails"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editSender">Sender Details</label>
-                            <textarea name="Sender Details" row="3" id="editSender"></textarea>
+                            <textarea name="Sender Details" row="5" id="editSender"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editFileName">File Name (PDF)</label>
@@ -322,15 +322,15 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addRecipient">Recipient Details</label>
-                            <textarea name="recipientDetails" rows="3" id="addRecipient"></textarea>
+                            <textarea name="recipientDetails" rows="2" id="addRecipient"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addParcelDetails">Parcel Details</label>
-                            <textarea name="parcelDetails" rows="3" id="addParcelDetails"></textarea>
+                            <textarea name="parcelDetails" rows="2" id="addParcelDetails"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addSender">Sender Details</label>
-                            <textarea name="senderDetails" rows="3" id="addSender"></textarea>
+                            <textarea name="senderDetails" rows="2" id="addSender"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addFileName">File Name (PDF)</label>

@@ -16,9 +16,6 @@
 	overflow-x: auto;
 	width: 100%;
 }
-.tracking-table {
-	min-width: 1800px;
-}
 .tracking-table th {
 	background: #22336A;
 	color: #fff;
@@ -85,7 +82,7 @@
 }
 .edit-modal input, .edit-modal select, .edit-modal textarea {
 	width: 100%;
-	padding: 0.5em 0.8em;
+	padding: 2em 0.8em;
 	margin-bottom: 1em;
 	border: 1.5px solid #bbb;
 	border-radius: 6px;
@@ -162,6 +159,7 @@
 	border-radius: 6px;
 	z-index: 1000;
 	padding: 0.3em 0;
+	margin: 0;
 }
 .row-menu-dropdown.show {
 	display: block;
@@ -480,6 +478,7 @@
 	border: 1px solid #d1d5db;
 	padding: 0.2rem 0.5rem;
 	text-align: center;
+	white-space: pre-wrap;
 }
 .listview-table th {
 	background: #22336A;
