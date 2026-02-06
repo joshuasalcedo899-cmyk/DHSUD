@@ -111,7 +111,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
         .stats { margin-bottom:10px; }
         .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
-        .btn-track { padding:6px 12px; font-weight: 600; background-color:pink; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.7rem; }
+        .btn-track { padding:6px 12px; font-weight: 600; background-color:#22336A; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.7rem; }
         .btn-track:hover { background-color:#0b7dda; }
 
         /* Modal Form UI - Two Column Grid */
