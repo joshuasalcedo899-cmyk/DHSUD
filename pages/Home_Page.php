@@ -117,10 +117,11 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         /* Modal Form UI - Two Column Grid */
         .edit-modal {
             background: #fff;
-            border-radius: 8px;
+            border-radius: 4px;
+            border: solid 15px #22336A ;
             box-shadow: 0 2px 16px rgba(0,0,0,0.18);
             padding: 32px 32px 24px 32px;
-            max-width: 540px;
+            max-width: 780px;
             width: 100%;
             margin: 40px auto;
             position: relative;
@@ -140,10 +141,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         }
         .edit-modal h2 {
             text-align: center;
-            color: #1a237e;
-            font-size: 1.3em;
+            color: #22336A;
+            font-size: 1.15em;
             font-weight: bold;
-            margin-bottom: 18px;
+            margin-bottom: 30px;
             letter-spacing: 1px;
         }
         .edit-modal form {
@@ -159,9 +160,9 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         }
         .edit-modal label {
             font-size: 0.98em;
-            color: #1a237e;
-            margin-bottom: 6px;
-            font-weight: 500;
+            color: #22336A;
+            margin-bottom: 4px;
+            font-weight: 600;
             display: block;
         }
         .edit-modal input,
@@ -172,7 +173,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             border-radius: 4px;
             font-size: 1em;
             background: #f7f8fa;
-            margin-bottom: 18px;
+            margin-bottom: 10px;
             display: block;
         }
         .edit-modal select {
@@ -184,7 +185,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         .edit-modal .modal-actions {
             grid-column: 1 / span 2;
             display: flex;
-            justify-content: flex-end;
+            justify-content: center;
             gap: 1em;
             margin-top: 10px;
             margin-bottom: 0;
@@ -206,8 +207,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             background: #3949ab;
         }
         .edit-modal .modal-btn.cancel {
-            background: #e3e3e3;
-            color: #1a237e;
+            background: #AA4444;
+            color: #ffffffff;
         }
         .edit-modal .modal-btn.cancel:hover {
             background: #bdbdbd;
@@ -243,12 +244,15 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <div class="admin-home-header">
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
         <div class="admin-home-header-border"></div>
+        <div style="position: absolute; top: 50px; left: 5px; z-index: 100;">
+            <a href="logout.php" style="text-decoration: none; font-weight: 600; color: #726868;">Logout</a>
+        </div>
     </div>
         <!-- Edit Modal (hidden by default) -->
         <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;">
             <div class="edit-modal" id="editModal">
                 <button class="modal-close" onclick="closeEditModal()" title="Close">&times;</button>
-                <h2>Edit Mail Record</h2>
+                <h2>EDIT MAIL RECORD</h2>
                 <form id="editForm" autocomplete="off">
                     <input type="hidden" name="original_notice_code" id="editNoticeCode">
                     <div style="display:contents">
@@ -287,8 +291,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="modal-btn cancel" onclick="clearEditForm()">Clear Form</button>
                         <button type="submit" class="modal-btn save">Save</button>
+                        <button type="button" class="modal-btn cancel" onclick="clearEditForm()">Clear Form</button>
                     </div>
                 </form>
             </div>
@@ -298,6 +302,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
                 <h2 style="text-align:center;color:#1a237e;font-size:1.3em;font-weight:bold;margin-bottom:18px;letter-spacing:1px;">ADD NEW RECORD</h2>
                 <form id="addForm" action="../api/Add.php" method="post" autocomplete="off">
+
                     <div style="display:contents">
                         <div>
                             <label for="addNoticeCode">Notice/Order Code*</label>
@@ -514,9 +519,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <div>
             <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 18px;border:none;border-radius:4px;font-weight:600;font-size:1em;cursor:pointer;">Add</button>
         </div>
-        <div style="position: absolute; top: 10px; left: 5px; z-index: 100;">
-            <a href="logout.php" style="text-decoration: none; color: #726868;">Logout</a>
-        </div>
+        
         <script>
         // Add Modal logic
         function openAddModal() {
