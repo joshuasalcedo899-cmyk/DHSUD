@@ -297,43 +297,43 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             <div class="edit-modal" id="addModal">
                 <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
                 <h2 style="text-align:center;color:#1a237e;font-size:1.3em;font-weight:bold;margin-bottom:18px;letter-spacing:1px;">ADD NEW RECORD</h2>
-                <form id="addForm" autocomplete="off">
+                <form id="addForm" action="../api/Add.php" method="post" autocomplete="off">
                     <div style="display:contents">
                         <div>
                             <label for="addNoticeCode">Notice/Order Code*</label>
-                            <input type="text" name="Notice/Order Code" id="addNoticeCode" required />
+                            <input type="text" name="notice_Code" id="addNoticeCode" required />
                         </div>
                         <div>
                             <label for="addDateAfd">Date Released to AFD*</label>
-                            <input type="date" name="Date released to AFD" id="addDateAfd" required>
+                            <input type="date" name="dateReleased" id="addDateAfd" required>
                         </div>
                         <div>
                             <label for="addParcelNo">Parcel No.</label>
-                            <input type="number" name="Parcel No." id="addParcelNo">
+                            <input type="number" name="parcelNo" id="addParcelNo">
                         </div>
                         <div>
                             <label for="addTrackingNo">Tracking No.</label>
-                            <input type="text" name="Tracking No." id="addTrackingNo">
+                            <input type="text" name="trackingNo" id="addTrackingNo">
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addRecipient">Recipient Details</label>
-                            <textarea name="Recipient Details" rows="3" id="addRecipient"></textarea>
+                            <textarea name="recipientDetails" rows="3" id="addRecipient"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addParcelDetails">Parcel Details</label>
-                            <textarea name="Parcel Details" rows="3" id="addParcelDetails"></textarea>
+                            <textarea name="parcelDetails" rows="3" id="addParcelDetails"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addSender">Sender Details</label>
-                            <textarea name="Sender Details" rows="3" id="addSender"></textarea>
+                            <textarea name="senderDetails" rows="3" id="addSender"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addFileName">File Name (PDF)</label>
-                            <input type="text" name="File Name (PDF)" id="addFileName">
+                            <input type="text" name="fileName" id="addFileName">
                         </div>
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="modal-btn save" style="background:#22336A; color:#fff;" onclick="submitAddForm(event)">Add Record</button>
+                        <button type="submit" class="modal-btn save" style="background:#22336A; color:#fff;">Add Record</button>
                         <button type="button" class="modal-btn cancel" style="background:#b94a48; color:#fff;" onclick="clearAddForm()">Clear Form</button>
                     </div>
                 </form>
@@ -542,27 +542,44 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             if (form) form.reset();
         }
         // Submit handler (AJAX)
-        function submitAddForm(event) {
-            event.preventDefault();
-            var form = document.getElementById('addForm');
-            var formData = new FormData(form);
-            fetch('../api/Add.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(resp => resp.json())
-            .then(data => {
-                if (data.success) {
-                    closeAddModal();
-                    location.reload();
-                } else {
-                    alert(data.message || 'Failed to add record.');
-                }
-            })
-            .catch(err => {
-                alert('Failed to add record.');
-            });
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var addForm = document.getElementById('addForm');
+            if (addForm) {
+                addForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    var formData = new FormData(addForm);
+                    
+                    // Debug: Log form data
+                    console.log('Form Data being sent:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log('  ' + key + ': "' + value + '"');
+                    }
+                    
+                    fetch('../api/Add.php', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        console.log('Response from Add.php:', data);
+                        if (data.success) {
+                            clearAddForm();
+                            closeAddModal();
+                            location.reload();
+                        } else {
+                            alert(data.message || 'Failed to add record.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        alert('Failed to add record.');
+                    });
+                });
+            }
+        });
                         // Modal logic
                         function openEditModal(rowData) {
                             document.getElementById('editModalOverlay').style.display = 'flex';
