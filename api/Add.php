@@ -17,6 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = trim($_POST['status'] ?? '');
     $transmittalRemarks = trim($_POST['transmittal_remarks'] ?? '');
     $date = trim($_POST['date'] ?? '');
+    if ($date !== '') {
+        $dateObj = new DateTime($date);
+        $date = $dateObj->format("F d, Y");
+    }
     $evaluator = trim($_POST['evaluator'] ?? '');
 
     // Validation
