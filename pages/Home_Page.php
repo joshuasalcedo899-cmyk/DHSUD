@@ -344,8 +344,6 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 </form>
             </div>
         </div>
-    
-
     <div class="admin-home-container">
         <div class="statistics-section">
             <div class="statistics-title">STATISTICS</div>
@@ -514,6 +512,14 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 </tbody>
             </table>
         </div>
+        <div id="trackingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;">
+            <div style="background:#fff;width:80%;max-width:900px;margin:5% auto;padding:20px;border-radius:8px;max-height:80vh;overflow:auto;">
+                <h2>JRS Tracking</h2>
+                <div id="trackingContent">Loading...</div>
+                <button onclick="closeTrackingModal()">Close</button>
+            </div>
+        </div>
+
         <!-- Add New Record Modal (hidden by default) -->
         
         <div>
@@ -583,6 +589,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 });
             }
         });
+        function closeTrackingModal() {
+            document.getElementById('trackingModal').style.display = 'none';
+        }
+
                         // Modal logic
                         function openEditModal(rowData) {
                             document.getElementById('editModalOverlay').style.display = 'flex';
@@ -672,49 +682,67 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         window.mailRows = <?php echo json_encode($rows, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
 
         // Track parcel using JRS Express and copy tracking number to clipboard
-        function trackJRS(trackingNo) {
-            if (!trackingNo || trackingNo === '0') {
-                alert('No valid tracking number found');
-                return;
+            function trackJRS(trackingNo) {
+    if (!trackingNo || trackingNo === '0') {
+        alert('No valid tracking number found');
+        return;
+    }
+
+    fetch('../api/jrs-track.php?tracking=' + encodeURIComponent(trackingNo))
+        .then(res => res.json())
+        .then(data => {
+
+            if (!Array.isArray(data)) {
+                throw 'Invalid response';
             }
-            
-            // Copy tracking number to clipboard
-            navigator.clipboard.writeText(trackingNo).then(function() {
-                // Remove any existing notification first to prevent duplicates
-                const existingNotification = document.querySelector('.tracking-notification');
-                if (existingNotification) {
-                    existingNotification.remove();
+
+            let html = `
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Location</th>
+                        <th>Receiver</th>
+                    </tr>
+            `;
+
+            data.forEach(row => {
+                const date = row.dateReceived
+                    ? new Date(row.dateReceived).toLocaleString()
+                    : '';
+
+                // ✅ Receiver logic (IMPORTANT PART)
+                let receiverText = '';
+                if (row.receiver) {
+                    receiverText = row.receiver;
+
+                    if (row.relation) {
+                        receiverText += `<br><small style="color:#666;">${row.relation}</small>`;
+                    }
                 }
-                
-                // Show success notification
-                const notification = document.createElement('div');
-                notification.className = 'tracking-notification';
-                notification.textContent = 'Tracking # ' + trackingNo + ' copied to clipboard!';
-                notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#4CAF50;color:white;padding:15px 20px;border-radius:4px;z-index:10000;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
-                document.body.appendChild(notification);
-                
-                // Remove notification after 3 seconds
-                setTimeout(function() {
-                    notification.style.transition = 'opacity 0.3s ease';
-                    notification.style.opacity = '0';
-                    setTimeout(function() { if (notification.parentNode) document.body.removeChild(notification); }, 300);
-                }, 3000);
-            }).catch(function(err) {
-                alert('Failed to copy tracking number: ' + err);
+
+                html += `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${row.statusText ?? ''}</td>
+                        <td>${row.location ?? ''}</td>
+                        <td>${receiverText}</td>
+                    </tr>
+                `;
             });
-            
-            // JRS Express tracking URL
-            const jrsUrl = 'https://www.jrs-express.com/track?tracking=' + encodeURIComponent(trackingNo);
-            console.log('Opening tracking URL:', jrsUrl);
-            
-            // Open as a popup window (like Gmail auth)
-            const popupWidth = 900;
-            const popupHeight = 700;
-            const left = (screen.width - popupWidth) / 2;
-            const top = (screen.height - popupHeight) / 2;
-            
-            window.open(jrsUrl, 'jrsTrackingWindow', `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`);
-        }
+
+            html += '</table>';
+
+            document.getElementById('trackingContent').innerHTML = html;
+            document.getElementById('trackingModal').style.display = 'block';
+        })
+        .catch(err => {
+            alert('Unable to fetch tracking info');
+            console.error(err);
+        });
+}
+
+
 
         // Table search and sort functionality (filter by Notice/Order Code and year)
         function filterTableRows() {
