@@ -517,7 +517,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <!-- Add New Record Modal (hidden by default) -->
         
         <div>
-            <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 18px;border:none;border-radius:4px;font-weight:600;font-size:1em;cursor:pointer;">Add</button>
+            <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 15px;margin-top:10px;border:none;border-radius:4px;font-weight:700;font-size:0.8rem;cursor:pointer;">Add</button>
         </div>
         
         <script>
