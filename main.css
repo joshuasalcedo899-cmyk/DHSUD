@@ -213,7 +213,7 @@
 .table-sort-bar {
 	display: flex;
 	align-items: center;
-	margin-right: 1rem;
+	margin-right: 0.1rem;
 }
 .table-sort-select {
 	padding: 0.38rem 0.45rem;
@@ -281,7 +281,7 @@
 	border-radius: 12px;
 }
 .admin-home-container {
-	top: 130px;
+	top: 165px;
 	padding: 2rem 2rem 1.5rem 2rem;
 }
 .admin-table-container {
@@ -363,19 +363,19 @@
 	margin: 0 auto;
 	background: rgba(255,255,255,0.92);
 	border-radius: 12px;
-	padding: 2rem 2rem 2rem 2rem;
+	padding: 1rem 2rem 2rem 2rem;
 }
 .admin-home-container {
 	max-width: 1200px;
 	margin: 0 auto;
-	padding: 2rem 2rem 0rem 2rem;
+	padding: 0rem 2rem 0rem 2rem;
 }
 
 .statistics-section {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin-bottom: 2rem;
+	margin-bottom: 0.5rem;
 }
 .statistics-title {
 	font-weight: 700;
@@ -442,7 +442,6 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		margin-bottom: 1.5rem;
 	}
 	.admin-home-header-img {
 		margin-top: 1.5rem;
@@ -456,7 +455,7 @@
 		height: 6px;
 		background: #22336a;
 		margin-top: 1.2rem;
-		margin-bottom: 1.5rem;
+		margin-bottom: 0.1rem;
 	}
 .admin-login-bg {
 	background: url('assets/ADMIN\ LOG\ IN\ PAGE_BG.svg') no-repeat center center fixed;
