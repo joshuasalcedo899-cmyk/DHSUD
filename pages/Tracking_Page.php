@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="edit-modal" id="editModal" style="position:relative;border: 6px solid #22336A; border-radius: 12px; max-width: 800px; width: 98vw; background: #fff; box-shadow:0 8px 32px rgba(34,51,106,0.13); padding: 2rem 2.5rem 1rem 2.5rem;">
                     <button class="modal-close" onclick="closeEditForm()" title="Close" style="position:absolute;top:18px;right:18px;font-size:2em;background:none;border:none;color:#22336A;cursor:pointer;z-index:2;">&times;</button>
                     <h2 style="text-align:center;color:#22336A;font-size:1.3em;font-weight:bold;margin-bottom:18px;letter-spacing:1px;">MAIL RECORD</h2>
-                    <form id="editForm" onsubmit="submitEditForm(event)" autocomplete="off" style="display:grid;grid-template-columns:1fr 1fr;gap:0 32px;">
+                    <form id="editForm" autocomplete="off" style="display:grid;grid-template-columns:1fr 1fr;gap:0 32px;">
                         <input type="hidden" name="original_notice_code" value="<?= htmlspecialchars($searchResult['Notice/Order Code'] ?? '') ?>">
                         <!-- Row 1: Notice/Order Code & Date Released to AFD -->
                         <div style="margin-bottom:0.5rem;">
@@ -242,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <span style="display:inline-block;background:#eee;color:#22336A;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;"><?= htmlspecialchars($status) ?></span>
                                 <?php endif; ?>
                             </div>
-                        </div>
+                        </div>  
                         <div style="margin-bottom:0.5rem;display:flex;flex-direction:column;">
                             <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Date</div>
                             <input type="date" id="Date" name="Date" value="<?= htmlspecialchars($searchResult['Date'] ?? '') ?>" style="width:100%;padding:0.5rem 0.8em;border:1.5px solid #bbb;border-radius:6px;font-size:1em;box-sizing:border-box;">
@@ -271,9 +271,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div id="editMessage" style="margin-top:1rem;"></div>
                 </div>
             </div>
-
-
             <script>
+                document.getElementById("editForm").addEventListener("submit", function(e){
+                    e.preventDefault(); // STOP redirect
+
+                    let formData = new FormData(this);
+
+                    fetch("../api/remarks.php", {
+                        method: "POST",
+                        body: formData
+                    })
+                    .then(res => res.text())
+                    .then(result => {
+                        document.getElementById("editMessage").innerHTML =
+                            "<div style='color:green;font-weight:bold;'>Updated Successfully</div>";
+                                closeEditForm();
+                    })
+                    .catch(err => {
+                        document.getElementById("editMessage").innerHTML =
+                            "<div style='color:red;'>Update Failed</div>";
+                        console.error(err);
+                    });
+                }); 
                 function openEditForm() {
                     document.getElementById('editModalOverlay').style.display = 'flex';
                 }
@@ -290,62 +309,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         overlay.addEventListener('click', function(e) {
                             if (e.target === overlay) {
                                 closeEditForm();
+                                e.preventDefault();
                             }
                         });
                     }
                 });
 
 
-                function submitEditForm(event) {
-                    event.preventDefault();
-                    const formData = new FormData(document.getElementById('editForm'));
-                    const messageDiv = document.getElementById('editMessage');
-                   
-                    // Log form data for debugging
-                    console.log('Submitting form data:');
-                    for (let [key, value] of formData.entries()) {
-                        console.log(key + ':', value);
-                    }
-
-
-                    fetch('/DHSUD/api/EditMail.php', {
-                        method: 'POST',
-                        body: formData,
-                        credentials: 'same-origin' // Important: send cookies with AJAX requests
-                    })
-                    .then(response => {
-                        console.log('Response status:', response.status);
-                        console.log('Response headers:', response.headers.get('content-type'));
-                        return response.text().then(text => ({
-                            status: response.status,
-                            body: text
-                        }));
-                    })
-                    .then(({status, body}) => {
-                        console.log('Response body:', body);
-                        try {
-                            const data = JSON.parse(body);
-                            console.log('Parsed response:', data);
-                            if (data.success) {
-                                const affectedMsg = data.affected > 0 ? ` (${data.affected} row(s) updated)` : '';
-                                messageDiv.innerHTML = '<div class="success">Record updated successfully!' + affectedMsg + '</div>';
-                                setTimeout(() => {
-                                    location.reload();
-                                }, 1500);
-                            } else {
-                                messageDiv.innerHTML = '<div class="error">Error: ' + escapeHtml(data.message) + '</div>';
-                            }
-                        } catch (e) {
-                            console.error('JSON parse error:', e);
-                            messageDiv.innerHTML = '<div class="error">Server error: Invalid response. Status: ' + status + '</div>';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Fetch error:', error);
-                        messageDiv.innerHTML = '<div class="error">Request failed: ' + escapeHtml(error.message) + '</div>';
-                    });
-                }
-
+                
 
                 function escapeHtml(text) {
                     const map = {
