@@ -217,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <!-- Row 4: Parcel Details (full width) -->
                         <div style="grid-column:1/span 2;margin-bottom:0.5rem;">
                             <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Parcel Details</div>
-                            <div style="font-size:1em;line-height:1.5;white-space:pre-line;"><?= nl2br(htmlspecialchars($searchResult['Parcel Details'] ?? '')) ?></div>
+                            <div style="font-size:1em;line-height:1.5;"><?= nl2br(htmlspecialchars($searchResult['Parcel Details'] ?? '')) ?></div>
                         </div>
                         <!-- Row 5: Sender Details (full width) -->
                         <div style="grid-column:1/span 2;margin-bottom:0.5rem;">

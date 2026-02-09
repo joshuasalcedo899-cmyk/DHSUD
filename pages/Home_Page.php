@@ -398,37 +398,43 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <div class="table-scroll-area">
             <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
                 <thead>
-                    <tr>
-                        <?php foreach ($columns as $h): ?>
-                            <th><?= htmlspecialchars($h) ?></th>
-                        <?php endforeach; ?>
-                        <th>Action</th>
-                    </tr>
+                        <tr>
+                            <th style="width:32px;">
+                                <input type="checkbox" id="selectAllCheckbox" onclick="toggleAllCheckboxes(this)">
+                            </th>
+                            <?php foreach ($columns as $h): ?>
+                                <th><?= htmlspecialchars($h) ?></th>
+                            <?php endforeach; ?>
+                            <th>Action</th>
+                        </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($rows)): ?>
-                        <tr><td colspan="<?= count($columns) ?>">No records found.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($rows as $row): ?>
-                            <tr>
-                                <td>
-                                    <div style="display: flex; align-items: center; gap: 0.3em; position: relative;">
-                                        <div class="row-menu-container" style="position: relative;">
-                                            <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, '<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')">
-                                                <span style="font-size:1.5em;line-height:1;">&#8942;</span>
-                                            </button>
-                                            <div class="row-menu-dropdown" style="display:none; position:absolute; left:0; top:32px; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
-                                                <button class="row-menu-item" onclick="editRow('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
-                                                    <img src="../assets/Edit_Icon.svg" alt="Edit" style="width:20px;height:20px;"> Edit
+                        <?php if (empty($rows)): ?>
+                            <tr><td colspan="<?= count($columns) + 2 ?>">No records found.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($rows as $row): ?>
+                                <tr>
+                                    <td style="width:32px;">
+                                        <input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.3em; position: relative;">
+                                            <div class="row-menu-container" style="position: relative;">
+                                                <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, '<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')">
+                                                    <span style="font-size:1.5em;line-height:1;">&#8942;</span>
                                                 </button>
-                                                <button class="row-menu-item" onclick="deleteRecord('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
-                                                    <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
-                                                </button>
+                                                <div class="row-menu-dropdown" style="display:none; position:absolute; left:0; top:32px; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
+                                                    <button class="row-menu-item" onclick="editRow('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
+                                                        <img src="../assets/Edit_Icon.svg" alt="Edit" style="width:20px;height:20px;"> Edit
+                                                    </button>
+                                                    <button class="row-menu-item" onclick="deleteRecord('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
+                                                        <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
+                                                    </button>
+                                                </div>
                                             </div>
+                                            <span><?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?></span>
                                         </div>
-                                        <span><?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?></span>
-                                    </div>
-                                </td>
+                                    </td>
                                         <script>
                                             function toggleRowMenu(event, noticeCode) {
                                                 event.stopPropagation();
@@ -542,6 +548,13 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         </div>
         
         <script>
+            // Select all checkboxes logic
+            function toggleAllCheckboxes(master) {
+                var checkboxes = document.querySelectorAll('.row-checkbox');
+                checkboxes.forEach(function(cb) {
+                    cb.checked = master.checked;
+                });
+            }
         // Status dropdown color coding logic
         function updateStatusSelectColor(select) {
             var val = select.value;
@@ -572,6 +585,13 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     updateStatusSelectColor(this);
                 });
             });
+                // Uncheck master if any row is unchecked
+                document.querySelectorAll('.row-checkbox').forEach(function(cb) {
+                    cb.addEventListener('change', function() {
+                        var allChecked = Array.from(document.querySelectorAll('.row-checkbox')).every(function(c) { return c.checked; });
+                        document.getElementById('selectAllCheckbox').checked = allChecked;
+                    });
+                });
         });
         // Add Modal logic
         function openAddModal() {
