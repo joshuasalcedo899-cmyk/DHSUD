@@ -470,10 +470,9 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                         <td>
                                             <form method="post" class="inline" style="margin:0;">
                                                 <input type="hidden" name="notice_code" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
-                                                <select name="status" onchange="this.form.submit()">
+                                                <select name="status" class="status-select" onchange="this.form.submit(); updateStatusSelectColor(this);">
                                                     <?php
                                                     $current = trim($row['Status'] ?? '');
-                                                    // placeholder option when no current status
                                                     $phSel = ($current === '') ? ' selected' : '';
                                                     echo '<option value="" disabled' . $phSel . '>Select status</option>';
                                                     // if current not in options, show it first
@@ -482,7 +481,23 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                                     }
                                                     foreach ($statusOptions as $opt) {
                                                         $sel = (trim($opt) === $current) ? ' selected' : '';
-                                                        echo '<option value="' . htmlspecialchars($opt) . '"' . $sel . '>' . htmlspecialchars($opt) . '</option>';
+                                                        $class = '';
+                                                        $color = '';
+                                                        switch ($opt) {
+                                                            case 'DELIVERED':
+                                                                $color = '#43AF1B';
+                                                                break;
+                                                            case 'RETURNED TO SENDER':
+                                                                $color = '#AA4444';
+                                                                break;
+                                                            case 'ON GOING DELIVERY':
+                                                                $color = '#DFE317';
+                                                                break;
+                                                            case 'PERSONALLY RECEIVED':
+                                                                $color = '#22336A';
+                                                                break;
+                                                        }
+                                                        echo '<option value="' . htmlspecialchars($opt) . '" style="background:' . $color . ';color:#fff;"' . $sel . '>' . htmlspecialchars($opt) . '</option>';
                                                     }
                                                     ?>
                                                 </select>
@@ -527,6 +542,37 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         </div>
         
         <script>
+        // Status dropdown color coding logic
+        function updateStatusSelectColor(select) {
+            var val = select.value;
+            var bg = '#22336A';
+            switch(val) {
+                case 'DELIVERED':
+                    bg = '#43AF1B';
+                    break;
+                case 'RETURNED TO SENDER':
+                    bg = '#AA4444';
+                    break;
+                case 'ON GOING DELIVERY':
+                    bg = '#DFE317';
+                    break;
+                case 'PERSONALLY RECEIVED':
+                    bg = '#22336A';
+                    break;
+                default:
+                    bg = '#22336A';
+            }
+            select.style.background = bg;
+            select.style.color = '#fff';
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.status-select').forEach(function(sel) {
+                updateStatusSelectColor(sel);
+                sel.addEventListener('change', function() {
+                    updateStatusSelectColor(this);
+                });
+            });
+        });
         // Add Modal logic
         function openAddModal() {
             document.getElementById('addModalOverlay').style.display = 'flex';

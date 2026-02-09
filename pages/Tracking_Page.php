@@ -234,13 +234,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div style="font-size:0.98em;font-weight:600;color:#22336A;margin-bottom:0.2em;">Status</div>
                             <div style="font-size:1em;line-height:1.5;">
                                 <?php $status = $searchResult['Status'] ?? ''; ?>
-                                <?php if (strtolower($status) === 'delivered'): ?>
-                                    <span style="display:inline-block;background:#4cd137;color:#fff;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;">DELIVERED</span>
-                                <?php elseif (strtolower($status) === 'pending'): ?>
-                                    <span style="display:inline-block;background:#fbc531;color:#22336A;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;">PENDING</span>
-                                <?php else: ?>
-                                    <span style="display:inline-block;background:#eee;color:#22336A;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;"><?= htmlspecialchars($status) ?></span>
-                                <?php endif; ?>
+                                <?php
+                                $statusText = strtoupper(trim($status));
+                                $bg = '#22336A';
+                                $color = '#fff';
+                                switch ($statusText) {
+                                    case 'DELIVERED':
+                                        $bg = '#43AF1B';
+                                        break;
+                                    case 'RETURNED TO SENDER':
+                                        $bg = '#AA4444';
+                                        break;
+                                    case 'ON GOING DELIVERY':
+                                        $bg = '#DFE317';
+                                        break;
+                                    case 'PERSONALLY RECEIVED':
+                                        $bg = '#22336A';
+                                        break;
+                                }
+                                ?>
+                                <span style="display:inline-block;background:<?= $bg ?>;color:<?= $color ?>;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;">
+                                    <?= htmlspecialchars($statusText) ?>
+                                </span>
                             </div>
                         </div>  
                         <div style="margin-bottom:0.5rem;display:flex;flex-direction:column;">

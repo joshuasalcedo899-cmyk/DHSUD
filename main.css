@@ -25,6 +25,14 @@
 	padding: 0.8rem 0.5rem;
 	letter-spacing: 0.03em;
 }
+
+/* Sticky table header for admin table */
+.admin-table-container .table-scroll-area table th {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background: #22336A;
+}
 .tracking-table td {
 	text-align: center;
 	font-size: 0.7rem;
@@ -83,7 +91,7 @@
 .edit-modal input, .edit-modal select, .edit-modal textarea {
 	width: 100%;
 	padding: 2em 0.8em;
-	margin-bottom: 1em;
+	margin-bottom: 0.5rem;
 	border: 1.5px solid #bbb;
 	border-radius: 6px;
 	font-size: 1em;
