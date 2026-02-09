@@ -367,6 +367,13 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         </div>
     </div>
     <div class="admin-table-container">
+        
+            <div style="text-align:right;margin-bottom:10px;">
+                <button onclick="exportSelectedToPDF()"
+                style="background:#22336A;color:white;padding:8px 16px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">
+                    Export Selected to PDF
+                </button>
+            </div>
         <div class="table-title">MAIL TRACKING RECORDS</div>
         <div class="table-search-bar">
             <div class="table-sort-bar">
@@ -390,6 +397,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     ?>
                 </select>
             </div>
+
             <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
             <button class="table-search-btn" id="tableSearchBtn" title="Search">
                 <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
@@ -854,6 +862,32 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             });
             yearSelect.addEventListener('change', filterTableRows);
         });
+        
+        function exportSelectedToPDF() {
+            let checked = document.querySelectorAll('.row-checkbox:checked');
+
+            if (checked.length === 0) {
+                alert("Select record first!");
+                return;
+            }
+
+            let codes = [];
+            checked.forEach(cb => codes.push(cb.value));
+
+            let form = document.createElement("form");
+            form.method = "POST";
+            form.action = "../api/jrs_tracking.php";
+
+            let input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "notice_codes";
+            input.value = JSON.stringify(codes);
+
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
+
         </script>
     </div>
 </body>
