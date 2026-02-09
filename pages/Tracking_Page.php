@@ -323,7 +323,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
 
-                    fetch('/DHSUD/api/EditMail.php', {
+                    fetch('/DHSUD/api/remarks.php', {
                         method: 'POST',
                         body: formData,
                         credentials: 'same-origin' // Important: send cookies with AJAX requests
