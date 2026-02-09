@@ -253,7 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         break;
                                 }
                                 ?>
-                                <span style="display:inline-block;background:<?= $bg ?>;color:<?= $color ?>;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;">
+                                <span style="display:inline-block;background:<?= $bg ?>;color:#fff;font-weight:600;padding:0.2em 1.5em;border-radius:5px;font-size:1em;">
                                     <?= htmlspecialchars($statusText) ?>
                                 </span>
                             </div>
