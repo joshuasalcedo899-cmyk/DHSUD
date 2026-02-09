@@ -536,7 +536,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                     $trackingNo = trim($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? '');
                                     ?>
                                     <?php if (!empty($trackingNo) && $trackingNo !== '0'): ?>
-                                        <button class="btn-track" onclick="trackJRS('<?= htmlspecialchars($trackingNo) ?>')">Track</button>
+                                        <a class="btn-track" href="JRS_Tracking_Page.php?tracking=<?= urlencode($trackingNo) ?>" style="display:inline-block;text-decoration:none;">Track</a>
                                     <?php else: ?>
                                         <span style="color:#999; font-size:12px;">No tracking #</span>
                                     <?php endif; ?>
