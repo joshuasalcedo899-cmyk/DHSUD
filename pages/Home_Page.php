@@ -251,7 +251,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
         <div class="admin-home-header-border"></div>
     </div>
-    <div style="max-width:900px;margin:0 auto;margin-bottom:620px; margin-left:6rem;">
+    <div class="welcome-block">
         <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-bottom:2px;">Welcome, Admin!</div>
         <a href="logout.php" style="display:block;text-decoration:none;font-weight:600;color:#726868;font-size:1em;margin-bottom:18px;">Logout</a>
     </div>
@@ -826,6 +826,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
 
 
         // Table search and sort functionality (filter by Notice/Order Code and year)
+        // Keep checked rows visible regardless of filter.
         function filterTableRows() {
             const input = document.getElementById('tableSearchInput');
             const filter = input.value.toLowerCase();
@@ -840,9 +841,14 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     tr.style.display = '';
                     return;
                 }
-                // Notice/Order Code is first td, Date released to AFD is 2nd td (index 1)
-                const code = tds[0].textContent.toLowerCase();
-                const dateAfd = tds[1] ? tds[1].textContent : '';
+                const checkbox = tr.querySelector('.row-checkbox');
+                if (checkbox && checkbox.checked) {
+                    tr.style.display = '';
+                    return;
+                }
+                // With the checkbox column, Notice/Order Code is td index 1 and Date released to AFD is td index 2.
+                const code = tds[1] ? tds[1].textContent.toLowerCase() : '';
+                const dateAfd = tds[2] ? tds[2].textContent : '';
                 let yearMatch = true;
                 if (selectedYear) {
                     yearMatch = dateAfd.indexOf(selectedYear) > -1;

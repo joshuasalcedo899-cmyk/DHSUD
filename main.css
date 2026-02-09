@@ -725,3 +725,241 @@ body {
 		grid-template-columns: 1fr 1fr;
 	}
 }
+
+/* ===== GLOBAL RESPONSIVE LAYOUT OVERRIDES ===== */
+:root {
+	--color-primary: #22336a;
+	--color-accent: #23409a;
+	--color-bg: #ffffff;
+	--color-muted: #6b7280;
+	--surface: #f6f7fb;
+	--shadow-soft: 0 8px 24px rgba(34,51,106,0.08);
+	--radius-lg: 14px;
+	--radius-md: 10px;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	color: #0f172a;
+	line-height: 1.5;
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+	display: block;
+}
+
+.page-shell {
+	width: min(1200px, calc(100% - 32px));
+	margin: 0 auto;
+	padding: 24px 0;
+}
+
+.page-shell.narrow {
+	width: min(900px, calc(100% - 32px));
+}
+
+.page-title {
+	text-align: center;
+	color: var(--color-primary);
+	font-size: 1.3rem;
+	font-weight: 700;
+	margin: 0.75rem 0 1.25rem 0;
+	letter-spacing: 0.04em;
+}
+
+.panel {
+	background: var(--color-bg);
+	border-radius: var(--radius-lg);
+	border: 1px solid #e5e7eb;
+	box-shadow: var(--shadow-soft);
+	padding: 1.5rem;
+}
+
+.panel.soft {
+	border: 1px solid #e7eaf0;
+	box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+.admin-home-header {
+	position: sticky;
+	top: 0;
+	z-index: 1000;
+	width: 100%;
+	background: #fff;
+	box-shadow: 0 4px 14px rgba(34,51,106,0.08);
+}
+
+.admin-home-header-border {
+	width: 100%;
+}
+
+.admin-home-bg {
+	display: block;
+	justify-content: flex-start;
+	align-items: stretch;
+	min-height: 100vh;
+}
+
+.welcome-block {
+	width: min(1200px, calc(100% - 32px));
+	margin: 1.5rem auto 0 auto;
+	padding: 0;
+}
+
+.admin-home-container,
+.admin-table-container {
+	position: relative;
+	left: auto;
+	transform: none;
+	width: min(1200px, calc(100% - 32px));
+	max-width: 1200px;
+	margin: 1.5rem auto;
+	padding: 1.5rem;
+}
+
+.admin-table-container {
+	height: auto;
+	overflow: visible;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.admin-table-container .table-scroll-area {
+	flex: 1 1 auto;
+	overflow: auto;
+	max-height: 70vh;
+	-webkit-overflow-scrolling: touch;
+}
+
+.table-search-bar {
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.table-search-input {
+	flex: 1 1 220px;
+	width: auto;
+	min-width: 180px;
+}
+
+.table-search-btn {
+	flex: 0 0 auto;
+}
+
+.tracking-table-container {
+	width: min(1200px, calc(100% - 32px));
+	margin: 0 auto 2rem auto;
+	padding: 1rem;
+	left: auto;
+	right: auto;
+	transform: none;
+}
+
+.tracking-table-scroll {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.button-container {
+	position: relative;
+	min-height: 100vh;
+	justify-content: center;
+	padding: 3rem 1.5rem;
+	gap: 1.2rem;
+}
+
+.button-container button {
+	width: min(420px, 90vw);
+}
+
+.bottom-container {
+	position: relative;
+	min-height: 100vh;
+	padding: 3rem 1.5rem;
+	align-items: center;
+	justify-content: center;
+}
+
+.login-form {
+	width: min(520px, 92vw);
+	min-width: 0;
+}
+
+.search-card {
+	width: min(480px, 100%);
+	padding: 1.5rem 1rem;
+	border-radius: var(--radius-lg);
+	border: 1px solid #22336a59;
+}
+
+.jrs-section {
+	margin: 2rem auto;
+	padding: 1.5rem 2rem;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	max-width: 1200px;
+	background: #fff;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.section-plain {
+	background: #fff;
+	box-shadow: none;
+	border: none;
+	padding: 0;
+	margin-bottom: 2.5rem;
+}
+
+.btn-primary {
+	background: var(--color-primary);
+	color: #fff;
+	border: none;
+	border-radius: 6px;
+	padding: 0.5rem 1rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.center-stack {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+@media (max-width: 900px) {
+	.admin-table-container .table-scroll-area {
+		max-height: none;
+	}
+}
+
+@media (max-width: 600px) {
+	.page-shell,
+	.page-shell.narrow,
+	.welcome-block,
+	.admin-home-container,
+	.admin-table-container,
+	.tracking-table-container {
+		width: calc(100% - 24px);
+	}
+	.admin-home-header-img {
+		max-width: 90vw;
+	}
+	.table-search-input {
+		min-width: 0;
+		width: 100%;
+	}
+	.table-search-btn {
+		width: 100%;
+		justify-content: center;
+	}
+	.search-card {
+		padding: 1.25rem 0.9rem;
+	}
+}

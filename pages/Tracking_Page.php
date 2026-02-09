@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 1.5rem 2rem;
             border: 1px solid #ddd;
             border-radius: 8px;
-            max-width: 900px;
+            max-width: 1200px;
             background: #fff;
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
@@ -80,8 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .edit-btn { padding: 0.5rem 1rem; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
         /* Header styles */
         .admin-home-header {
-            width: 100vw;
-            position: relative;
+            width: 100%;
+            position: sticky;
             top: 0;
             left: 0;
             z-index: 1000;
@@ -89,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             flex-direction: column;
             align-items: center;
+            box-shadow: 0 4px 14px rgba(34,51,106,0.08);
         }
         .admin-home-header-img {
             margin-top: 1.5rem;
@@ -98,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: block;
         }
         .admin-home-header-border {
-            width: 100vw;
+            width: 100%;
             height: 6px;
             background: #22336a;
             margin-top: 1.2rem;
@@ -113,8 +114,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
 
-    <div style="width: 100vw; max-width: 100vw; margin: 0; padding: 0;">
-        <h1 style="text-align:center; color:#22336a; font-size:1.3rem; font-weight:700; margin-top:1rem; margin-bottom:1rem; letter-spacing:0.04em;">MAIL TRACKING RECORDS</h1>
+    <div class="page-shell">
+        <h1 class="page-title">MAIL TRACKING RECORDS</h1>
 
 
 
@@ -122,14 +123,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Search Section -->
 
 
-    <div class="section" style="background: #fff; box-shadow: none; border: none; padding: 0; margin-bottom: 2.5rem;">
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <div style="background: #fff; border-radius: 10px;  border: solid #22336a59 1px; padding: 2rem 0.2rem 2rem 0.2rem; min-width: 350px; max-width: 480px; width: 100%;">
+    <div class="section section-plain">
+        <div class="center-stack">
+            <div class="search-card">
                 <div style="font-size: 1rem; font-weight: 700; color: #22336a; text-align: center; margin-bottom: 1.5rem;">Search by Notice/Order Code</div>
                 <form method="get" action="" style="width: 100%;">
                     <div class="table-search-bar" style="justify-content: center; margin-bottom: 0;">
-                        <input type="text" name="search" class="table-search-input" placeholder="Enter notice/order code" required style="width: 260px;">
-                        <button type="submit" class="table-search-btn" style="font-size: 0.8rem;padding: 0.4rem 1em; background: #22336a;color: #fff;border-radius: 5px;border: none;">Search</button>
+                        <input type="text" name="search" class="table-search-input" placeholder="Enter notice/order code" required>
+                        <button type="submit" class="table-search-btn btn-primary">Search</button>
                     </div>
                 </form>
             </div>
@@ -375,7 +376,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </script>
         <?php endif; ?>
     </div>
-</div>
 </div>
 </body>
 </html>
