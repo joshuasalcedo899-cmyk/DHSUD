@@ -250,9 +250,10 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <div class="admin-home-header">
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
         <div class="admin-home-header-border"></div>
-        <div style="position: absolute; top: 50px; left: 5px; z-index: 100;">
-            <a href="logout.php" style="text-decoration: none; font-weight: 600; color: #726868;">Logout</a>
-        </div>
+    </div>
+    <div style="max-width:900px;margin:0 auto;margin-bottom:620px; margin-left:6rem;">
+        <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-bottom:2px;">Welcome, Admin!</div>
+        <a href="logout.php" style="display:block;text-decoration:none;font-weight:600;color:#726868;font-size:1em;margin-bottom:18px;">Logout</a>
     </div>
         <!-- Edit Modal (hidden by default) -->
         <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;">
@@ -350,6 +351,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 </form>
             </div>
         </div>
+    
     <div class="admin-home-container">
         <div class="statistics-section">
             <div class="statistics-title">STATISTICS</div>
@@ -374,40 +376,39 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     </div>
     <div class="admin-table-container">
         
-            <div style="text-align:right;margin-bottom:10px;">
-                <button onclick="exportSelectedToPDF()"
+        <div class="table-title">MAIL TRACKING RECORDS</div>
+        <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 10px;">
+            <button onclick="exportSelectedToPDF()"
                 style="background:#22336A;color:white;padding:8px 16px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">
-                    Export Selected to PDF
+                Export Selected to PDF
+            </button>
+            <div class="table-search-bar" style="flex:1; display:flex; align-items:center;">
+                <div class="table-sort-bar">
+                    <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;" aria-label="Year">
+                        <option value="" disabled selected hidden>Year</option>
+                        <option value="all">All</option>
+                        <?php
+                        // Collect unique years from the 'Date released to AFD' column
+                        $years = [];
+                        foreach ($rows as $row) {
+                            $dateAfd = $row['Date released to AFD'] ?? '';
+                            if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
+                                $years[] = $m[1];
+                            }
+                        }
+                        $years = array_unique($years);
+                        rsort($years);
+                        foreach ($years as $year) {
+                            echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
+                <button class="table-search-btn" id="tableSearchBtn" title="Search">
+                    <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
                 </button>
             </div>
-        <div class="table-title">MAIL TRACKING RECORDS</div>
-        <div class="table-search-bar">
-            <div class="table-sort-bar">
-                <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;" aria-label="Year">
-                    <option value="" disabled selected hidden>Year</option>
-                    <option value="all">All</option>
-                    <?php
-                    // Collect unique years from the 'Date released to AFD' column
-                    $years = [];
-                    foreach ($rows as $row) {
-                        $dateAfd = $row['Date released to AFD'] ?? '';
-                        if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
-                            $years[] = $m[1];
-                        }
-                    }
-                    $years = array_unique($years);
-                    rsort($years);
-                    foreach ($years as $year) {
-                        echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
-                    }
-                    ?>
-                </select>
-            </div>
-
-            <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
-            <button class="table-search-btn" id="tableSearchBtn" title="Search">
-                <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
-            </button>
         </div>
         <div class="table-scroll-area">
             <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
