@@ -33,12 +33,13 @@ h2 { text-align:center; color:#22336A; }
 table { width:100%; border-collapse: collapse; }
 th { background:#22336A; color:white; padding:6px; font-size:10px; }
 td { border:1px solid #000; padding:4px; font-size:9px; word-wrap:break-word; white-space:pre-wrap; text-align:center; }
+.shipper-label { font-weight: bold; }
+.date-label { font-weight: bold; }
+.title { font-weight: bold; font-size: 18px;}
 </style>
 </head>
 <body>
-
-<h2>DEPARTMENT OF HUMAN SETTLEMENT AND URBAN DEVELOPMENT REGIONAL OFFICE 4A (CALABARZON)</h2>
-<center><h4>SHIPPER: HREDRD-EMES<br>DATE: '.date("F-d-Y").'</h4></center>
+<center><span class="title"><p>DEPARTMENT OF HUMAN SETTLEMENTS AND URBAN DEVELOPMENT REGIONAL OFFICE 4A (CALABARZON)</span><span class="shipper-label">SHIPPER</span>: HREDRD-EMES<br><span class="date-label">DATE</span>: '.date("F-d-Y").'</p></center><br>
 
 <table>
 <tr>
