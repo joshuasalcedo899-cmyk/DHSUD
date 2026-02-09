@@ -107,6 +107,12 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         form.inline { margin:0; }
         select { padding:4px; }
         button.save { padding:4px 8px; }
+            /* Add border-radius to Status dropdown */
+            .status-select {
+                border-radius: 12px !important;
+                font-weight: 500;
+                font-size: 0.8rem;
+            }
         .message { padding:8px; margin:10px 0; }
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
         .stats { margin-bottom:10px; }
