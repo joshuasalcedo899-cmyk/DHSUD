@@ -10,7 +10,7 @@ $trackingNo = isset($_GET['tracking']) ? trim($_GET['tracking']) : '';
 // Fetch tracking data from API if tracking number is provided
 $trackingData = [];
 if ($trackingNo !== '') {
-    $apiUrl = '../api/jrs-track.php?tracking=' . urlencode($trackingNo);
+    $apiUrl = "https://jrs-core-api.azurewebsites.net/api/Tracking/v1/track-airbill?airbill=" . urlencode($trackingNo);
     $json = @file_get_contents($apiUrl);
     if ($json !== false) {
         $trackingData = json_decode($json, true);
@@ -141,7 +141,7 @@ function formatDateTime($dt) {
         <h1 style="text-align:center; color:#22336a; font-size:1.3rem; font-weight:700; margin-top:0.5rem; margin-bottom:1.2rem; letter-spacing:0.04em;">JRS TRACKING</h1>
         <div style="text-align:center; margin-bottom:1.2rem;">
             <span class="jrs-tracking-label">Tracking Number: <span style="font-weight:700; color:#22336A;"> <?= htmlspecialchars($trackingNo) ?> </span></span>
-            <span class="jrs-download" title="Download" onclick="window.print()">
+            <span class="jrs-download" title="Download" onclick="saveToPDF()">
                 <img src="../assets/Download_Icon.svg" alt="Download" style="width:28px;height:28px;vertical-align:middle;cursor:pointer;">
             </span>
         </div>
@@ -163,22 +163,27 @@ function formatDateTime($dt) {
                             <?php foreach ($trackingData as $row): ?>
                                 <tr>
                                     <td><?= formatDateTime($row['dateReceived'] ?? '') ?></td>
-                                    <td><?= htmlspecialchars($row['statusText'] ?? '') ?></td>
                                     <td>
-                                        <?php
-                                            if (!empty($row['receiver'])) {
-                                                echo 'Delivered To ' . htmlspecialchars($row['receiver']);
-                                                if (!empty($row['relation'])) {
-                                                    echo '<br>Relationship: ' . htmlspecialchars($row['relation']);
+                                        <?php   
+                                        echo htmlspecialchars($row['statusText']);
+                                                if (!empty($row['receiver'])) {
+                                                    echo ' ' . htmlspecialchars($row['receiver']);
+                                                    if (!empty($row['relation'])) {
+                                                        echo '<br>Relationship: ' . htmlspecialchars($row['relation']);
+                                                    }
+                                                    else {
+                                                        echo '';
+                                                    }
                                                 }
-                                            } elseif (!empty($row['remarks'])) {
-                                                echo htmlspecialchars($row['remarks']);
-                                            } else {
-                                                echo '';
-                                            }
-                                        ?>
+                                                else {
+                                                    echo '';
+                                                }
+                                            ?>
                                     </td>
-                                    <td><?= htmlspecialchars($row['location'] ?? '') ?></td>
+                                    <td>
+                    
+                                    </td>
+                                    <td><?= htmlspecialchars($row['branchLocation'] ?? '') ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -187,5 +192,17 @@ function formatDateTime($dt) {
             </div>
         </div>
     </div>
+    <script>
+        function saveToPDF() {
+            let trackingNo = "<?= htmlspecialchars($trackingNo) ?>";
+            if (!trackingNo) {
+                alert("No tracking number!");
+                return;
+            }
+
+            window.open("../api/jrs-download.php?tracking=" + trackingNo, "_blank");
+        }
+    </script>
+
 </body>
 </html>
