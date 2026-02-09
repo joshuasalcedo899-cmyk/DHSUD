@@ -36,6 +36,7 @@ td { border:1px solid #000; padding:4px; font-size:9px; word-wrap:break-word; wh
 .shipper-label { font-weight: bold; }
 .date-label { font-weight: bold; }
 .title { font-weight: bold; font-size: 18px;}
+
 </style>
 </head>
 <body>
