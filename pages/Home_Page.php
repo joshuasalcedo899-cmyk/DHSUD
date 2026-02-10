@@ -111,7 +111,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         .status-select {
             border-radius: 12px !important;
             font-weight: 600;
-            font-size: 0.75rem;
+            font-size: 0.5rem;
             width: 100%;
             min-width: 0;
             max-width: 100%;

@@ -32,6 +32,7 @@
 	top: 0;
 	z-index: 2;
 	background: #22336A;
+	padding: 0.1rem 0.5rem;
 }
 .tracking-table td {
 	text-align: center;
@@ -304,7 +305,7 @@
 }
 .admin-table-container th,
 .admin-table-container td {
-	white-space: normal;
+	white-space: pre-wrap;
 	word-break: break-word;
 	overflow-wrap: anywhere;
 }
