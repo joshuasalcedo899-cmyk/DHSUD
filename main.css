@@ -297,6 +297,7 @@
 }
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
+	overflow-y: auto;
 	min-height: 0;
 }
 .admin-table-container table {
@@ -394,13 +395,13 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin-bottom: -6.5rem;
+	margin-bottom: 0.5rem;
 }
 .statistics-title {
 	font-weight: 700;
 	color: #22336a;
 	font-size: 1.3rem;
-	margin-bottom: 0.2rem;
+	margin-bottom: 1rem;
 	letter-spacing: 0.04em;
 }
 .table-title {
@@ -416,7 +417,7 @@
     gap: 1.2rem;
     flex-wrap: wrap;
     background: #d9d9d984;
-    border: solid 8px #d9d9d900;
+    border: solid 12px #d9d9d900;
     margin-bottom: 0.5rem;
 }
 .stat-box {
@@ -426,7 +427,7 @@
 	font-size: 0.6rem;
 	font-weight: 600;
 	border-radius: 6px;
-	padding: 0.1rem 0.4rem 0.1rem 0.4rem;
+	padding: 0.3rem 0.5rem 0.3rem 0.5rem;
 	background: #eee;
 	border: 1.5px solid #bbb;
 }
@@ -630,6 +631,9 @@ body {
 		height: auto !important;
 		overflow: visible !important;
 	}
+	.admin-table-container .table-scroll-area {
+		overflow-x: auto !important;
+	}
 	table {
 		font-size: 0.65rem !important;
 		table-layout: auto;
@@ -697,7 +701,7 @@ body {
 		overflow: visible !important;
 	}
 	.admin-table-container .table-scroll-area {
-		overflow-x: hidden !important;
+		overflow-x: auto !important;
 	}
 	table {
 		font-size: 0.8rem !important;
@@ -823,7 +827,7 @@ img {
 }
 
 .welcome-block {
-	width: min(1200px, calc(100% - 96px));
+	width: min(1200px, calc(100% - 32px));
 	margin: 0.5rem auto 0.2rem auto;
 	padding: 0;
 }
@@ -836,7 +840,7 @@ img {
 	width: min(1400px, calc(100% - 48px));
 	max-width: 1400px;
 	margin: 0.05rem auto 0.05rem auto;
-	padding: 0rem 0.5rem 0.2rem 0.5rem;
+	padding: 0.2rem 0.5rem 0.2rem 0.5rem;
 }
 
 .admin-table-container {
@@ -869,7 +873,7 @@ img {
 }
 
 .tracking-table-container {
-	width: min(1200px, calc(100% - 96px));
+	width: min(1200px, calc(100% - 32px));
 	margin: 0 auto 2rem auto;
 	padding: 1rem;
 	left: auto;
