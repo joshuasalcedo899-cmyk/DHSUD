@@ -113,8 +113,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             font-weight: 600;
             font-size: 0.75rem;
             width: 100%;
-            min-width: 120px;
-            max-width: 180px;
+            min-width: 0;
+            max-width: 100%;
             box-sizing: border-box;
             display: block;
             margin: 0 auto;
@@ -124,8 +124,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             position: relative;
             overflow: hidden;
             padding: 8px;
-            min-width: 130px;
-            max-width: 200px;
+            min-width: 0;
+            max-width: 100%;
         }
         .message { padding:8px; margin:10px 0; }
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
