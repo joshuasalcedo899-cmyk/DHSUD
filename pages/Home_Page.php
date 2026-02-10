@@ -110,7 +110,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             /* Add border-radius to Status dropdown */
             .status-select {
                 border-radius: 12px !important;
-                font-weight: 500;
+                font-weight: 600;
                 font-size: 0.8rem;
             }
         .message { padding:8px; margin:10px 0; }

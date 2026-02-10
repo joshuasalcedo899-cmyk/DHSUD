@@ -238,7 +238,6 @@
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
-	margin-bottom: 1rem;
 	width: 100%;
 }
 .table-search-input {
@@ -259,13 +258,13 @@
 	padding: 0.5em 1em;
 	cursor: pointer;
 	color: #23409A;
-	font-size: 0.5rem;
+	font-size: 0.75rem;
 	display: flex;
 	align-items: center;
 }
 .table-search-icon {
-	width: 20px;
-	height: 20px;
+	width: 18px;
+	height: 17px;
 	margin-left: 0.2em;
 	display: inline-block;
 	vertical-align: middle;
@@ -808,7 +807,7 @@ img {
 
 .welcome-block {
 	width: min(1200px, calc(100% - 32px));
-	margin: 1.5rem auto 0 auto;
+	margin: 0.5rem auto 0.2rem auto;
 	padding: 0;
 }
 
@@ -819,8 +818,8 @@ img {
 	transform: none;
 	width: min(1200px, calc(100% - 32px));
 	max-width: 1200px;
-	margin: 1.5rem auto;
-	padding: 1.5rem;
+	margin: 0.05rem auto 0.05rem auto;
+	padding: 0.2rem 0.5rem 0.2rem 0.5rem;
 }
 
 .admin-table-container {
@@ -828,19 +827,18 @@ img {
 	overflow: visible;
 	display: flex;
 	flex-direction: column;
-	gap: 0.75rem;
+	gap: 0.2rem;
 }
 
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
 	overflow: auto;
-	max-height: 70vh;
+	max-height: 50vh;
 	-webkit-overflow-scrolling: touch;
 }
 
 .table-search-bar {
 	flex-wrap: wrap;
-	gap: 0.5rem;
 }
 
 .table-search-input {

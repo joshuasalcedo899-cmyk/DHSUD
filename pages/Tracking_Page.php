@@ -63,11 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .section {
             margin: 2rem auto;
             padding: 1.5rem 2rem;
-            border: 1px solid #ddd;
-            border-radius: 8px;
             max-width: 1200px;
-            background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .search-box { display: flex; gap: 0.5rem; }
         .search-box input { flex: 1; padding: 0.5rem; }
