@@ -299,12 +299,24 @@
 	min-height: 0;
 }
 .admin-table-container table {
-	table-layout: auto;
+	table-layout: fixed;
 	width: 100%;
 }
-.admin-table-container th{
-	white-space: nowrap;
-	word-wrap: auto;
+.admin-table-container th,
+.admin-table-container td {
+	white-space: normal;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+
+/* Wider columns for long text fields (with checkbox column at 1) */
+.admin-table-container table th:nth-child(5),
+.admin-table-container table td:nth-child(5),
+.admin-table-container table th:nth-child(6),
+.admin-table-container table td:nth-child(6),
+.admin-table-container table th:nth-child(7),
+.admin-table-container table td:nth-child(7) {
+	width: 10%;
 }
 .admin-home-header {
 	width: 100vw;
@@ -410,7 +422,7 @@
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	font-size: 0.5rem;
+	font-size: 0.6rem;
 	font-weight: 600;
 	border-radius: 6px;
 	padding: 0.1rem 0.4rem 0.1rem 0.4rem;
@@ -721,8 +733,8 @@ body {
 /* Desktop (769px and above) */
 @media (min-width: 769px) {
 	.admin-home-container, .admin-table-container {
-		width: 1375px;
-		max-width: 95vw;
+		width: 1400px;
+		max-width: 98vw;
 	}
 	.edit-modal form {
 		grid-template-columns: 1fr 1fr;
@@ -820,8 +832,8 @@ img {
 	position: relative;
 	left: auto;
 	transform: none;
-	width: min(1200px, calc(100% - 96px));
-	max-width: 1200px;
+	width: min(1400px, calc(100% - 48px));
+	max-width: 1400px;
 	margin: 0.05rem auto 0.05rem auto;
 	padding: 0rem 0.5rem 0.2rem 0.5rem;
 }

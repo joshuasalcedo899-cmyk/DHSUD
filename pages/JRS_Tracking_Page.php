@@ -116,7 +116,7 @@ function formatDateTime($dt) {
         }
         .jrs-back:hover { text-decoration: underline; }
         .jrs-download {
-            margin: 0 0 12px 0;
+            margin: 0 0 0 0;
             font-size: 1.5em;
             color: #22336A;
             cursor: pointer;
