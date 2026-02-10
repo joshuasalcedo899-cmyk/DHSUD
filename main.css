@@ -296,17 +296,14 @@
 }
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
-	overflow-y: auto;
-	overflow-x: hidden;
 	min-height: 0;
 }
-.admin-table-container table {
-	table-layout: fixed;
+.admin-table-container header {
 	width: 100%;
 }
-.admin-table-container th,
-.admin-table-container td {
-	word-break: break-word;
+.admin-table-container th{
+	word-wrap: auto;
+	white-space: nowrap;
 }
 .admin-home-header {
 	width: 100vw;
@@ -619,9 +616,6 @@ body {
 		height: auto !important;
 		overflow: visible !important;
 	}
-	.admin-table-container .table-scroll-area {
-		overflow-x: hidden !important;
-	}
 	table {
 		font-size: 0.65rem !important;
 		table-layout: fixed;
@@ -815,7 +809,7 @@ img {
 }
 
 .welcome-block {
-	width: min(1200px, calc(100% - 32px));
+	width: min(1200px, calc(100% - 96px));
 	margin: 0.5rem auto 0.2rem auto;
 	padding: 0;
 }
@@ -825,7 +819,7 @@ img {
 	position: relative;
 	left: auto;
 	transform: none;
-	width: min(1200px, calc(100% - 32px));
+	width: min(1200px, calc(100% - 96px));
 	max-width: 1200px;
 	margin: 0.05rem auto 0.05rem auto;
 	padding: 0.2rem 0.5rem 0.2rem 0.5rem;
@@ -861,7 +855,7 @@ img {
 }
 
 .tracking-table-container {
-	width: min(1200px, calc(100% - 32px));
+	width: min(1200px, calc(100% - 96px));
 	margin: 0 auto 2rem auto;
 	padding: 1rem;
 	left: auto;
