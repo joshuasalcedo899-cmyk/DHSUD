@@ -298,12 +298,13 @@
 	flex: 1 1 auto;
 	min-height: 0;
 }
-.admin-table-container header {
+.admin-table-container table {
+	table-layout: auto;
 	width: 100%;
 }
 .admin-table-container th{
-	word-wrap: auto;
 	white-space: nowrap;
+	word-wrap: auto;
 }
 .admin-home-header {
 	width: 100vw;
@@ -386,7 +387,7 @@
 	font-weight: 700;
 	color: #22336a;
 	font-size: 1.3rem;
-	margin-bottom: 1rem;
+	margin-bottom: 0.2rem;
 	letter-spacing: 0.04em;
 }
 .table-title {
@@ -402,17 +403,17 @@
     gap: 1.2rem;
     flex-wrap: wrap;
     background: #d9d9d984;
-    border: solid 12px #d9d9d900;
+    border: solid 8px #d9d9d900;
     margin-bottom: 0.5rem;
 }
 .stat-box {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	font-size: 0.8rem;
+	font-size: 0.5rem;
 	font-weight: 600;
 	border-radius: 6px;
-	padding: 0.3rem 0.5rem 0.3rem 0.5rem;
+	padding: 0.1rem 0.4rem 0.1rem 0.4rem;
 	background: #eee;
 	border: 1.5px solid #bbb;
 }
@@ -618,7 +619,7 @@ body {
 	}
 	table {
 		font-size: 0.65rem !important;
-		table-layout: fixed;
+		table-layout: auto;
 		width: 100% !important
 	}
 	th, td {
@@ -822,7 +823,7 @@ img {
 	width: min(1200px, calc(100% - 96px));
 	max-width: 1200px;
 	margin: 0.05rem auto 0.05rem auto;
-	padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+	padding: 0rem 0.5rem 0.2rem 0.5rem;
 }
 
 .admin-table-container {

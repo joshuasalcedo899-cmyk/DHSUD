@@ -94,7 +94,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <link rel="stylesheet" href="../main.css">
     <style>
         table { width:100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center; white-space: pre-wrap;}
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center; white-space: pre-wrap; overflow: hidden; }
         @media (max-width: 768px) {
             table { font-size: 0.65rem; }
             th, td { padding: 6px; }
@@ -107,12 +107,26 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         form.inline { margin:0; }
         select { padding:4px; }
         button.save { padding:4px 8px; }
-            /* Add border-radius to Status dropdown */
-            .status-select {
-                border-radius: 12px !important;
-                font-weight: 500;
-                font-size: 0.8rem;
-            }
+        /* Add border-radius to Status dropdown */
+        .status-select {
+            border-radius: 12px !important;
+            font-weight: 600;
+            font-size: 0.75rem;
+            width: 100%;
+            min-width: 120px;
+            max-width: 180px;
+            box-sizing: border-box;
+            display: block;
+            margin: 0 auto;
+        }
+        /* Ensure status column does not overflow */
+        td.status-cell {
+            position: relative;
+            overflow: hidden;
+            padding: 8px;
+            min-width: 130px;
+            max-width: 200px;
+        }
         .message { padding:8px; margin:10px 0; }
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
         .stats { margin-bottom:10px; }
@@ -488,7 +502,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                     <?php if ($idx === 0) continue; // skip Notice/Order Code, already rendered ?>
                                     <?php if ($idx === 8): // STATUS column (9th)
                                     ?>
-                                        <td>
+                                        <td class="status-cell">
                                             <form method="post" class="inline" style="margin:0;">
                                                 <input type="hidden" name="notice_code" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                                 <select name="status" class="status-select" onchange="this.form.submit(); updateStatusSelectColor(this);">
