@@ -85,7 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 4px 14px rgba(34,51,106,0.08);
         }
         .admin-home-header-img {
             margin-top: 1.5rem;
@@ -99,7 +98,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             height: 6px;
             background: #22336a;
             margin-top: 1.2rem;
-            margin-bottom: 1.5rem;
         }
     </style>
 </head>
