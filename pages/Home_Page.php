@@ -110,7 +110,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             /* Add border-radius to Status dropdown */
             .status-select {
                 border-radius: 12px !important;
-                font-weight: 600;
+                font-weight: 500;
                 font-size: 0.8rem;
             }
         .message { padding:8px; margin:10px 0; }
@@ -253,7 +253,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     </div>
     <div class="welcome-block">
         <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-bottom:2px;">Welcome, Admin!</div>
-        <a href="logout.php" style="display:block;text-decoration:none;font-weight:600;color:#726868;font-size:1em;margin-bottom:18px;">Logout</a>
+        <a href="logout.php" style="display:block;text-decoration:none;font-weight:600;color:#726868;font-size:1em;margin-bottom:-160px;">Logout</a>
     </div>
         <!-- Edit Modal (hidden by default) -->
         <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;">

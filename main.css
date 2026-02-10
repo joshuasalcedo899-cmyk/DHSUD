@@ -297,7 +297,16 @@
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
 	overflow-y: auto;
+	overflow-x: hidden;
 	min-height: 0;
+}
+.admin-table-container table {
+	table-layout: fixed;
+	width: 100%;
+}
+.admin-table-container th,
+.admin-table-container td {
+	word-break: break-word;
 }
 .admin-home-header {
 	width: 100vw;
@@ -374,7 +383,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin-bottom: 0.5rem;
+	margin-bottom: -6.5rem;
 }
 .statistics-title {
 	font-weight: 700;
@@ -611,11 +620,11 @@ body {
 		overflow: visible !important;
 	}
 	.admin-table-container .table-scroll-area {
-		overflow-x: auto !important;
+		overflow-x: hidden !important;
 	}
 	table {
 		font-size: 0.65rem !important;
-		table-layout: auto;
+		table-layout: fixed;
 		width: 100% !important
 	}
 	th, td {
@@ -680,7 +689,7 @@ body {
 		overflow: visible !important;
 	}
 	.admin-table-container .table-scroll-area {
-		overflow-x: auto !important;
+		overflow-x: hidden !important;
 	}
 	table {
 		font-size: 0.8rem !important;
