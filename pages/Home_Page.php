@@ -13,6 +13,7 @@ $updatedStatus = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['notice_code']) && isset($_POST['status'])) {
     $notice = trim($_POST['notice_code']);
     $status = trim($_POST['status']);
+    $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest';
     if ($notice === '') {
         $message = 'Missing Notice/Order Code.';
     } elseif ($status === '') {
@@ -30,6 +31,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['notice_code']) && is
         } catch (PDOException $e) {
             $message = 'Update failed: ' . $e->getMessage();
         }
+    }
+
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => ($message === ''),
+            'message' => $message,
+            'notice' => $updatedNotice,
+            'status' => $updatedStatus,
+        ]);
+        exit;
     }
 }
 
@@ -428,65 +440,23 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                         <input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
                                     <td>
-                                        <div style="display: flex; align-items: center; gap: 0.3em; position: relative;">
-                                            <div class="row-menu-container" style="position: relative;">
+                                        <div style="display: flex; align-items: center; gap: 0.3em;">
+                                            <div class="row-menu-container">
                                                 <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, '<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')">
                                                     <span style="font-size:1.5em;line-height:1;">&#8942;</span>
                                                 </button>
-                                                <div class="row-menu-dropdown" style="display:none; position:absolute; left:0; top:32px; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
-                                                    <button class="row-menu-item" onclick="editRow('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
-                                                        <img src="../assets/Edit_Icon.svg" alt="Edit" style="width:20px;height:20px;"> Edit
-                                                    </button>
-                                                    <button class="row-menu-item" onclick="deleteRecord('<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
-                                                        <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
-                                                    </button>
-                                                </div>
                                             </div>
                                             <span><?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?></span>
                                         </div>
                                     </td>
-                                        <script>
-                                            function toggleRowMenu(event, noticeCode) {
-                                                event.stopPropagation();
-                                                var btn = event.currentTarget;
-                                                var dropdown = btn.parentElement.querySelector('.row-menu-dropdown');
-                                                var allDropdowns = document.querySelectorAll('.row-menu-dropdown');
-                                                allDropdowns.forEach(function(dd) { if (dd !== dropdown) dd.style.display = 'none'; });
-                                                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-                                                document.addEventListener('click', function hideMenu(e) {
-                                                    if (!dropdown.contains(e.target) && e.target !== btn) {
-                                                        dropdown.style.display = 'none';
-                                                        document.removeEventListener('click', hideMenu);
-                                                    }
-                                                });
-                                            }
-                                            function deleteRecord(noticeCode) {
-                                                if (confirm('Are you sure you want to delete this record?')) {
-                                                   if (!noticeCode) return;
-                                                        // Redirect to PHP delete handler via POST using a form
-                                                        const form = document.createElement('form');
-                                                        form.method = 'POST';
-                                                        form.action = '../api/Delete.php'; // your PHP file that handles deletion
-
-                                                        const input = document.createElement('input');
-                                                        input.type = 'hidden';
-                                                        input.name = 'noticeCode';       // the field name your table uses
-                                                        input.value = noticeCode;
-
-                                                        form.appendChild(input);
-                                                        document.body.appendChild(form);
-                                                        form.submit();
-                                                }
-                                            }
-                                        </script>
                                 <?php foreach ($columns as $idx => $colName): ?>
                                     <?php if ($idx === 0) continue; // skip Notice/Order Code, already rendered ?>
                                     <?php if ($idx === 8): // STATUS column (9th)
                                     ?>
                                         <td class="status-cell">
-                                            <form method="post" class="inline" style="margin:0;">
+                                            <form method="post" class="inline status-form" style="margin:0;">
                                                 <input type="hidden" name="notice_code" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
-                                                <select name="status" class="status-select" onchange="this.form.submit(); updateStatusSelectColor(this);">
+                                                <select name="status" class="status-select" onchange="updateStatusSelectColor(this);">
                                                     <?php
                                                     $current = trim($row['Status'] ?? '');
                                                     $phSel = ($current === '') ? ' selected' : '';
@@ -532,7 +502,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                     $trackingNo = trim($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? '');
                                     ?>
                                     <?php if (!empty($trackingNo) && $trackingNo !== '0'): ?>
-                                        <a class="btn-track" href="JRS_Tracking_Page.php?tracking=<?= urlencode($trackingNo) ?>" style="display:inline-block;text-decoration:none;">Track</a>
+                                        <a class="btn-track" href="JRS_Tracking_Page.php?tracking=<?= urlencode($trackingNo) ?>" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;">Track</a>
                                     <?php else: ?>
                                         <span style="color:#999; font-size:12px;">No tracking #</span>
                                     <?php endif; ?>
@@ -542,6 +512,14 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+        <div id="rowMenuDropdown" class="row-menu-dropdown" style="display:none; position:fixed; left:0; top:0; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
+            <button class="row-menu-item" onclick="editRowFromMenu()" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
+                <img src="../assets/Edit_Icon.svg" alt="Edit" style="width:20px;height:20px;"> Edit
+            </button>
+            <button class="row-menu-item" onclick="deleteRecordFromMenu()" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
+                <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
+            </button>
         </div>
         <div id="trackingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;">
             <div style="background:#fff;width:80%;max-width:900px;margin:5% auto;padding:20px;border-radius:8px;max-height:80vh;overflow:auto;">
@@ -557,7 +535,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             <button class="add-btn" onclick="openAddModal()">Add</button>
             <a href="Archive_Page.php" class="archive-btn">Archive</a>
             <div class="statistics-section">
-                <div class="statistics-title">STATISTICS</div>
+                <div class="statistics-title">Statistics</div>
                 <div class="statistics-bar">
                     <div class="stat-box stat-rtos">Returned to Sender
                         <div class="stat-count"><?= $rts ?></div>
@@ -601,6 +579,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             font-size: 0.8rem;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
+            height: 35px;
         }
         .add-btn:hover {
             background: black;
@@ -642,6 +621,67 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     </style>
         
         <script>
+            var currentRowMenuNoticeCode = '';
+            function hideRowMenuDropdown() {
+                var dropdown = document.getElementById('rowMenuDropdown');
+                if (dropdown) dropdown.style.display = 'none';
+                currentRowMenuNoticeCode = '';
+            }
+            function toggleRowMenu(event, noticeCode) {
+                event.stopPropagation();
+                var dropdown = document.getElementById('rowMenuDropdown');
+                if (!dropdown) return;
+                if (dropdown.style.display === 'block' && currentRowMenuNoticeCode === noticeCode) {
+                    hideRowMenuDropdown();
+                    return;
+                }
+                currentRowMenuNoticeCode = noticeCode || '';
+                dropdown.style.display = 'block';
+                var rect = event.currentTarget.getBoundingClientRect();
+                var left = rect.left;
+                var top = rect.bottom + 6;
+                dropdown.style.left = left + 'px';
+                dropdown.style.top = top + 'px';
+                var ddRect = dropdown.getBoundingClientRect();
+                if (ddRect.right > window.innerWidth - 8) {
+                    dropdown.style.left = Math.max(8, window.innerWidth - ddRect.width - 8) + 'px';
+                }
+                if (ddRect.bottom > window.innerHeight - 8) {
+                    dropdown.style.top = Math.max(8, rect.top - ddRect.height - 6) + 'px';
+                }
+            }
+            function editRowFromMenu() {
+                var noticeCode = currentRowMenuNoticeCode;
+                hideRowMenuDropdown();
+                if (noticeCode) {
+                    editRow(noticeCode);
+                }
+            }
+            function deleteRecordFromMenu() {
+                var noticeCode = currentRowMenuNoticeCode;
+                hideRowMenuDropdown();
+                if (noticeCode) {
+                    deleteRecord(noticeCode);
+                }
+            }
+            function deleteRecord(noticeCode) {
+                if (confirm('Are you sure you want to delete this record?')) {
+                   if (!noticeCode) return;
+                        // Redirect to PHP delete handler via POST using a form
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = '../api/Delete.php'; // your PHP file that handles deletion
+
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'noticeCode';       // the field name your table uses
+                        input.value = noticeCode;
+
+                        form.appendChild(input);
+                        document.body.appendChild(form);
+                        form.submit();
+                }
+            }
             // Select all checkboxes logic
             function toggleAllCheckboxes(master) {
                 var checkboxes = document.querySelectorAll('.row-checkbox');
@@ -943,6 +983,67 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
                 }, 2000);
             });
+            document.querySelectorAll('.status-form').forEach(function(form) {
+                var select = form.querySelector('.status-select');
+                if (!select) return;
+                select.addEventListener('change', function() {
+                    var formData = new FormData(form);
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        var cell = form.closest('.status-cell');
+                        if (!cell) return;
+                        var existing = cell.querySelector('.row-message');
+                        if (existing) existing.remove();
+                        var msg = document.createElement('div');
+                        msg.className = 'row-message';
+                        if (data && data.success) {
+                            msg.style.color = 'green';
+                            msg.textContent = 'Status saved.';
+                        } else {
+                            msg.style.color = '#AA4444';
+                            msg.textContent = (data && data.message) ? data.message : 'Failed to save status.';
+                        }
+                        cell.appendChild(msg);
+                        setTimeout(function() {
+                            msg.style.opacity = '0';
+                            setTimeout(function() { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 500);
+                        }, 2000);
+                    })
+                    .catch(() => {
+                        var cell = form.closest('.status-cell');
+                        if (!cell) return;
+                        var existing = cell.querySelector('.row-message');
+                        if (existing) existing.remove();
+                        var msg = document.createElement('div');
+                        msg.className = 'row-message';
+                        msg.style.color = '#AA4444';
+                        msg.textContent = 'Failed to save status.';
+                        cell.appendChild(msg);
+                        setTimeout(function() {
+                            msg.style.opacity = '0';
+                            setTimeout(function() { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 500);
+                        }, 2000);
+                    });
+                });
+            });
+            document.addEventListener('click', function(e) {
+                var dropdown = document.getElementById('rowMenuDropdown');
+                if (!dropdown) return;
+                var isMenuClick = dropdown.contains(e.target);
+                var isButtonClick = e.target.closest && e.target.closest('.row-menu-btn');
+                if (!isMenuClick && !isButtonClick) {
+                    hideRowMenuDropdown();
+                }
+            });
+            window.addEventListener('scroll', hideRowMenuDropdown, true);
+            window.addEventListener('resize', hideRowMenuDropdown);
             // Search and sort bar events
             const searchInput = document.getElementById('tableSearchInput');
             const searchBtn = document.getElementById('tableSearchBtn');
@@ -969,6 +1070,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             let form = document.createElement("form");
             form.method = "POST";
             form.action = "../api/jrs_tracking.php";
+            form.target = "_blank";
 
             let input = document.createElement("input");
             input.type = "hidden";
