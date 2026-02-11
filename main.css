@@ -262,6 +262,7 @@
 	font-size: 0.75rem;
 	display: flex;
 	align-items: center;
+	margin-right: -88px;
 }
 .table-search-icon {
 	width: 18px;
@@ -893,7 +894,7 @@ img {
 .button-container {
 	position: relative;
 	min-height: 100vh;
-	justify-content: flex-end;
+	justify-content: flex-end ;
 	padding: 3rem 1.5rem;
 	gap: 1.2rem;
 }

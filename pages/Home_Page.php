@@ -1,4 +1,4 @@
-
+ 
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
@@ -264,7 +264,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <div class="admin-home-header">
     <div class="welcome-block">
         <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:29px;margin-bottom:2px;">Welcome, Admin!</div>
-        <a href="logout.php" style="display:block;text-decoration:none;font-weight:600;color:#726868;font-size:1em;margin-bottom:-160px;">Logout</a>
+        <a href="logout.php" class="logout-btn">Logout</a>
     </div>
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
         <div class="admin-home-header-border"></div>
@@ -388,7 +388,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <div class="admin-table-container">
         <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
             <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:8px;text-align:center;">MAIL TRACKING RECORDS</div>
-            <div style="display: flex; align-items: center; width:100%; max-width:1200px; gap:18px;">
+            <div style="display: flex; align-items: center; width:100%; max-width:1200px; gap:810px;">
                 <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
                 <div class="table-search-bar" style="flex:1; display:flex; align-items:center;">
                     <div class="table-sort-bar">
@@ -572,6 +572,18 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             <a href="Archive_Page.php" class="archive-btn">Archive</a>
         </div>
     <style>
+        .logout-btn {
+            display: block;
+            text-decoration: none;
+            font-weight: 600;
+            color: #726868;
+            font-size: 1em;
+            margin-bottom: -160px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .logout-btn:hover {
+            color: black;
+        }
         .add-btn {
             background: #22336A;
             color: #fff;
@@ -596,6 +608,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             font-weight: bold;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
+            margin-left: -88px;
         }
         .export-btn:hover {
             background: black;
