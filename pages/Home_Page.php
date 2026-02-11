@@ -385,7 +385,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         </div>
     <div class="admin-table-container">
         <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
-            <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:8px;text-align:center;">MAIL TRACKING RECORDS</div>
+            <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:50px;text-align:center;">MAIL TRACKING RECORDS</div>
             <div style="display: flex; align-items: center; width:100%; max-width:1200px; gap:810px;">
                 <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
                 <div class="table-search-bar" style="flex:1; display:flex; align-items:center;">
