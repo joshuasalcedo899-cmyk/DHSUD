@@ -285,7 +285,7 @@
 	padding: 2rem 2rem 1.5rem 2rem;
 }
 .admin-table-container {
-	top: 270px;
+	top: 165px;
 	padding: 2rem 2rem 2rem 2rem;
 	height: calc(100vh - 380px);
 	overflow: hidden;
@@ -395,13 +395,13 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin-bottom: 0.5rem;
+	margin-top: 10px
 }
 .statistics-title {
 	font-weight: 700;
 	color: #22336a;
 	font-size: 1.3rem;
-	margin-bottom: 1rem;
+	margin-bottom: 0.5rem;
 	letter-spacing: 0.04em;
 }
 .table-title {
@@ -414,11 +414,12 @@
 }
 .statistics-bar {
 	display: flex;
-    gap: 1.2rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
     background: #d9d9d984;
-    border: solid 12px #d9d9d900;
+    border: solid 5px #d9d9d900;
     margin-bottom: 0.5rem;
+	border-radius: 10px;
 }
 .stat-box {
 	display: flex;
@@ -451,7 +452,7 @@
 .stat-total { background: #000000; color: #fff; border: none }
 .stat-total .color { background: #000000; border: none; }
 
-.stat-ndr { background: #9B4F9F; color: #fff; border: none; }
+.stat-ndr { background: #9B4F9F; color: #fff; border: none;}
 .stat-ndr .color { background: #9B4F9F; border: none; }
 .admin-home-bg {
 	background: #fff !important;
@@ -648,6 +649,7 @@ body {
 	}
 	.stat-box {
 		width: 100%;
+		padding: 2px 2px;
 	}
 	.stat-count {
 		font-size: 0.9em !important;
@@ -849,6 +851,7 @@ img {
 	display: flex;
 	flex-direction: column;
 	gap: 0.2rem;
+	position: static;
 }
 
 .admin-table-container .table-scroll-area {
