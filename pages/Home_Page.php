@@ -132,7 +132,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         .stats { margin-bottom:10px; }
         .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
         .btn-track { padding:6px 12px; font-weight: 600; background-color:#22336A; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.7rem; }
-        .btn-track:hover { background-color:#0b7dda; }
+        .btn-track:hover { background-color:black; }
 
         /* Modal Form UI - Two Column Grid */
         .edit-modal {
@@ -263,7 +263,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
 <body class="admin-home-bg">
     <div class="admin-home-header">
     <div class="welcome-block">
-        <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-bottom:2px;">Welcome, Admin!</div>
+        <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:29px;margin-bottom:2px;">Welcome, Admin!</div>
         <a href="logout.php" style="display:block;text-decoration:none;font-weight:600;color:#726868;font-size:1em;margin-bottom:-160px;">Logout</a>
     </div>
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
@@ -366,38 +366,37 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             </div>
         </div>
     <div class="admin-table-container">
-        <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 10px;">
-            <button onclick="exportSelectedToPDF()"
-                style="background:#22336A;color:white;padding:8px 16px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">
-                Export Selected to PDF
-            </button>
-            <div class="table-title">MAIL TRACKING RECORDS</div>
-            <div class="table-search-bar" style="flex:1; display:flex; align-items:center;">
-                <div class="table-sort-bar">
-                    <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;" aria-label="Year">
-                        <option value="" disabled selected hidden>Year</option>
-                        <option value="all">All</option>
-                        <?php
-                        // Collect unique years from the 'Date released to AFD' column
-                        $years = [];
-                        foreach ($rows as $row) {
-                            $dateAfd = $row['Date released to AFD'] ?? '';
-                            if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
-                                $years[] = $m[1];
+        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
+            <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:8px;text-align:center;">MAIL TRACKING RECORDS</div>
+            <div style="display: flex; align-items: center; width:100%; max-width:1200px; gap:18px;">
+                <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
+                <div class="table-search-bar" style="flex:1; display:flex; align-items:center;">
+                    <div class="table-sort-bar">
+                        <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;" aria-label="Year">
+                            <option value="" disabled selected hidden>Year</option>
+                            <option value="all">All</option>
+                            <?php
+                            // Collect unique years from the 'Date released to AFD' column
+                            $years = [];
+                            foreach ($rows as $row) {
+                                $dateAfd = $row['Date released to AFD'] ?? '';
+                                if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
+                                    $years[] = $m[1];
+                                }
                             }
-                        }
-                        $years = array_unique($years);
-                        rsort($years);
-                        foreach ($years as $year) {
-                            echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
-                        }
-                        ?>
-                    </select>
+                            $years = array_unique($years);
+                            rsort($years);
+                            foreach ($years as $year) {
+                                echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
+                    <button class="table-search-btn" id="tableSearchBtn" title="Search">
+                        <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
+                    </button>
                 </div>
-                <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
-                <button class="table-search-btn" id="tableSearchBtn" title="Search">
-                    <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
-                </button>
             </div>
         </div>
         <div class="table-scroll-area">
@@ -549,7 +548,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <!-- Add New Record Modal (hidden by default) -->
         
         <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 15px;border:none;border-radius:4px;font-weight:700;font-size:0.8rem;cursor:pointer;">Add</button>
+            <button class="add-btn" onclick="openAddModal()">Add</button>
             <a href="Archive_Page.php" class="archive-btn">Archive</a>
             <div class="statistics-section">
                 <div class="statistics-title">STATISTICS</div>
@@ -574,6 +573,49 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         </div>
         
     <style>
+        .add-btn {
+            background: #22336A;
+            color: #fff;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .add-btn:hover {
+            background: black;
+            color: #fff;
+        }
+        .export-btn {
+            background: #22336A;
+            color: #fff;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .export-btn:hover {
+            background: black;
+            color: #fff;
+        }
+        .archive-btn {
+            background: #AA4444;
+            color: #fff;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s;
+        }
         .archive-btn:hover {
             background: #d32f2f;
             color: #fff;

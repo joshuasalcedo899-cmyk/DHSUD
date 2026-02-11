@@ -784,6 +784,7 @@ img {
 	max-width: 100%;
 	height: auto;
 	display: block;
+	margin-right: 13px;
 }
 
 .page-shell {
@@ -801,7 +802,7 @@ img {
 	color: var(--color-primary);
 	font-size: 1.3rem;
 	font-weight: 700;
-	margin: 0.75rem 0 1.25rem 0;
+	margin: 0.75rem 0 -0.75rem 0;
 	letter-spacing: 0.04em;
 }
 
@@ -902,7 +903,7 @@ img {
 .button-container {
 	position: relative;
 	min-height: 100vh;
-	justify-content: center;
+	justify-content: flex-end;
 	padding: 3rem 1.5rem;
 	gap: 1.2rem;
 }
