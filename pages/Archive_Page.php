@@ -7,7 +7,7 @@ requireLogin();
 
 // Fetch archived rows (example: Status = 'ARCHIVED' or a dedicated column, adjust as needed)
 try {
-    $rows = $pdo->query("SELECT * FROM mailtracking WHERE `Status` = 'ARCHIVED'")->fetchAll();
+    $rows = $pdo->query('SELECT * FROM archive')->fetchAll();
 } catch (Exception $e) {
     $rows = [];
     $message = 'Failed to load records: ' . $e->getMessage();
@@ -53,7 +53,7 @@ $columns = [
             font-weight: bold;
             letter-spacing: 1px;
             text-align: center;
-            margin-top: 80px;
+            margin-top: 30px;
             margin-bottom: 18px;
         }
         .archive-table-container {
@@ -63,10 +63,13 @@ $columns = [
             padding: 24px;
             margin: 0 auto;
             max-width: 1200px;
+            max-height: 450px;
+            overflow-y: auto;
         }
-        table { width:100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center; white-space: pre-wrap; overflow: hidden; }
-        th { background:#22336A; color: #fff; }
+        table { width:100%; border-collapse: collapse;}
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center;}
+        th { background:#22336A; color: #fff;}
+        td {white-space: pre-wrap; word-break: break-word;}
         .status-cell .status-archived {
             background: #AA4444;
             color: #fff;
@@ -134,8 +137,8 @@ $columns = [
         <a href="Home_Page.php" class="return-link" style="display:inline-flex;align-items:center;">
             <img src="../assets/Return_Icon.svg" alt="Return" style="height:20px;width:20px;margin-right:8px;"> <span>Return</span>
         </a>
-        <button class="delete-btn">Delete Forever</button>
-        <button class="recover-btn">Recover</button>
+        <button class="delete-btn" onclick="deleteSelected()">Delete Forever</button>
+        <button class="recover-btn" onclick="recoverSelected()">Recover</button>
     </div>
     <div class="archive-table-container">
         <table>
@@ -145,7 +148,6 @@ $columns = [
                     <?php foreach ($columns as $col): ?>
                         <th><?= htmlspecialchars($col) ?></th>
                     <?php endforeach; ?>
-                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -164,7 +166,6 @@ $columns = [
                                     <?php endif; ?>
                                 </td>
                             <?php endforeach; ?>
-                            <td><button style="background:#22336A;color:#fff;padding:4px 10px;border:none;border-radius:4px;font-weight:600;">Track</button></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -177,6 +178,83 @@ $columns = [
             checkboxes.forEach(function(cb) {
                 cb.checked = master.checked;
             });
+        }
+        function deleteRecord(noticeCodes) {
+            if (!noticeCodes || noticeCodes.length === 0) return;
+
+            if (!confirm('Are you sure you want to delete selected records?')) return;
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '../api/archive-delete.php';
+
+            // Loop through all selected codes
+            noticeCodes.forEach(code => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'noticeCode[]'; // PHP array
+                input.value = code;
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+
+        function getSelectedRecords() {
+            // Get all checkboxes
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const selected = [];
+
+            // Loop through and check if each is checked
+            checkboxes.forEach(cb => {
+            if (cb.checked) {
+                selected.push(cb.value); // Get the value attribute
+            }
+            });
+            return selected;
+        }
+        function deleteSelected() {
+            const noticeCodes = getSelectedRecords();
+
+            if (noticeCodes.length === 0) {
+                alert("No records selected!");
+                return;
+            }
+
+            deleteRecord(noticeCodes);
+        }
+        function recoverSelected() {
+            const noticeCodes = getSelectedRecords();
+
+            if (noticeCodes.length === 0) {
+                alert("No records selected!");
+                return;
+            }
+            recoverRecord(noticeCodes);
+        }
+
+        function recoverRecord(noticeCodes) {
+            if (!noticeCodes || noticeCodes.length === 0) return;
+
+            if (!confirm('Are you sure you want to recover selected records?')) return;
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '../api/archived-recover.php';
+
+            // Loop through all selected codes
+            noticeCodes.forEach(code => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'noticeCode[]'; // PHP array
+                input.value = code;
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
         }
     </script>
 </body>

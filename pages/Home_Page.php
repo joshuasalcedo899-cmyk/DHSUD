@@ -93,7 +93,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <title>Home Page</title>
     <link rel="stylesheet" href="../main.css">
     <style>
-        table { width:100%; border-collapse: collapse; }
+        table { width:100%; border-collapse: collapse;}
         th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center; white-space: pre-wrap; overflow: hidden; }
         @media (max-width: 768px) {
             table { font-size: 0.65rem; }
@@ -365,26 +365,6 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 </form>
             </div>
         </div>
-    <div class="statistics-section">
-            <div class="statistics-title">STATISTICS</div>
-            <div class="statistics-bar">
-                <div class="stat-box stat-rtos">Returned to Sender
-                    <div class="stat-count"><?= $rts ?></div>
-                </div>
-                <div class="stat-box stat-ongoing">Ongoing Delivery
-                    <div class="stat-count"><?= $ogd?></div>
-                </div>
-                <div class="stat-box stat-delivered">Delivered
-                    <div class="stat-count"><?= $del ?></div>
-                </div>
-                <div class="stat-box stat-total">Total
-                    <div class="stat-count"><?= (int)$totalCount ?></div>
-                </div>
-                <div class="stat-box stat-ndr">Non-delivery Rate
-                    <div class="stat-count"><?= htmlspecialchars($ndrPercent) ?>%</div>
-                </div>
-        </div>
-        </div>
     <div class="admin-table-container">
         <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 10px;">
             <button onclick="exportSelectedToPDF()"
@@ -421,7 +401,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             </div>
         </div>
         <div class="table-scroll-area">
-            <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
+            <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95); max-width: ;">
                 <thead>
                         <tr>
                             <th style="width:32px;">
@@ -571,22 +551,29 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 15px;border:none;border-radius:4px;font-weight:700;font-size:0.8rem;cursor:pointer;">Add</button>
             <a href="Archive_Page.php" class="archive-btn">Archive</a>
+            <div class="statistics-section">
+                <div class="statistics-title">STATISTICS</div>
+                <div class="statistics-bar">
+                    <div class="stat-box stat-rtos">Returned to Sender
+                        <div class="stat-count"><?= $rts ?></div>
+                    </div>
+                    <div class="stat-box stat-ongoing">Ongoing Delivery
+                        <div class="stat-count"><?= $ogd?></div>
+                    </div>
+                    <div class="stat-box stat-delivered">Delivered
+                        <div class="stat-count"><?= $del ?></div>
+                    </div>
+                    <div class="stat-box stat-total">Total
+                        <div class="stat-count"><?= (int)$totalCount ?></div>
+                    </div>
+                    <div class="stat-box stat-ndr">Non-delivery Rate
+                        <div class="stat-count"><?= htmlspecialchars($ndrPercent) ?>%</div>
+                    </div>
+            </div>
         </div>
+        </div>
+        
     <style>
-        .archive-btn {
-            background: #AA4444;
-            color: #fff;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            font-weight: 700;
-            font-size: 0.8rem;
-            cursor: pointer;
-            display: inline-block;
-            text-align: center;
-            text-decoration: none;
-            transition: background 0.2s, color 0.2s;
-        }
         .archive-btn:hover {
             background: #d32f2f;
             color: #fff;
