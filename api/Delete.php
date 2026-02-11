@@ -7,6 +7,10 @@ if (!isset($_POST['noticeCode'])) {
 }
 
 $code = $_POST['noticeCode'];
+
+$stmt = $pdo->prepare("INSERT INTO archive SELECT * FROM mailtracking WHERE `Notice/Order Code` = ?");
+$stmt->execute([$code]);
+
 // Use prepared statement to prevent SQL injection
 $stmt = $pdo->prepare("DELETE FROM mailtracking WHERE `Notice/Order Code` = ?");
 

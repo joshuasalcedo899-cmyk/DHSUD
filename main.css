@@ -27,12 +27,25 @@
 }
 
 /* Sticky table header for admin table */
-.admin-table-container .table-scroll-area table th {
+.admin-table-container .table-scroll-area .archive-table table th {
 	position: sticky;
 	top: 0;
 	z-index: 2;
 	background: #22336A;
 	padding: 0.1rem 0.5rem;
+}
+
+.archive-btn{
+	background: #AA4444;
+	color: #fff;
+	padding: 8px 15px;
+	border: none;
+	border-radius: 4px;
+	font-weight: 700;
+	font-size: 0.8rem;
+	cursor: pointer;
+	text-decoration: none;
+	transition: background 0.2s, color 0.2s;
 }
 .tracking-table td {
 	text-align: center;
@@ -294,7 +307,7 @@
 	flex-direction: column;
 }
 .admin-table-container .table-title {
-	flex: 0 0 auto;
+	flex: 1 0 auto;
 }
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
@@ -329,7 +342,6 @@
 	z-index: 1000;
 	background: #fff;
 	display: flex;
-	flex-direction: column;
 	align-items: center;
 }
 .admin-home-header-border {
@@ -394,15 +406,14 @@
 
 .statistics-section {
 	display: flex;
-	flex-direction: column;
 	align-items: center;
-	margin-top: 10px
+	margin-top: 10px;
+	margin-left: auto;
 }
 .statistics-title {
 	font-weight: 700;
 	color: #22336a;
 	font-size: 1.3rem;
-	margin-bottom: 0.5rem;
 	letter-spacing: 0.04em;
 }
 .table-title {
@@ -419,7 +430,6 @@
     flex-wrap: wrap;
     background: #d9d9d984;
     border: solid 5px #d9d9d900;
-    margin-bottom: 0.5rem;
 	border-radius: 10px;
 }
 .stat-box {
@@ -813,8 +823,7 @@ img {
 .admin-home-header {
 	position: sticky;
 	top: 0;
-	z-index: 1000;
-	width: 100%;
+	width: auto;
 	background: #fff;
 	box-shadow: 0 4px 14px rgba(34,51,106,0.08);
 }
@@ -831,9 +840,10 @@ img {
 }
 
 .welcome-block {
-	width: min(1200px, calc(100% - 32px));
+	width: auto;
 	margin: 0.5rem auto 0.2rem auto;
 	padding: 0;
+	flex: 1 0 auto;
 }
 
 .admin-home-container,
@@ -844,7 +854,7 @@ img {
 	width: min(1400px, calc(100% - 48px));
 	max-width: 1400px;
 	margin: 0.05rem auto 0.05rem auto;
-	padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+	padding: 1.5rem 0.5rem 0.2rem 0.5rem;
 }
 
 .admin-table-container {
@@ -859,7 +869,7 @@ img {
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
 	overflow: auto;
-	max-height: 50vh;
+	max-height: 55vh;
 	-webkit-overflow-scrolling: touch;
 }
 
@@ -868,7 +878,7 @@ img {
 }
 
 .table-search-input {
-	flex: 1 1 220px;
+	flex: 0 1 220px;
 	width: auto;
 	min-width: 180px;
 }
