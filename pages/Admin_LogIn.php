@@ -82,18 +82,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body class="admin-login-bg">
-    <div class="bottom-container">
-        <form class="login-form" method="post" action="Admin_LogIn.php">
+    <div class="bottom-container" style="position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:flex-end;min-height:0;padding-bottom:2rem;z-index:10;">
+        <form class="login-form" method="post" action="Admin_LogIn.php" style="margin-bottom:50px;">
             <h2>Log in to your account</h2>
-            
             <?php if (!empty($error_message)): ?>
                 <div class="error-message"><?php echo htmlspecialchars($error_message); ?></div>
             <?php endif; ?>
-            
             <?php if (!empty($success_message)): ?>
                 <div class="success-message"><?php echo htmlspecialchars($success_message); ?></div>
             <?php endif; ?>
-            
             <div style="margin-bottom: 1rem;">
                 <label for="username">User Name</label>
                 <input type="text" id="username" name="username" placeholder="Enter your user name" required>
