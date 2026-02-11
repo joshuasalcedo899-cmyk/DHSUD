@@ -104,6 +104,12 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             th, td { padding: 4px; }
         }
         th { background:#22336A; color: #ffffffff}
+        .admin-table-container .table-scroll-area thead th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            background: #22336A;
+        }
         form.inline { margin:0; }
         select { padding:4px; }
         button.save { padding:4px 8px; }
