@@ -132,7 +132,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         .stats { margin-bottom:10px; }
         .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
         .btn-track { padding:6px 12px; font-weight: 600; background-color:#22336A; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.7rem; }
-        .btn-track:hover { background-color:#0b7dda; }
+        .btn-track:hover { background-color:black; }
 
         /* Modal Form UI - Two Column Grid */
         .edit-modal {
@@ -389,10 +389,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
             <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:8px;text-align:center;">MAIL TRACKING RECORDS</div>
             <div style="display: flex; align-items: center; width:100%; max-width:1200px; gap:18px;">
-                <button onclick="exportSelectedToPDF()"
-                    style="background:#22336A;color:white;padding:8px 16px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">
-                    Export Selected to PDF
-                </button>
+                <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
                 <div class="table-search-bar" style="flex:1; display:flex; align-items:center;">
                     <div class="table-sort-bar">
                         <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;" aria-label="Year">
@@ -571,10 +568,39 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         <!-- Add New Record Modal (hidden by default) -->
         
         <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 15px;border:none;border-radius:4px;font-weight:700;font-size:0.8rem;cursor:pointer;">Add</button>
+            <button class="add-btn" onclick="openAddModal()">Add</button>
             <a href="Archive_Page.php" class="archive-btn">Archive</a>
         </div>
     <style>
+        .add-btn {
+            background: #22336A;
+            color: #fff;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .add-btn:hover {
+            background: black;
+            color: #fff;
+        }
+        .export-btn {
+            background: #22336A;
+            color: #fff;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .export-btn:hover {
+            background: black;
+            color: #fff;
+        }
         .archive-btn {
             background: #AA4444;
             color: #fff;

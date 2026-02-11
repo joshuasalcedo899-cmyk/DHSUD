@@ -68,7 +68,7 @@ function formatDateTime($dt) {
             border-radius: 6px;
             padding: 6px 18px;
             margin: 18px 0 18px 0;
-            font-size: 1.1em;
+            font-size: 1em;
         }
         .jrs-table-container {
             background: #f7f7f7;
@@ -116,11 +116,27 @@ function formatDateTime($dt) {
         }
         .jrs-back:hover { text-decoration: underline; }
         .jrs-download {
-            margin: 0 0 0 0;
             font-size: 1.5em;
             color: #22336A;
             cursor: pointer;
             display: inline-block;
+        }
+        .return-btn {
+            color: black;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 1em;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s, color 0.2s;
+        }
+        .return-btn:hover {
+            background: #e3e6f3;
+            color: #black;
         }
         @media (max-width: 900px) {
             .jrs-table-container, .jrs-tracking-box { max-width: 98vw; }
@@ -138,10 +154,14 @@ function formatDateTime($dt) {
     </div>
     <div class="page-shell narrow">
         <div class="jrs-section">
-            <a href="javascript:history.back()" class="jrs-back">&larr; Return</a>
             <h1 class="page-title">JRS TRACKING</h1>
-            <div style="text-align:center; margin-bottom:1.2rem;">
-                <span class="jrs-tracking-label">Tracking Number: <span style="font-weight:700; color:#22336A;"> <?= htmlspecialchars($trackingNo) ?> </span></span>
+            <div style="text-align:center; margin-bottom:-0.8rem;">
+                <span class="jrs-tracking-label">Tracking Number: <span style="font-weight:500; color:#22336A;"> <?= htmlspecialchars($trackingNo) ?> </span></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <a href="javascript:history.back()" class="return-btn">
+                    <img src="../assets/Return_Icon.svg" alt="Return" style="width:22px;height:22px;vertical-align:middle;margin-right:6px;"> Return
+                </a>
                 <span class="jrs-download" title="Download" onclick="saveToPDF()">
                     <img src="../assets/Download_Icon.svg" alt="Download" style="width:28px;height:28px;vertical-align:middle;cursor:pointer;">
                 </span>
