@@ -61,8 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             min-height: 100vh;
         }
         .section {
-            margin: 2rem auto;
-            padding: 1.5rem 2rem;
+            margin: 0 auto;
+            padding: 1rem 2rem;
             max-width: 1200px;
         }
         .search-box { display: flex; gap: 0.5rem; }

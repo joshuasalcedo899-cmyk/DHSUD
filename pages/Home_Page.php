@@ -572,9 +572,30 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
 
         <!-- Add New Record Modal (hidden by default) -->
         
-        <div>
-            <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 15px;margin-top:10px;border:none;border-radius:4px;font-weight:700;font-size:0.8rem;cursor:pointer;">Add</button>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button onclick="openAddModal()" style="background:#22336A;color:#fff;padding:8px 15px;border:none;border-radius:4px;font-weight:700;font-size:0.8rem;cursor:pointer;">Add</button>
+            <a href="Archive_Page.php" class="archive-btn">Archive</a>
         </div>
+    <style>
+        .archive-btn {
+            background: #AA4444;
+            color: #fff;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s;
+        }
+        .archive-btn:hover {
+            background: #d32f2f;
+            color: #fff;
+        }
+    </style>
         
         <script>
             // Select all checkboxes logic
