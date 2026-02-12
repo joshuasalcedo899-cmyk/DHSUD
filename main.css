@@ -270,7 +270,8 @@
 	font-size: 0.75rem;
 	display: flex;
 	align-items: center;
-	margin-right: -88px;
+	width: 40px
+
 }
 .table-search-icon {
 	width: 18px;
@@ -281,13 +282,14 @@
 }
 .admin-home-container, .admin-table-container {
 	position: fixed;
-	left: 50%;
-	transform: translateX(-50%);
+	left: 0;
+	transform: none;
 	z-index: 100;
-	width: 1200px;
-	max-width: 98vw;
+	width: 100%;
+	max-width: 100%;
 	background: rgba(255,255,255,0.92);
 	border-radius: 12px;
+	box-sizing: border-box;
 }
 .admin-home-container {
 	top: 165px;
@@ -831,8 +833,8 @@ img {
 }
 
 .welcome-block {
-	width: min(1500px, calc(100% - 32px));
-	margin: 0.5rem auto 0.2rem auto;
+	width: min(1500px, calc(100% - 0.5in - 32px));
+	margin: 0.5rem 0 0.2rem 0.5in;
 	padding: 0;
 	flex: 1 0 auto;
 }
@@ -842,10 +844,11 @@ img {
 	position: relative;
 	left: auto;
 	transform: none;
-	width: min(1400px, calc(100% - 48px));
+	width: 100%;
 	max-width: 1400px;
 	margin: 0.05rem auto 0.05rem auto;
-	padding: 1.5rem 0.5rem 0.2rem 0.5rem;
+	padding: clamp(0.75rem, 2.5vw, 1.5rem) clamp(0.5rem, 2vw, 1.25rem);
+	box-sizing: border-box;
 }
 
 .admin-table-container {
@@ -969,6 +972,10 @@ img {
 	.admin-table-container,
 	.tracking-table-container {
 		width: calc(100% - 24px);
+	}
+	.welcome-block {
+		margin-left: 16px;
+		margin-right: 0;
 	}
 	.admin-home-header-img {
 		max-width: 90vw;

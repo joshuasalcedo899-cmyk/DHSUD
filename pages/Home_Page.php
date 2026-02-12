@@ -96,6 +96,13 @@ $ogd = (int)$statusCounts['ON GOING DELIVERY'] ?? 0;
 $totalCount = count($rows);
 $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) : 0;
 
+function formatDateCell($value) {
+    if ($value === null || $value === '') return '';
+    $ts = strtotime($value);
+    if ($ts === false) return $value;
+    return date('F-d-Y', $ts);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -125,18 +132,6 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         form.inline { margin:0; }
         select { padding:4px; }
         button.save { padding:4px 8px; }
-        /* Add border-radius to Status dropdown */
-        .status-select {
-            border-radius: 12px !important;
-            font-weight: 600;
-            font-size: 0.5rem;
-            width: 100%;
-            min-width: 0;
-            max-width: 100%;
-            box-sizing: border-box;
-            display: block;
-            margin: 0 auto;
-        }
         /* Ensure status column does not overflow */
         td.status-cell {
             position: relative;
@@ -145,12 +140,18 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             min-width: 0;
             max-width: 100%;
         }
+        .status-text { font-weight: 700; }
+        .status-delivered { color: #2e7d32; }
+        .status-returned { color: #c62828; }
+        .status-ongoing { color: #b39b00; }
+        .status-personal { color: #22336A; }
         .message { padding:8px; margin:10px 0; }
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
         .stats { margin-bottom:10px; }
         .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
         .btn-track { padding:6px 12px; font-weight: 600; background-color:#22336A; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.7rem; }
         .btn-track:hover { background-color:black; }
+        .status-delivered { color:#1b7f3b; font-weight:700; }
 
         /* Modal Form UI - Two Column Grid */
         .edit-modal {
@@ -275,17 +276,32 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             z-index: 1000;
             backdrop-filter: blur(4px);
         }
-        ..top-bar {
+        .top-bar {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             width: 100%;
-            box-sizing: border-box; 
+            box-sizing: border-box;
+            gap: 12px;
+            flex-wrap: wrap;
+            overflow-x: hidden;
+        }
+        .table-sort-bar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex: 1 1 auto;
+            max-width: 100%;
+            flex-wrap: wrap;
+            box-sizing: border-box;
+            min-width: 0;
         }
 
         .table-search-bar {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 0;
             margin-left: auto;
             flex-shrink: 0; /* prevent breaking layout */
         }
@@ -293,11 +309,36 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
         .table-search-input {
             max-width: 200px; /* limit input width */
             width: 150px;
+            min-width: 0;
+        }
+        @media (max-width: 1024px) {
+            .table-search-input {
+                width: 140px;
+            }
         }
 
         .table-search-btn img {
             width: 16px;
             height: 16px;
+        }
+        @media (max-width: 768px) {
+            .top-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .export-btn {
+                align-self: flex-start;
+            }
+            .table-sort-bar {
+                width: 100%;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            .table-search-input {
+                width: 100%;
+                max-width: 100%;
+            }
         }
 
 
@@ -434,7 +475,6 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             </select>
                 <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
                 <button class="table-search-btn" id="tableSearchBtn">
-                    <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
                 </button>
         </div>
 </div>
@@ -475,47 +515,35 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                     <?php if ($idx === 0) continue; // skip Notice/Order Code, already rendered ?>
                                     <?php if ($idx === 8): // STATUS column (9th)
                                     ?>
+                                        <?php
+                                            $current = trim($row['Status'] ?? '');
+                                            $statusClass = '';
+                                            switch ($current) {
+                                                case 'DELIVERED':
+                                                    $statusClass = 'status-text status-delivered';
+                                                    break;
+                                                case 'RETURNED TO SENDER':
+                                                    $statusClass = 'status-text status-returned';
+                                                    break;
+                                                case 'ON GOING DELIVERY':
+                                                    $statusClass = 'status-text status-ongoing';
+                                                    break;
+                                                case 'PERSONALLY RECEIVED':
+                                                    $statusClass = 'status-text status-personal';
+                                                    break;
+                                            }
+                                        ?>
                                         <td class="status-cell">
-                                            <form method="post" class="inline status-form" style="margin:0;">
-                                                <input type="hidden" name="notice_code" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
-                                                <select name="status" class="status-select" onchange="updateStatusSelectColor(this);">
-                                                    <?php
-                                                    $current = trim($row['Status'] ?? '');
-                                                    $phSel = ($current === '') ? ' selected' : '';
-                                                    echo '<option value="" disabled' . $phSel . '>Select status</option>';
-                                                    // if current not in options, show it first
-                                                    if ($current !== '' && !in_array($current, $statusOptions, true)) {
-                                                        echo '<option value="' . htmlspecialchars($current) . '" selected>' . htmlspecialchars($current) . '</option>';
-                                                    }
-                                                    foreach ($statusOptions as $opt) {
-                                                        $sel = (trim($opt) === $current) ? ' selected' : '';
-                                                        $class = '';
-                                                        $color = '';
-                                                        switch ($opt) {
-                                                            case 'DELIVERED':
-                                                                $color = '#43AF1B';
-                                                                break;
-                                                            case 'RETURNED TO SENDER':
-                                                                $color = '#AA4444';
-                                                                break;
-                                                            case 'ON GOING DELIVERY':
-                                                                $color = '#DFE317';
-                                                                break;
-                                                            case 'PERSONALLY RECEIVED':
-                                                                $color = '#22336A';
-                                                                break;
-                                                        }
-                                                        echo '<option value="' . htmlspecialchars($opt) . '" style="background:' . $color . ';color:#fff;"' . $sel . '>' . htmlspecialchars($opt) . '</option>';
-                                                    }
-                                                    ?>
-                                                </select>
-                                                <?php if (!empty($updatedNotice) && trim($row['Notice/Order Code'] ?? '') === $updatedNotice): ?>
-                                                    <div class="row-message">Status updated</div>
-                                                <?php endif; ?>
-                                            </form>
+                                            <span class="<?= $statusClass ?>"><?= htmlspecialchars($current) ?></span>
                                         </td>
                                     <?php else: ?>
-                                        <td><?= htmlspecialchars($row[$colName] ?? '') ?></td>
+                                        <?php
+                                            $cellValue = $row[$colName] ?? '';
+                                            if ($colName === 'Date released to AFD' || $colName === 'Date') {
+                                                $cellValue = formatDateCell($cellValue);
+                                            }
+                                        ?>
+                                        <td><?= htmlspecialchars($cellValue) ?></td>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
                                 <td>
@@ -524,7 +552,8 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                                     $trackingNo = trim($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? '');
                                     ?>
                                     <?php if (!empty($trackingNo) && $trackingNo !== '0'): ?>
-                                        <a class="btn-track" href="JRS_Tracking_Page.php?tracking=<?= urlencode($trackingNo) ?>" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;">Track</a>
+                                        <button type="button" class="btn-track" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking="<?= htmlspecialchars($trackingNo) ?>" style="display:inline-block;text-decoration:none;">Track</button>
+                                        <div class="track-result"></div>
                                     <?php else: ?>
                                         <span style="color:#999; font-size:12px;">No tracking #</span>
                                     <?php endif; ?>
@@ -543,11 +572,17 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
             </button>
         </div>
-        <div id="trackingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;">
+        <div id="trackingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999; align-content: center;">
             <div style="background:#fff;width:80%;max-width:900px;margin:5% auto;padding:20px;border-radius:8px;max-height:80vh;overflow:auto;">
+                <button onclick="closeTrackingModal()" style="display: flex;"><img src="../assets/Return_Icon.svg" alt="Return" style="width:22px;height:22px;vertical-align:middle;margin-right:6px;"> Return</button>
                 <h2>JRS Tracking</h2>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
+                    <div id="trackingNumberLabel" style="font-weight:600;color:#22336A;"></div>
+                    <span class="jrs-download" title="Download" onclick="saveToPDF()">
+                        <img src="../assets/Download_Icon.svg" alt="Download" style="width:28px;height:28px;vertical-align:middle;cursor:pointer;">
+                    </span>
+                </div>
                 <div id="trackingContent">Loading...</div>
-                <button onclick="closeTrackingModal()">Close</button>
             </div>
         </div>
 
@@ -710,36 +745,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                     cb.checked = master.checked;
                 });
             }
-        // Status dropdown color coding logic
-        function updateStatusSelectColor(select) {
-            var val = select.value;
-            var bg = '#22336A';
-            switch(val) {
-                case 'DELIVERED':
-                    bg = '#43AF1B';
-                    break;
-                case 'RETURNED TO SENDER':
-                    bg = '#AA4444';
-                    break;
-                case 'ON GOING DELIVERY':
-                    bg = '#DFE317';
-                    break;
-                case 'PERSONALLY RECEIVED':
-                    bg = '#22336A';
-                    break;
-                default:
-                    bg = '#22336A';
-            }
-            select.style.background = bg;
-            select.style.color = '#fff';
-        }
         document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.status-select').forEach(function(sel) {
-                updateStatusSelectColor(sel);
-                sel.addEventListener('change', function() {
-                    updateStatusSelectColor(this);
-                });
-            });
                 // Uncheck master if any row is unchecked
                 document.querySelectorAll('.row-checkbox').forEach(function(cb) {
                     cb.addEventListener('change', function() {
@@ -810,9 +816,19 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                 });
             }
         });
+         
         function closeTrackingModal() {
             document.getElementById('trackingModal').style.display = 'none';
-        }
+            if (refreshAfterTracking) {
+                location.reload();
+            }
+        }                                   
+        document.addEventListener('DOMContentLoaded', function() {
+            const downloadBtn = document.getElementById('trackingDownloadBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', downloadTrackingPDF);
+            }
+        });
 
                         // Modal logic
                         function openEditModal(rowData) {
@@ -902,66 +918,88 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         // Expose PHP rows as JS array for modal
                         window.mailRows = <?php echo json_encode($rows, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
 
-        // Track parcel using JRS Express and copy tracking number to clipboard
-    function trackJRS(trackingNo) {
-    if (!trackingNo || trackingNo === '0') {
-        alert('No valid tracking number found');
-        return;
-    }
+        let currentTrackingNo = '';
+        let refreshAfterTracking = false;
 
-    fetch('../api/remarks.php?tracking=' + encodeURIComponent(trackingNo))
-        .then(res => res.json())
-        .then(data => {
+        function showTrackingModal(trackingNo) {
+            const content = document.getElementById('trackingContent');
+            const label = document.getElementById('trackingNumberLabel');
+            const downloadBtn = document.getElementById('trackingDownloadBtn');
 
-            if (!Array.isArray(data)) {
-                throw 'Invalid response';
+            if (!trackingNo || trackingNo === '0') {
+                if (content) content.innerHTML = '<div style="color:#AA4444;">No valid tracking number found.</div>';
+                document.getElementById('trackingModal').style.display = 'flex';
+                return;
             }
 
-            let html = `
-                <table style="width:100%;border-collapse:collapse;">
-                    <tr>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Location</th>
-                        <th>Receiver</th>
-                    </tr>
-            `;
+            currentTrackingNo = trackingNo;
+            if (label) label.textContent = 'Tracking Number: ' + trackingNo;
+            if (downloadBtn) downloadBtn.disabled = false;
+            if (content) content.innerHTML = 'Loading...';
 
-            data.forEach(row => {
-                const date = row.dateReceived
-                    ? new Date(row.dateReceived).toLocaleString()
-                    : '';
-
-                // ✅ Receiver logic (IMPORTANT PART)
-                let receiverText = '';
-                if (row.receiver) {
-                    receiverText = row.receiver;
-
-                    if (row.relation) {
-                        receiverText += `<br><small style="color:#666;">${row.relation}</small>`;
+            fetch('../api/jrs-track.php?tracking=' + encodeURIComponent(trackingNo))
+                .then(res => res.json())
+                .then(data => {
+                    if (!Array.isArray(data)) {
+                        throw new Error('Invalid response');
                     }
-                }
 
-                html += `
-                    <tr>
-                        <td>${date}</td>
-                        <td>${row.statusText ?? ''}</td>
-                        <td>${row.location ?? ''}</td>
-                        <td>${receiverText}</td>
-                    </tr>
-                `;
-            });
+                    let html = `
+                        <table style="width:100%;border-collapse:collapse;">
+                            <tr>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Receiver</th>
+                            </tr>
+                    `;
 
-            html += '</table>';
+                    data.forEach(row => {
+                        const date = row.dateReceived
+                            ? new Date(row.dateReceived).toLocaleString()
+                            : '';
+                        const statusText = row.statusText ?? '';
+                        const statusClass = (typeof statusText === 'string' && statusText.toLowerCase().startsWith('delivered'))
+                            ? 'status-delivered'
+                            : '';
 
-            document.getElementById('trackingContent').innerHTML = html;
-            document.getElementById('trackingModal').style.display = 'block';
-        })
-        .catch(err => {
-            alert('Unable to fetch tracking info');
-            console.error(err);
-        });
-}
+                        let receiverText = '';
+                        if (row.receiver) {
+                            receiverText = row.receiver;
+                            if (row.relation) {
+                                receiverText += `<br><small style="color:#666;">${row.relation}</small>`;
+                            }
+                        }
+
+                        html += `
+                            <tr>
+                                <td>${date}</td>
+                                <td><span class="${statusClass}">${statusText}</span></td>
+                                <td>${row.branchLocation ?? row.location ?? ''}</td>
+                                <td>${receiverText}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</table>';
+
+                    if (content) content.innerHTML = html;
+                    document.getElementById('trackingModal').style.display = 'flex';
+                })
+                .catch(err => {
+                    if (content) content.innerHTML = '<div style="color:#AA4444;">Unable to fetch tracking info.</div>';
+                    document.getElementById('trackingModal').style.display = 'flex';
+                    console.error(err);
+                });
+        }
+
+        function downloadTrackingPDF() {
+            if (!currentTrackingNo) {
+                alert('No tracking number found.');
+                return;
+            }
+            window.open('../api/jrs-download.php?tracking=' + encodeURIComponent(currentTrackingNo), '_blank');
+        }
 
 
 
@@ -998,62 +1036,6 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             });
         }
         document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.row-message').forEach(function(el) {
-                setTimeout(function() {
-                    el.style.opacity = '0';
-                    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
-                }, 2000);
-            });
-            document.querySelectorAll('.status-form').forEach(function(form) {
-                var select = form.querySelector('.status-select');
-                if (!select) return;
-                select.addEventListener('change', function() {
-                    var formData = new FormData(form);
-                    fetch(window.location.href, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(resp => resp.json())
-                    .then(data => {
-                        var cell = form.closest('.status-cell');
-                        if (!cell) return;
-                        var existing = cell.querySelector('.row-message');
-                        if (existing) existing.remove();
-                        var msg = document.createElement('div');
-                        msg.className = 'row-message';
-                        if (data && data.success) {
-                            msg.style.color = 'green';
-                            msg.textContent = 'Status saved.';
-                        } else {
-                            msg.style.color = '#AA4444';
-                            msg.textContent = (data && data.message) ? data.message : 'Failed to save status.';
-                        }
-                        cell.appendChild(msg);
-                        setTimeout(function() {
-                            msg.style.opacity = '0';
-                            setTimeout(function() { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 500);
-                        }, 2000);
-                    })
-                    .catch(() => {
-                        var cell = form.closest('.status-cell');
-                        if (!cell) return;
-                        var existing = cell.querySelector('.row-message');
-                        if (existing) existing.remove();
-                        var msg = document.createElement('div');
-                        msg.className = 'row-message';
-                        msg.style.color = '#AA4444';
-                        msg.textContent = 'Failed to save status.';
-                        cell.appendChild(msg);
-                        setTimeout(function() {
-                            msg.style.opacity = '0';
-                            setTimeout(function() { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 500);
-                        }, 2000);
-                    });
-                });
-            });
             document.addEventListener('click', function(e) {
                 var dropdown = document.getElementById('rowMenuDropdown');
                 if (!dropdown) return;
@@ -1102,6 +1084,69 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             document.body.appendChild(form);
             form.submit();
         }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const buttons = document.querySelectorAll(".btn-track");
+
+            if (!buttons.length) return;
+
+            buttons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    const noticeCode = (button.dataset.notice || "").trim();
+                    const fallbackTracking = (button.dataset.tracking || "").trim();
+                    const result = button.parentElement
+                        ? button.parentElement.querySelector(".track-result")
+                        : null;
+
+                    if (!noticeCode) {
+                        alert("No notice/order code found.");
+                        return;
+                    }
+
+                    // Optional: disable button while fetching
+                    button.disabled = true;
+                    button.innerText = "Updating...";
+                    if (result) result.innerHTML = "";
+
+                    fetch("../api/remarks.php", {
+                        method: "POST",
+                        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                        body: "notice_code=" + encodeURIComponent(noticeCode)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.error) {
+                            if (result) {
+                                result.innerHTML = `<span style="color:red">${data.error}</span>`;
+                                setTimeout(function () { result.innerHTML = ""; }, 2000);
+                            }
+                            button.disabled = false;
+                            button.innerText = "Track";
+                        } else {
+                            if (result) {
+                                result.innerHTML = `<span style="color:green">Tracking updated successfully!</span>`;
+                                setTimeout(function () { result.innerHTML = ""; }, 2000);
+                            }
+                            const trackingNo = (data.trackingNo || fallbackTracking || "").trim();
+                            refreshAfterTracking = true;
+                            showTrackingModal(trackingNo);
+                            button.disabled = false;
+                            button.innerText = "Track";
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        if (result) {
+                            result.innerHTML = `<span style="color:red">An error occurred</span>`;
+                            setTimeout(function () { result.innerHTML = ""; }, 2000);
+                        }
+                        button.disabled = false;
+                        button.innerText = "Track";
+                    });
+                });
+            });
+        });
+
 
         </script>
     </div>
