@@ -479,7 +479,7 @@
 		align-items: center;
 	}
 	.admin-home-header-img {
-		margin-top: 1.5rem;
+		margin-top: 0.5rem;
 		max-width: 500px;
 		width: 100%;
 		height: auto;
@@ -867,6 +867,7 @@ img {
 	flex-direction: column;
 	gap: 0.2rem;
 	position: static;
+	padding-top: 10px;
 }
 
 .admin-table-container .table-scroll-area {

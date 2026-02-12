@@ -281,7 +281,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
 <body class="admin-home-bg">
     <div class="admin-home-header">
     <div class="welcome-block">
-        <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:29px;margin-bottom:2px;">Welcome, Admin!</div>
+        <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:15px;margin-bottom:2px;">Welcome, Admin!</div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </div>
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
