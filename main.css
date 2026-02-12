@@ -229,7 +229,6 @@
 .table-sort-bar {
 	display: flex;
 	align-items: center;
-	margin-right: 0.1rem;
 }
 .table-sort-select {
 	padding: 0.38rem 0.45rem;
@@ -249,12 +248,6 @@
 	color: #22336a;
 	font-weight: 600;
 	margin-right: 0.5em;
-}
-.table-search-bar {
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
-	width: 100%;
 }
 .table-search-input {
 	padding: 0.5em 1em;
@@ -409,7 +402,6 @@
 .statistics-section {
 	display: flex;
 	align-items: center;
-	margin-top: 10px;
 	margin-left: auto;
 }
 .statistics-title {
@@ -668,10 +660,6 @@ body {
 	.stat-count {
 		font-size: 0.9em !important;
 	}
-	.table-search-bar {
-		flex-wrap: wrap;
-		justify-content: center;
-	}
 	.table-search-input {
 		width: 90vw !important;
 		max-width: 90vw !important;
@@ -867,7 +855,6 @@ img {
 	flex-direction: column;
 	gap: 0.2rem;
 	position: static;
-	padding-top: 10px;
 }
 
 .admin-table-container .table-scroll-area {
@@ -877,9 +864,6 @@ img {
 	-webkit-overflow-scrolling: touch;
 }
 
-.table-search-bar {
-	flex-wrap: wrap;
-}
 
 .table-search-input {
 	flex: 0 1 220px;

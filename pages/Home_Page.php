@@ -106,7 +106,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
     <link rel="stylesheet" href="../main.css">
     <style>
         table { width:100%; border-collapse: collapse;}
-        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center; white-space: pre-wrap; overflow: hidden; align-items: center; vertical-align: middle;}
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center;   word-wrap: break-word; word-break: break-word; max-width: 100px; white-space: normal; overflow: hidden; align-items: center; vertical-align: middle;}
         @media (max-width: 768px) {
             table { font-size: 0.65rem; }
             th, td { padding: 6px; }
@@ -115,7 +115,7 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             table { font-size: 0.6rem; }
             th, td { padding: 4px; }
         }
-        th { background:#22336A; color: #ffffffff}
+        th { background:#22336A; color: #ffffffff;}
         .admin-table-container .table-scroll-area thead th {
             position: sticky;
             top: 0;
@@ -275,6 +275,32 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             z-index: 1000;
             backdrop-filter: blur(4px);
         }
+        ..top-bar {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box; 
+        }
+
+        .table-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: auto;
+            flex-shrink: 0; /* prevent breaking layout */
+        }
+
+        .table-search-input {
+            max-width: 200px; /* limit input width */
+            width: 150px;
+        }
+
+        .table-search-btn img {
+            width: 16px;
+            height: 16px;
+        }
+
+
     </style>
 </head>
 
@@ -384,39 +410,35 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             </div>
         </div>
     <div class="admin-table-container">
-        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
-            <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:50px;text-align:center;">MAIL TRACKING RECORDS</div>
-            <div style="display: flex; align-items: center; width:100%; max-width:1200px; gap:810px;">
-                <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
-                <div class="table-search-bar" style="flex:1; display:flex; align-items:center;">
-                    <div class="table-sort-bar">
-                        <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;" aria-label="Year">
-                            <option value="" disabled selected hidden>Year</option>
-                            <option value="all">All</option>
-                            <?php
-                            // Collect unique years from the 'Date released to AFD' column
-                            $years = [];
-                            foreach ($rows as $row) {
-                                $dateAfd = $row['Date released to AFD'] ?? '';
-                                if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
-                                    $years[] = $m[1];
-                                }
-                            }
-                            $years = array_unique($years);
-                            rsort($years);
-                            foreach ($years as $year) {
-                                echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
-                            }
-                            ?>
-                        </select>
-                    </div>
-                    <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
-                    <button class="table-search-btn" id="tableSearchBtn" title="Search">
-                        <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
-                    </button>
-                </div>
-            </div>
+        <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:30px;text-align:center;">MAIL TRACKING RECORDS</div>
+    <div class="top-bar">
+        <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
+        <div class="table-sort-bar">
+            <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;">
+                <option value="" disabled selected hidden>Year</option>
+                <option value="all">All</option>
+                <?php
+                $years = [];
+                foreach ($rows as $row) {
+                    $dateAfd = $row['Date released to AFD'] ?? '';
+                    if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
+                        $years[] = $m[1];
+                    }
+                }
+                $years = array_unique($years);
+                rsort($years);
+                foreach ($years as $year) {
+                    echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
+                }
+                ?>
+            </select>
+                <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
+                <button class="table-search-btn" id="tableSearchBtn">
+                    <img src="../assets/Search Icon.svg" alt="Search" class="table-search-icon">
+                </button>
         </div>
+</div>
+
         <div class="table-scroll-area">
             <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95); max-width: ;">
                 <thead>
@@ -594,7 +616,6 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
             font-weight: bold;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
-            margin-left: -88px;
         }
         .export-btn:hover {
             background: black;
@@ -882,13 +903,13 @@ $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) 
                         window.mailRows = <?php echo json_encode($rows, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
 
         // Track parcel using JRS Express and copy tracking number to clipboard
-            function trackJRS(trackingNo) {
+    function trackJRS(trackingNo) {
     if (!trackingNo || trackingNo === '0') {
         alert('No valid tracking number found');
         return;
     }
 
-    fetch('../api/jrs-track.php?tracking=' + encodeURIComponent(trackingNo))
+    fetch('../api/remarks.php?tracking=' + encodeURIComponent(trackingNo))
         .then(res => res.json())
         .then(data => {
 

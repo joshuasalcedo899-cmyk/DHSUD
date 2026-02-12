@@ -32,7 +32,7 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 11px; }
 h2 { text-align:center; color:#22336A; }
 table { width:100%; border-collapse: collapse; }
 th { background:#22336A; color:white; padding:6px; font-size:10px; }
-td { border:1px solid #000; padding:4px; font-size:9px; word-wrap:break-word; white-space:pre-wrap; text-align:center; }
+td { max-width: 200px; border:1px solid #000; padding:4px; font-size:9px; word-wrap:break-word; word-break: break-word; white-space: normal; text-align:center; }
 .shipper-label { font-weight: bold; }
 .date-label { font-weight: bold; }
 .title { font-weight: bold; font-size: 18px;}
