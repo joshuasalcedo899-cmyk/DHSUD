@@ -539,7 +539,7 @@ HREDRD-EMES
                                                 case 'RETURNED TO SENDER':
                                                     $statusClass = 'status-text status-returned';
                                                     break;
-                                                case 'ON GOING DELIVERY':
+                                                case 'ONGOING DELIVERY':
                                                     $statusClass = 'status-text status-ongoing';
                                                     break;
                                                 case 'PERSONALLY RECEIVED':
