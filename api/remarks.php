@@ -54,7 +54,9 @@ if ($statusUpper === "DELIVERED TO" || $statusUpper === "DELIVERED") {
     $statusText = "ON GOING DELIVERY";
 } elseif ($statusUpper === "RETURN TO ORIGIN") {
     $statusText = "RETURNED TO SENDER";
-} 
+} else{
+    $statusText = "ONGOING DELIVERY"; // Use as-is if no match
+}
 
 // Convert date
 $mysqlDate = null;
@@ -102,8 +104,26 @@ if ($statusText === "DELIVERED" && !empty($receiver)) {
     ]);
 }
 
+// Return the latest saved row values so UI can update without page refresh.
+$rowStmt = $pdo->prepare("SELECT `Status`, `Date`, `Transmittal Remarks/Received By` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1");
+$rowStmt->execute([':notice' => $noticeCode]);
+$savedRow = $rowStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+$savedDate = $savedRow['Date'] ?? '';
+$dateDisplay = '';
+if (!empty($savedDate) && $savedDate !== '0000-00-00' && $savedDate !== '0000-00-00 00:00:00') {
+    $ts = strtotime($savedDate);
+    if ($ts !== false) {
+        $dateDisplay = date('F-d-Y', $ts);
+    }
+}
+
 echo json_encode([
     "success" => true,
     "trackingNo" => $trackingNo,
-    "updated" => (int) $stmt->rowCount()
+    "updated" => (int) $stmt->rowCount(),
+    "status" => $savedRow['Status'] ?? '',
+    "date" => $savedDate,
+    "dateDisplay" => $dateDisplay,
+    "transmittalRemarks" => $savedRow['Transmittal Remarks/Received By'] ?? ''
 ]);

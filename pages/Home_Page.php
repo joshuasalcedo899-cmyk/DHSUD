@@ -511,7 +511,7 @@ HREDRD-EMES
                             <tr><td colspan="<?= count($columns) + 2 ?>">No records found.</td></tr>
                         <?php else: ?>
                             <?php foreach ($rows as $row): ?>
-                                <tr>
+                                <tr data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     <td style="width:32px;">
                                         <input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
@@ -547,7 +547,7 @@ HREDRD-EMES
                                                     break;
                                             }
                                         ?>
-                                        <td class="status-cell">
+                                        <td class="status-cell" data-col="Status">
                                             <span class="<?= $statusClass ?>"><?= htmlspecialchars($current) ?></span>
                                         </td>
                                     <?php else: ?>
@@ -557,7 +557,7 @@ HREDRD-EMES
                                                 $cellValue = formatDateCell($cellValue);
                                             }
                                         ?>
-                                        <td><?= htmlspecialchars($cellValue) ?></td>
+                                        <td data-col="<?= htmlspecialchars($colName) ?>"><?= htmlspecialchars($cellValue) ?></td>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
                                 <td>
@@ -833,9 +833,6 @@ HREDRD-EMES
          
         function closeTrackingModal() {
             document.getElementById('trackingModal').style.display = 'none';
-            if (refreshAfterTracking) {
-                location.reload();
-            }
         }                                   
         document.addEventListener('DOMContentLoaded', function() {
             const downloadBtn = document.getElementById('trackingDownloadBtn');
@@ -933,7 +930,63 @@ HREDRD-EMES
                         window.mailRows = <?php echo json_encode($rows, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
 
         let currentTrackingNo = '';
-        let refreshAfterTracking = false;
+
+        function getStatusClass(statusValue) {
+            switch ((statusValue || '').trim()) {
+                case 'DELIVERED':
+                    return 'status-text status-delivered';
+                case 'RETURNED TO SENDER':
+                    return 'status-text status-returned';
+                case 'ON GOING DELIVERY':
+                    return 'status-text status-ongoing';
+                case 'PERSONALLY RECEIVED':
+                    return 'status-text status-personal';
+                default:
+                    return '';
+            }
+        }
+
+        function formatDisplayDate(value) {
+            if (!value) return '';
+            const dateObj = new Date(value);
+            if (Number.isNaN(dateObj.getTime())) return '';
+            const month = dateObj.toLocaleString('en-US', { month: 'long' });
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const year = dateObj.getFullYear();
+            return `${month}-${day}-${year}`;
+        }
+
+        function findRowByNoticeCode(noticeCode) {
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            for (const cb of checkboxes) {
+                if ((cb.value || '').trim() === (noticeCode || '').trim()) {
+                    return cb.closest('tr');
+                }
+            }
+            return null;
+        }
+
+        function updateTrackingRow(noticeCode, data) {
+            const row = findRowByNoticeCode(noticeCode);
+            if (!row) return;
+
+            const statusCell = row.querySelector('td[data-col="Status"]');
+            if (statusCell && typeof data.status !== 'undefined') {
+                const statusClass = getStatusClass(data.status);
+                statusCell.innerHTML = `<span class="${statusClass}">${data.status || ''}</span>`;
+            }
+
+            const dateCell = row.querySelector('td[data-col="Date"]');
+            if (dateCell) {
+                const dateText = (data.dateDisplay || formatDisplayDate(data.date || '') || '').trim();
+                dateCell.textContent = dateText;
+            }
+
+            const transmittalCell = row.querySelector('td[data-col="Transmittal Remarks/Received By"]');
+            if (transmittalCell && typeof data.transmittalRemarks !== 'undefined') {
+                transmittalCell.textContent = data.transmittalRemarks || '';
+            }
+        }
 
         function showTrackingModal(trackingNo) {
             const content = document.getElementById('trackingContent');
@@ -1142,7 +1195,7 @@ HREDRD-EMES
                                 setTimeout(function () { result.innerHTML = ""; }, 2000);
                             }
                             const trackingNo = (data.trackingNo || fallbackTracking || "").trim();
-                            refreshAfterTracking = true;
+                            updateTrackingRow(noticeCode, data);
                             showTrackingModal(trackingNo);
                             button.disabled = false;
                             button.innerText = "Track";
