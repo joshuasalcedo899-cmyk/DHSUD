@@ -32,7 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $st = strtotime($dateReleased);
     $formattedDate = date('F-d-Y', $st);
     $senderDetails = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538" . "\n\n" . "(".$formattedDate .")";
-    $fileName = trim($_POST['File Name (PDF)'] ?? $_POST['fileName'] ?? '');
+    $df = strtotime($dateReleased);
+    $newFormatDate = date('ymd', $df);
+    $fileName = "EMES-" . $newFormatDate . "-0" . $parcelNo;
     $trackingNo = trim($_POST['Tracking No.'] ?? $_POST['trackingNo'] ?? '');
     $transmittalRemarks = trim($_POST['Transmittal Remarks/Received By'] ?? $_POST['transmittalRemarks'] ?? '');
 
