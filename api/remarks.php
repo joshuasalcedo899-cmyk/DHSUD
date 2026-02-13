@@ -53,7 +53,7 @@ if ($statusUpper === "DELIVERED TO" || $statusUpper === "DELIVERED") {
 } elseif ($statusUpper === "OUT FOR DELIVERY") {
     $statusText = "ON GOING DELIVERY";
 } elseif ($statusUpper === "RETURN TO ORIGIN") {
-    $statusText = "RETURN TO SENDER";
+    $statusText = "RETURNED TO SENDER";
 } 
 
 // Convert date
