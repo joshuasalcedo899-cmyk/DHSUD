@@ -40,22 +40,30 @@ if (!is_array($data) || empty($data)) {
 
 // ✅ Get ONLY the latest record (last array item)
 $latest = end($data);
-
 $statusText   = trim($latest['statusText'] ?? '');
 $dateReceived = $latest['dateReceived'] ?? null;
 $receiver     = $latest['receiver'] ?? '';
 $relation     = $latest['relation'] ?? '';
 
+$hasReturnToOrigin = false;
+foreach ($data as $record) {
+    $recordStatus = strtoupper(trim($record['statusText'] ?? ''));
+    if ($recordStatus === "RETURN TO ORIGIN") {
+        $hasReturnToOrigin = true;
+        break;
+    }
+}
+
 // Normalize status to match DB values
 $statusUpper = strtoupper($statusText);
-if ($statusUpper === "DELIVERED TO" || $statusUpper === "DELIVERED") {
+if ($hasReturnToOrigin) {
+    $statusText = "RETURNED TO SENDER";
+} elseif ($statusUpper === "DELIVERED TO" || $statusUpper === "DELIVERED") {
     $statusText = "DELIVERED";
 } elseif ($statusUpper === "OUT FOR DELIVERY") {
     $statusText = "ON GOING DELIVERY";
-} elseif ($statusUpper === "RETURN TO ORIGIN") {
-    $statusText = "RETURNED TO SENDER";
 } else{
-    $statusText = "ONGOING DELIVERY"; // Use as-is if no match
+    $statusText = "ON GOING DELIVERY";
 }
 
 // Convert date
@@ -127,3 +135,4 @@ echo json_encode([
     "dateDisplay" => $dateDisplay,
     "transmittalRemarks" => $savedRow['Transmittal Remarks/Received By'] ?? ''
 ]);
+
