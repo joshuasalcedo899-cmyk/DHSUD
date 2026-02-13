@@ -567,10 +567,17 @@ HREDRD-EMES
                                     ?>
                                     <?php if (!empty($trackingNo) && $trackingNo !== '0'): ?>
                                         <button type="button" class="btn-track" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking="<?= htmlspecialchars($trackingNo) ?>" style="display:inline-block;text-decoration:none;">Track</button>
+                                        
                                         <div class="track-result"></div>
                                     <?php else: ?>
                                         <span style="color:#999; font-size:12px;">No tracking #</span>
                                     <?php endif; ?>
+                                    <a href="../test.php?code=<?= urlencode($row['Notice/Order Code']) ?>"
+                                        class="scan-track"
+                                        style="display:inline-block;text-decoration:none;">
+                                        <button type="button">Scan</button>
+                                    </a>
+
                                 </td>
                             </tr>
                         <?php endforeach; ?>
