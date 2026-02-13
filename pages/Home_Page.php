@@ -937,7 +937,7 @@ HREDRD-EMES
                     return 'status-text status-delivered';
                 case 'RETURNED TO SENDER':
                     return 'status-text status-returned';
-                case 'ON GOING DELIVERY':
+                case 'ONGOING DELIVERY':
                     return 'status-text status-ongoing';
                 case 'PERSONALLY RECEIVED':
                     return 'status-text status-personal';
