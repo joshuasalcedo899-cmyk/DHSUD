@@ -55,7 +55,7 @@ if ($statusUpper === "DELIVERED TO" || $statusUpper === "DELIVERED") {
 } elseif ($statusUpper === "RETURN TO ORIGIN") {
     $statusText = "RETURNED TO SENDER";
 } else{
-    $statusText = "ONGOING DELIVERY"; // Use as-is if no match
+    $statusText = "ON GOING DELIVERY"; // Use as-is if no match
 }
 
 // Convert date
