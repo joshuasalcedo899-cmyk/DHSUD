@@ -588,7 +588,7 @@ HREDRD-EMES
         </div>
         <div id="trackingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999; align-content: center;">
             <div style="background:#fff;width:80%;max-width:900px;margin:5% auto;padding:20px;border-radius:8px;max-height:80vh;overflow:auto;">
-                <button onclick="closeTrackingModal()" style="display: flex;"><img src="../assets/Return_Icon.svg" alt="Return" style="width:22px;height:22px;vertical-align:middle;margin-right:6px;"> Return</button>
+                <button onclick="closeTrackingModal()" style="display: flex;color: black;text-decoration: none;font-weight: 600;margin-right: 18px;padding: 8px 16px;border-radius: 6px;transition: background 0.2s, color 0.2s; border: none;"><img src="../assets/Return_Icon.svg" alt="Return" style="width:22px;height:22px;vertical-align:middle;margin-right:6px;"> Return</button>
                 <h2>JRS Tracking</h2>
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
                     <div id="trackingNumberLabel" style="font-weight:600;color:#22336A;"></div>
