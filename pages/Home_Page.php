@@ -310,6 +310,14 @@ function formatDateCell($value) {
             max-width: 200px; /* limit input width */
             width: 150px;
             min-width: 0;
+            flex: 1;
+            padding: 0.4rem;
+            border: 1.5px solid #22336a59;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            outline: none;
+            transition: border 0.2s;
         }
         @media (max-width: 1024px) {
             .table-search-input {
@@ -320,6 +328,7 @@ function formatDateCell($value) {
         .table-search-btn img {
             width: 16px;
             height: 16px;
+            margin-right: 0;
         }
         @media (max-width: 768px) {
             .top-bar {
@@ -475,6 +484,7 @@ function formatDateCell($value) {
             </select>
                 <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
                 <button class="table-search-btn" id="tableSearchBtn">
+                    <img src="../assets/Search Icon.svg" alt="Search">
                 </button>
         </div>
 </div>

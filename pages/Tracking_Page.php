@@ -122,10 +122,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="search-card">
                 <div style="font-size: 1rem; font-weight: 700; color: #22336a; text-align: center; margin-bottom: 1.5rem;">Search by Notice/Order Code</div>
                 <form method="get" action="" style="width: 100%;">
-                    <div class="table-search-bar" style="justify-content: center; margin-bottom: 0;">
-                        <input type="text" name="search" class="table-search-input" placeholder="Enter notice/order code" required>
-                        <button type="submit" class="table-search-btn btn-primary">Search</button>
-                    </div>
+                                    <div class="tracking-search-bar" style="justify-content: center; margin-bottom: 0;">
+                                        <input type="text" name="search" class="tracking-search-input" placeholder="Enter notice/order code" required>
+                                        <button type="submit" class="tracking-search-btn btn-primary">Search</button>
+                                    </div>
                 </form>
             </div>
         </div>
