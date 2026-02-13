@@ -52,7 +52,9 @@ if ($statusUpper === "DELIVERED TO" || $statusUpper === "DELIVERED") {
     $statusText = "DELIVERED";
 } elseif ($statusUpper === "OUT FOR DELIVERY") {
     $statusText = "ON GOING DELIVERY";
-}
+} elseif ($statusUpper === "RETURN TO ORIGIN") {
+    $statusText = "RETURN TO SENDER";
+} 
 
 // Convert date
 $mysqlDate = null;
