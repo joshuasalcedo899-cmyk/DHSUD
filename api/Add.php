@@ -28,7 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $parcelNo = trim($_POST['Parcel No.'] ?? $_POST['parcelNo'] ?? '');
     $recipientDetails = trim($_POST['Recipient Details'] ?? $_POST['recipientDetails'] ?? '');
     $parcelDetails = trim($_POST['Parcel Details'] ?? $_POST['parcelDetails'] ?? '');
-    $senderDetails = trim($_POST['Sender Details'] ?? $_POST['senderDetails'] ?? '');
+    // Sender Details is fixed for all new records.
+    $st = strtotime($dateReleased);
+    $formattedDate = date('F-d-Y', $st);
+    $senderDetails = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538" . "\n\n" . "(".$formattedDate .")";
     $fileName = trim($_POST['File Name (PDF)'] ?? $_POST['fileName'] ?? '');
     $trackingNo = trim($_POST['Tracking No.'] ?? $_POST['trackingNo'] ?? '');
     $transmittalRemarks = trim($_POST['Transmittal Remarks/Received By'] ?? $_POST['transmittalRemarks'] ?? '');

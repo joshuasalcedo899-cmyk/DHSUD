@@ -28,6 +28,13 @@ $columns = [
     'Evaluator',
 ];
 
+function formatDateCell($value) {
+    if ($value === null || $value === '') return '';
+    $ts = strtotime($value);
+    if ($ts === false) return $value;
+    return date('F-d-Y', $ts);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -162,7 +169,13 @@ $columns = [
                                     <?php if ($col === 'Status'): ?>
                                         <span class="status-archived">ARCHIVED</span>
                                     <?php else: ?>
-                                        <?= htmlspecialchars($row[$col] ?? '') ?>
+                                        <?php
+                                            $cellValue = $row[$col] ?? '';
+                                            if ($col === 'Date released to AFD' || $col === 'Date') {
+                                                $cellValue = formatDateCell($cellValue);
+                                            }
+                                        ?>
+                                        <?= htmlspecialchars($cellValue) ?>
                                     <?php endif; ?>
                                 </td>
                             <?php endforeach; ?>
