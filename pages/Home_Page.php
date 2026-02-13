@@ -691,6 +691,14 @@ HREDRD-EMES
     </style>
         
         <script>
+            (function cleanDeleteQueryParam() {
+                var url = new URL(window.location.href);
+                if (url.searchParams.has('deleted')) {
+                    url.searchParams.delete('deleted');
+                    window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+                }
+            })();
+
             var currentRowMenuNoticeCode = '';
             function hideRowMenuDropdown() {
                 var dropdown = document.getElementById('rowMenuDropdown');

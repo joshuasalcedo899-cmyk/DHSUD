@@ -34,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $senderDetails = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538" . "\n\n" . "(".$formattedDate .")";
     $df = strtotime($dateReleased);
     $newFormatDate = date('ymd', $df);
-    $fileName = "EMES-" . $newFormatDate . "-0" . $parcelNo;
+    $formattedParcelNo = sprintf("%03d", (int)$parcelNo);
+    $fileName = "EMES-" . $newFormatDate ."-". $formattedParcelNo;
     $trackingNo = trim($_POST['Tracking No.'] ?? $_POST['trackingNo'] ?? '');
     $transmittalRemarks = trim($_POST['Transmittal Remarks/Received By'] ?? $_POST['transmittalRemarks'] ?? '');
 

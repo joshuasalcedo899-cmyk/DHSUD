@@ -15,8 +15,8 @@ $stmt->execute([$code]);
 $stmt = $pdo->prepare("DELETE FROM mailtracking WHERE `Notice/Order Code` = ?");
 
 if ($stmt->execute([$code])) {
-    // Redirect back with success
-    header("Location: ../pages/Home_Page.php?deleted=1");
+    // Redirect back without query params so URL stays clean.
+    header("Location: ../pages/Home_Page.php");
     exit;
 } else {
     echo "Error deleting record: " . $stmt->errorInfo()[2];
