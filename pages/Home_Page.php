@@ -97,9 +97,11 @@ $totalCount = count($rows);
 $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) : 0;
 
 function formatDateCell($value) {
-    if ($value === null || $value === '') return '';
+    if ($value === null) return '';
+    $value = trim((string)$value);
+    if ($value === '' || $value === '0000-00-00' || $value === '0000-00-00 00:00:00') return '';
     $ts = strtotime($value);
-    if ($ts === false) return $value;
+    if ($ts === false) return '';
     return date('F-d-Y', $ts);
 }
 
@@ -445,7 +447,9 @@ function formatDateCell($value) {
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addSender">Sender Details</label>
-                            <textarea name="senderDetails" rows="2" id="addSender"></textarea>
+                            <textarea name="senderDetails" rows="3" id="addSender" readonly>Department of Human Settlements and Urban Development Region 4A
+HREDRD-EMES
+0935 542 1538</textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addFileName">File Name (PDF)</label>
