@@ -1,0 +1,44 @@
+DHSUD - Dependency Installation Guide
+
+1) Open terminal in project folder:
+   c:\xampp\htdocs\DHSUD
+
+2) Run automatic installer (recommended):
+   npm run install:deps
+
+   Alternative:
+   .\install-deps.bat
+
+3) If your network blocks browser download, run:
+   npm run install:deps:skip-browser
+
+What the installer does:
+- Installs Node.js LTS (via winget) if missing
+- Verifies node and npm
+- Sets NODE_PATH for current user
+- Runs npm install
+- Verifies Puppeteer is available
+
+Manual setup (if needed):
+1) Install Node.js LTS from:
+   https://nodejs.org
+
+2) In project folder, run:
+   npm install
+
+3) Verify:
+   node -v
+   npm -v
+   npm ls puppeteer --depth=0
+
+PDF save prerequisites:
+- Node must be installed on the same machine running Apache/PHP
+- Puppeteer must be installed in this project
+- api/script/savepdf.js must exist
+- Folder JRS_PDFs must be writable
+
+Quick PDF test:
+Open this in browser:
+   http://localhost/DHSUD/api/download-receipt.php?tracking=YOUR_TRACKING_NUMBER
+
+If it fails, the page will show the exact error output.
