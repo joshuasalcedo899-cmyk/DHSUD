@@ -75,16 +75,14 @@ function onScanSuccess(decodedText, decodedResult) {
             "&codes[]=" + encodeURIComponent(noticeCode)
     })
     .then(res => res.text())
-    .then(data => {
+    .then(async (data) => {
         document.getElementById("result").innerHTML = data;
 
-        // Generate and save the PDF on the server in the background
-        generateReceiptPDF(trackingNumber);
+        // Generate and save the PDF on the server before returning to table.
+        await generateReceiptPDF(trackingNumber);
 
         // return to table
-        setTimeout(() => {
-            window.location.href = "pages/Home_Page.php?updated=1";
-        }, 1500);
+        window.location.href = "pages/Home_Page.php?updated=1";
     });
 
 
@@ -94,14 +92,32 @@ function onScanSuccess(decodedText, decodedResult) {
    
 }
 
-function generateReceiptPDF(trackingNumber) {
+async function generateReceiptPDF(trackingNumber) {
     if (!trackingNumber) return;
-    fetch(`api/download-receipt.php?tracking=${encodeURIComponent(trackingNumber)}`, {
-        method: "GET",
-        cache: "no-store"
-    }).catch(() => {
-        // Ignore errors here; the PDF generation failure will show in server logs/output
-    });
+
+    // Avoid indefinite waiting; still attempt generation.
+    const timeoutMs = 90000;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const response = await fetch(`api/download-receipt.php?tracking=${encodeURIComponent(trackingNumber)}`, {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        // Consume body so request fully completes server-side.
+        await response.blob();
+    } catch (error) {
+        console.error("PDF generation failed:", error);
+    } finally {
+        clearTimeout(timeout);
+    }
 }
 
 

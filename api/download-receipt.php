@@ -16,7 +16,30 @@ if (!is_dir($outputDir)) {
 
 $pdfFile = $outputDir . "/proof_$tracking.pdf";
 
-$command = "node " . escapeshellarg($nodeScript) . " " . escapeshellarg($url) . " " . escapeshellarg($pdfFile) . " 2>&1";
+// Resolve node executable explicitly for Apache/PHP environments without PATH configured.
+$nodeCandidates = [
+    getenv('NODE_PATH') ?: null,
+    'C:\\Program Files\\nodejs\\node.exe',
+    'C:\\Program Files (x86)\\nodejs\\node.exe',
+    'node',
+];
+
+$nodeExecutable = null;
+foreach ($nodeCandidates as $candidate) {
+    if (!$candidate) {
+        continue;
+    }
+    if ($candidate === 'node' || file_exists($candidate)) {
+        $nodeExecutable = $candidate;
+        break;
+    }
+}
+
+if ($nodeExecutable === null) {
+    die("Node.js executable not found. Set NODE_PATH or install Node.js.");
+}
+
+$command = escapeshellarg($nodeExecutable) . " " . escapeshellarg($nodeScript) . " " . escapeshellarg($url) . " " . escapeshellarg($pdfFile) . " 2>&1";
 exec($command, $output, $return_var);
 
 if ($return_var !== 0 || !file_exists($pdfFile)) {
