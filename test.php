@@ -39,10 +39,7 @@
 
 <div class="result" id="result">Waiting for scan...</div>
 
-
-   
-
-
+    
 
 
 <script>
@@ -81,10 +78,8 @@ function onScanSuccess(decodedText, decodedResult) {
     .then(data => {
         document.getElementById("result").innerHTML = data;
 
-
         // Generate and save the PDF on the server in the background
         generateReceiptPDF(trackingNumber);
-
 
         // return to table
         setTimeout(() => {
@@ -99,7 +94,6 @@ function onScanSuccess(decodedText, decodedResult) {
    
 }
 
-
 function generateReceiptPDF(trackingNumber) {
     if (!trackingNumber) return;
     fetch(`api/download-receipt.php?tracking=${encodeURIComponent(trackingNumber)}`, {
@@ -109,8 +103,6 @@ function generateReceiptPDF(trackingNumber) {
         // Ignore errors here; the PDF generation failure will show in server logs/output
     });
 }
-
-
 
 
 var html5QrcodeScanner = new Html5QrcodeScanner(
