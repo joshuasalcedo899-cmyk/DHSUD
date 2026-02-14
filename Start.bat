@@ -1,5 +1,5 @@
 @echo off
-title Parcel Tracking System
+title Mail Tracking System - Start
 
 :: Go to XAMPP folder
 cd /d C:\xampp
@@ -22,7 +22,7 @@ set ip=%ip: =%
 echo %ip% > ip.txt
 
 :: open browser automatically
-start http://%ip%/parcel
+start http://localhost/DHSUD
 
 :: open the HTA close window
-start close.hta
+start Close.hta

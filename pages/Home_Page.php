@@ -557,7 +557,24 @@ HREDRD-EMES
                                                 $cellValue = formatDateCell($cellValue);
                                             }
                                         ?>
-                                        <td data-col="<?= htmlspecialchars($colName) ?>"><?= htmlspecialchars($cellValue) ?></td>
+                                        <?php if ($colName === 'File Name (PDF)'): ?>
+                                            <?php
+                                                $fileName = trim((string)$cellValue);
+                                                $trackingValue = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? ''));
+                                                $pdfName = $trackingValue !== '' ? ('proof_' . $trackingValue . '.pdf') : '';
+                                                $fileHref = $pdfName !== '' ? '../JRS_PDFs/' . rawurlencode($pdfName) : '';
+                                                $linkLabel = $fileName !== '' ? basename($fileName) : '';
+                                            ?>
+                                            <td data-col="<?= htmlspecialchars($colName) ?>">
+                                                <?php if ($fileHref && $linkLabel !== ''): ?>
+                                                    <a href="<?= htmlspecialchars($fileHref) ?>" target="_blank" rel="noopener">
+                                                        <?= htmlspecialchars($linkLabel) ?>
+                                                    </a>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php else: ?>
+                                            <td data-col="<?= htmlspecialchars($colName) ?>"><?= htmlspecialchars($cellValue) ?></td>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
                                 <td>

@@ -1,0 +1,49 @@
+<html>
+<head>
+<title>Parcel Tracking System</title>
+
+<HTA:APPLICATION
+    APPLICATIONNAME="ParcelSystem"
+    BORDER="thin"
+    CAPTION="yes"
+    SHOWINTASKBAR="yes"
+    SINGLEINSTANCE="yes"
+    WINDOWSTATE="normal">
+
+<style>
+body{
+    font-family:Segoe UI;
+    background:#f2f2f2;
+    text-align:center;
+    padding-top:40px;
+}
+button{
+    font-size:18px;
+    padding:15px 30px;
+    background:#d9534f;
+    color:white;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+button:hover{
+    background:#c9302c;
+}
+</style>
+
+<script>
+function closeSystem(){
+    var shell = new ActiveXObject("WScript.Shell");
+    shell.Run("Stop.bat",0);
+    window.close();
+}
+</script>
+</head>
+
+<body>
+<h2>Parcel Tracking System Running</h2>
+<p>You may now use phones to scan parcels.</p>
+<br>
+<button onclick="closeSystem()">Shut Down Server</button>
+</body>
+</html>

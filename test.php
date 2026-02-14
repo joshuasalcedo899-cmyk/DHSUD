@@ -34,6 +34,16 @@
 
 <div class="result" id="result">Waiting for scan...</div>
 
+<h1>JRS Tracking PDF Generator</h1>
+
+    <label for="tracking">Enter Tracking Number:</label>
+    <input type="text" id="tracking" placeholder="4657704807491349">
+
+    <button id="generateBtn">Save as PDF</button>
+
+    
+
+
 <script>
 
 // get Notice/Order Code from URL
@@ -71,7 +81,25 @@ function onScanSuccess(decodedText, decodedResult) {
     });
 
     html5QrcodeScanner.clear();
+
+    
 }
+
+//Receipt
+    const btn = document.getElementById('generateBtn');
+
+    btn.addEventListener('click', () => {
+        const tracking = document.getElementById('tracking').value.trim();
+
+        if (!tracking) {
+            alert("Please enter a tracking number!");
+            return;
+        }
+
+        // Open PHP script in a new tab to download PDF
+        const url = `api/download-receipt.php?tracking=${encodeURIComponent(tracking)}`;
+        window.open(url, '_blank');
+    });
 
 var html5QrcodeScanner = new Html5QrcodeScanner(
     "reader",
