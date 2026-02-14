@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "install:deps": "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1",
-    "install:deps:skip-browser": "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1 -SkipBrowserDownload"
+    "install:deps:skip-browser": "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1 -SkipBrowserDownload",
+    "set:exe-icon": "powershell -ExecutionPolicy Bypass -File .\\scripts\\set-exe-icon.ps1"
   },
   "repository": {
     "type": "git",

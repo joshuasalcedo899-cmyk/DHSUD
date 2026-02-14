@@ -1,5 +1,9 @@
 @echo off
 title Mail Tracking System - Start
+setlocal
+
+:: Remember this script directory (DHSUD folder)
+set "APP_DIR=%~dp0"
 
 :: Go to XAMPP folder
 cd /d C:\xampp
@@ -24,5 +28,3 @@ echo %ip% > ip.txt
 :: open browser automatically
 start http://localhost/DHSUD
 
-:: open the HTA close window
-start Close.hta

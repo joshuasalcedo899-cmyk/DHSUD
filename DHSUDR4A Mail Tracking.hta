@@ -1,0 +1,241 @@
+<html>
+<head>
+<title>Mail Tracking System</title>
+
+<HTA:APPLICATION
+    APPLICATIONNAME="MailTrackingSystem"
+    BORDER="thin"
+    CAPTION="yes"
+    SHOWINTASKBAR="yes"
+    SINGLEINSTANCE="yes"
+    SCROLL="no"
+    MAXIMIZEBUTTON="no"
+    MINIMIZEBUTTON="yes"
+    SYSMENU="yes"
+    WINDOWSTATE="normal"
+    ICON="C:\xampp\htdocs\DHSUD\assets\DHSUDLogo.ico">
+
+<style>
+body{
+    font-family:Segoe UI, Arial, sans-serif;
+    background:#f7f7f8;
+    text-align:center;
+    padding:18px 16px;
+    margin:0;
+    color:#202124;
+}
+.btn-row{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+}
+.app-shell{
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #e3e5e8;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+h2{
+    margin: 0 0 6px 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+p{
+    margin: 6px 0;
+    font-size: 0.9rem;
+    color: #5f6368;
+}
+.server-indicator{
+    margin: 10px auto 12px auto;
+    width: fit-content;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid #d1d5db;
+    background: #f8f9fa;
+    color: #5f6368;
+}
+.server-indicator.running{
+    background: #e7f6eb;
+    color: #1e7e34;
+    border-color: #9ad0a8;
+}
+.server-indicator.stopped{
+    background: #fdeaea;
+    color: #b42318;
+    border-color: #f0b0b0;
+}
+button{
+    font-size:14px;
+    padding:10px 14px;
+    color:white;
+    border:none;
+    border-radius:7px;
+    cursor:pointer;
+    min-width: 128px;
+}
+.btn-start{
+    background:#2f7d32;
+}
+.btn-start:hover{
+    background:#256428;
+}
+.btn-stop{
+    background:#c63d39;
+}
+.btn-stop:hover{
+    background:#a9302d;
+}
+.status-msg{
+    margin-top:12px;
+    font-size:13px;
+    font-weight:600;
+    color:#c9302c;
+    display:none;
+}
+.status-msg.show{
+    display:block;
+}
+</style>
+
+<script>
+var isShuttingDown = false;
+var allowExit = false;
+var serverStatusTimer = null;
+
+window.onbeforeunload = function(evt) {
+    if (allowExit || isShuttingDown) {
+        return;
+    }
+
+    alert("Please shut down the server first before exiting this app.");
+    evt = evt || window.event;
+    if (evt) {
+        evt.returnValue = false;
+        if (evt.preventDefault) evt.preventDefault();
+    }
+    return false;
+};
+
+function getAppDir(){
+    var fso = new ActiveXObject("Scripting.FileSystemObject");
+    var htaPath = decodeURIComponent(window.location.pathname || "").replace(/\//g, "\\");
+    if (htaPath.indexOf("\\\\") === 0) {
+        htaPath = htaPath.substring(2);
+    } else if (htaPath.charAt(0) === "\\") {
+        htaPath = htaPath.substring(1);
+    }
+    return fso.GetParentFolderName(htaPath);
+}
+
+function isApacheRunning(){
+    try {
+        var wmi = GetObject("winmgmts:\\\\.\\root\\cimv2");
+        var processes = wmi.ExecQuery("SELECT Name FROM Win32_Process WHERE Name='httpd.exe'");
+        return processes.Count > 0;
+    } catch (e) {
+        return false;
+    }
+}
+
+function updateServerIndicator(){
+    var indicator = document.getElementById("serverIndicator");
+    if (!indicator) return;
+
+    var running = isApacheRunning();
+    if (running) {
+        indicator.className = "server-indicator running";
+        indicator.innerText = "Server Status: RUNNING";
+    } else {
+        indicator.className = "server-indicator stopped";
+        indicator.innerText = "Server Status: STOPPED";
+    }
+}
+
+function startServerStatusPolling(){
+    updateServerIndicator();
+    if (serverStatusTimer) {
+        clearInterval(serverStatusTimer);
+    }
+    serverStatusTimer = setInterval(updateServerIndicator, 3000);
+}
+
+function setupWindow(){
+    var width = 500;
+    var height = 360;
+    try {
+        window.resizeTo(width, height);
+        var x = Math.max(0, Math.round((screen.availWidth - width) / 2));
+        var y = Math.max(0, Math.round((screen.availHeight - height) / 2));
+        window.moveTo(x, y);
+    } catch (e) {}
+}
+
+function startSystem(){
+    var shell = new ActiveXObject("WScript.Shell");
+    var status = document.getElementById("statusMsg");
+    shell.Run('"C:\\xampp\\xampp_start.exe"', 0, false);
+    shell.Run("http://localhost/DHSUD", 1, false);
+    if (status) {
+        status.className = "status-msg show";
+        status.style.color = "#1e7e34";
+        status.innerText = "Starting server. Please wait...";
+    }
+    setTimeout(function(){
+        if (status && !isShuttingDown) {
+            status.style.color = "#1e7e34";
+            status.innerText = "Server start command sent.";
+        }
+        updateServerIndicator();
+    }, 3500);
+}
+
+function closeSystem(){
+    var shell = new ActiveXObject("WScript.Shell");
+    var fso = new ActiveXObject("Scripting.FileSystemObject");
+    var status = document.getElementById("statusMsg");
+    var startBtn = document.getElementById("startBtn");
+    var stopBtn = document.getElementById("stopBtn");
+    var appDir = getAppDir();
+    var stopBat = fso.BuildPath(appDir, "Stop.bat");
+    if (!fso.FileExists(stopBat)) {
+        alert("Stop.bat not found at: " + stopBat);
+        return;
+    }
+
+    isShuttingDown = true;
+    allowExit = true;
+    if (status) {
+        status.className = "status-msg show";
+        status.innerText = "Server is shutting down. Please wait...";
+    }
+    if (startBtn) startBtn.disabled = true;
+    if (stopBtn) stopBtn.disabled = true;
+
+    shell.CurrentDirectory = appDir;
+    shell.Run('"' + stopBat + '"', 0, false);
+    setTimeout(function() {
+        window.close();
+    }, 1500);
+}
+</script>
+</head>
+
+<body onload="setupWindow(); startServerStatusPolling()">
+<div class="app-shell">
+    <h2>Mail Tracking Controls</h2>
+    <p>Start services before use.</p>
+    <p><strong>Reminder:</strong> shut down server before exiting.</p>
+    <div id="serverIndicator" class="server-indicator">Server Status: Checking...</div>
+    <div class="btn-row">
+        <button id="startBtn" class="btn-start" onclick="startSystem()">Start Server</button>
+        <button id="stopBtn" class="btn-stop" onclick="closeSystem()">Shut Down Server</button>
+    </div>
+    <div id="statusMsg" class="status-msg"></div>
+</div>
+</body>
+</html>
