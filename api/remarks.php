@@ -61,9 +61,9 @@ if ($hasReturnToOrigin) {
 } elseif ($statusUpper === "DELIVERED TO" || $statusUpper === "DELIVERED") {
     $statusText = "DELIVERED";
 } elseif ($statusUpper === "OUT FOR DELIVERY") {
-    $statusText = "ON GOING DELIVERY";
+    $statusText = "ONGOING DELIVERY";
 } else{
-    $statusText = "ON GOING DELIVERY";
+    $statusText = "ONGOING DELIVERY";
 }
 
 // Convert date

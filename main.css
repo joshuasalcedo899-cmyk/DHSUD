@@ -36,6 +36,16 @@
 	padding: 0.1rem 0.5rem;
 }
 
+/* Sticky table header for home tracking table – header stays fixed when table scrolls */
+.admin-table-container .table-scroll-area .tracking-table-container .listview-table.tracking-table thead th,
+.admin-table-container .table-scroll-area .listview-table.tracking-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 3;
+	background: #22336A;
+	box-shadow: 0 2px 2px -1px rgba(0,0,0,0.15);
+}
+
 .archive-btn{
 	background: #AA4444;
 	color: #fff;
@@ -317,12 +327,48 @@
 }
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
+	overflow-x: auto;
 	overflow-y: auto;
 	min-height: 0;
+	width: 100%;
+	-webkit-overflow-scrolling: touch;
+}
+/* Home table: same container and scroll pattern as Tracking_Page */
+.admin-table-container .table-scroll-area .tracking-table-container {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 0.5rem 0;
+	margin: 0 0 1rem 0;
+	width: 100%;
+	max-width: 100%;
+	left: auto;
+	right: auto;
+	transform: none;
+	box-sizing: border-box;
+}
+.admin-table-container .table-scroll-area .tracking-table-scroll {
+	overflow-x: auto;
+	overflow-y: visible;
+	width: 100%;
+	-webkit-overflow-scrolling: touch;
+}
+.admin-table-container .listview-table.tracking-table {
+	table-layout: fixed;
+	width: 100%;
+	min-width: 900px; /* force horizontal scroll on small screens (same as Tracking_Page) */
+	margin: 0;
+}
+.admin-table-container .listview-table.tracking-table th,
+.admin-table-container .listview-table.tracking-table td {
+	white-space: pre-wrap;
+	word-break: break-word;
+	overflow-wrap: anywhere;
 }
 .admin-table-container table {
 	table-layout: fixed;
 	width: 100%;
+	min-width: 900px;
 }
 .admin-table-container th,
 .admin-table-container td {
@@ -331,7 +377,23 @@
 	overflow-wrap: anywhere;
 }
 
-/* Wider columns for long text fields (with checkbox column at 1) */
+/* File Name (PDF) column: keep link inside cell, no overlap */
+.admin-table-container td.pdf-link-cell {
+	overflow: hidden;
+}
+.admin-table-container td.pdf-link-cell a.pdf-link-in-cell {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Column spacing: checkbox and Action stay narrow, long-text columns get share */
+.admin-table-container table th:nth-child(1),
+.admin-table-container table td:nth-child(1) {
+	width: 32px;
+	min-width: 32px;
+}
 .admin-table-container table th:nth-child(5),
 .admin-table-container table td:nth-child(5),
 .admin-table-container table th:nth-child(6),
@@ -339,6 +401,39 @@
 .admin-table-container table th:nth-child(7),
 .admin-table-container table td:nth-child(7) {
 	width: 10%;
+}
+.admin-table-container table th:last-child,
+.admin-table-container table td:last-child {
+	width: 90px;
+	min-width: 90px;
+}
+.admin-table-container table th:nth-child(2),
+.admin-table-container table td:nth-child(2) {
+	min-width: 100px;
+}
+.admin-table-container table th:nth-child(3),
+.admin-table-container table td:nth-child(3),
+.admin-table-container table th:nth-child(4),
+.admin-table-container table td:nth-child(4) {
+	min-width: 70px;
+}
+.admin-table-container table th:nth-child(8),
+.admin-table-container table td:nth-child(8),
+.admin-table-container table th:nth-child(9),
+.admin-table-container table td:nth-child(9) {
+	min-width: 80px;
+}
+.admin-table-container table th:nth-child(10),
+.admin-table-container table td:nth-child(10) {
+	min-width: 120px;
+}
+.admin-table-container table th:nth-child(11),
+.admin-table-container table td:nth-child(11),
+.admin-table-container table th:nth-child(12),
+.admin-table-container table td:nth-child(12),
+.admin-table-container table th:nth-child(13),
+.admin-table-container table td:nth-child(13) {
+	min-width: 70px;
 }
 .admin-home-header {
 	width: 100vw;
@@ -652,6 +747,12 @@ body {
 	.admin-table-container .table-scroll-area {
 		overflow-x: auto !important;
 	}
+	.admin-table-container .listview-table.tracking-table,
+	.admin-table-container .table-scroll-area table {
+		min-width: 900px !important;
+		table-layout: fixed !important;
+		width: 100% !important;
+	}
 	table {
 		font-size: 0.65rem !important;
 		table-layout: auto;
@@ -717,6 +818,12 @@ body {
 	}
 	.admin-table-container .table-scroll-area {
 		overflow-x: auto !important;
+	}
+	.admin-table-container .listview-table.tracking-table,
+	.admin-table-container .table-scroll-area table {
+		min-width: 900px !important;
+		table-layout: fixed !important;
+		width: 100% !important;
 	}
 	table {
 		font-size: 0.8rem !important;
@@ -787,7 +894,7 @@ img {
 	max-width: 100%;
 	height: auto;
 	display: block;
-	margin-right: 13px;
+	margin-right: 5px;
 }
 
 .page-shell {

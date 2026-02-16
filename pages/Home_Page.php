@@ -114,17 +114,7 @@ function formatDateCell($value) {
     <title>Home Page</title>
     <link rel="stylesheet" href="../main.css">
     <style>
-        table { width:100%; border-collapse: collapse;}
-        th, td { border: 1px solid #ccc; padding: 8px; font-size: 0.7rem; text-align: center;   word-wrap: break-word; word-break: break-word; max-width: 100px; white-space: normal; overflow: hidden; align-items: center; vertical-align: middle;}
-        @media (max-width: 768px) {
-            table { font-size: 0.65rem; }
-            th, td { padding: 6px; }
-        }
-        @media (max-width: 480px) {
-            table { font-size: 0.6rem; }
-            th, td { padding: 4px; }
-        }
-        th { background:#22336A; color: #ffffffff;}
+        /* Table uses .listview-table .tracking-table from main.css (same as Tracking_Page) */
         .admin-table-container .table-scroll-area thead th {
             position: sticky;
             top: 0;
@@ -367,7 +357,31 @@ function formatDateCell($value) {
     </div>
         <!-- Edit Modal (hidden by default) -->
         <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;">
-            <div class="edit-modal" id="editModal">
+            <div class="edit-modal edit-modal-scrollable" id="editModal">
+                    <style>
+                        /* Edit Modal scrollable and responsive */
+                        .edit-modal-scrollable {
+                            max-height: 90vh;
+                            overflow-y: auto;
+                            min-width: 320px;
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+                        @media (max-width: 768px) {
+                            .edit-modal-scrollable {
+                                max-width: 98vw;
+                                min-width: 0;
+                                padding: 12px 6px 8px 6px;
+                            }
+                        }
+                        @media (max-width: 480px) {
+                            .edit-modal-scrollable {
+                                max-width: 100vw;
+                                min-width: 0;
+                                padding: 8px 2px 6px 2px;
+                            }
+                        }
+                    </style>
                 <button class="modal-close" onclick="closeEditModal()" title="Close">&times;</button>
                 <h2>EDIT MAIL RECORD</h2>
                 <form id="editForm" autocomplete="off">
@@ -394,7 +408,7 @@ function formatDateCell($value) {
                             <textarea name="Recipient Details" row="5" id="editRecipient"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
-                            <label for="editParcelDetails">Parcel Details</label>
+                            <labelwhite for="editParcelDetails">Parcel Details</label>
                             <textarea name="Parcel Details" row="5" id="editParcelDetails"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
@@ -403,7 +417,7 @@ function formatDateCell($value) {
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editFileName">File Name (PDF)</label>
-                            <input type="text" name="File Name (PDF)" id="editFileName">
+                            <input type="text" name="File Name (PDF)" id="ewhiteditFileName">
                         </div>
                         
                     </div>
@@ -415,16 +429,104 @@ function formatDateCell($value) {
             </div>
         </div>
         <div id="addModalOverlay" class="edit-modal-overlay" style="display:none;">
-            <div class="edit-modal" id="addModal">
+            <div class="edit-modal add-modal-scrollable" id="addModal">
+                    <style>
+                        /* Add Modal scrollable and responsive */
+                        .add-modal-scrollable {
+                            max-height: 90vh;
+                            overflow-y: auto;
+                            min-width: 320px;
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+                        @media (max-width: 768px) {
+                            .add-modal-scrollable {
+                                max-width: 98vw;
+                                min-width: 0;
+                                padding: 12px 6px 8px 6px;
+                            }
+                        }
+                        @media (max-width: 480px) {
+                            .add-modal-scrollable {
+                                max-width: 100vw;
+                                min-width: 0;
+                                padding: 8px 2px 6px 2px;
+                            }
+                        }
+                    </style>
                 <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
                 <h2 style="text-align:center;color:#1a237e;font-size:1.3em;font-weight:bold;margin-bottom:18px;letter-spacing:1px;">ADD NEW RECORD</h2>
                 <form id="addForm" action="../api/Add.php" method="post" autocomplete="off">
 
                     <div style="display:contents">
-                        <div>
-                            <label for="addNoticeCode">Notice/Order Code*</label>
-                            <input type="text" name="notice_Code" id="addNoticeCode" required />
+                        <div id="noticeCodeFields">
+                            <div class="notice-code-row" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                                <label for="addNoticeCode_0" style="flex:0 0 90px;">Notice/Order Code*</label>
+                                <input type="text" name="notice_Code[]" id="addNoticeCode_0" required style="flex:1;" />
+                                <button type="button" class="add-notice-btn" >
+                                    <img src="../assets/Add_Icon.svg" alt="Add" style="width:22px;height:22px;">
+                                </button>
+                            </div>
                         </div>
+                            <style>
+                                .notice-code-row {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                    margin-bottom: 4px;
+                                }
+                                .add-notice-btn, .remove-notice-btn {
+                                    background: none;
+                                    border: none;
+                                    padding: 0.3em 0.7em;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    cursor: pointer;
+                                    margin-left: 4px;
+                                    transition: background 0.2s;
+                                }
+                                .add-notice-btn img,  {
+                                    width: 22px;
+                                    height: 22px;
+                                }
+                                .remove-notice-btn img {
+                                    width: 20px;
+                                    height: 20px;
+                                }
+                            </style>
+                            <script>
+                            // Dynamic Notice/Order Code fields in Add Modal
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const fieldsContainer = document.getElementById('noticeCodeFields');
+                                let noticeCodeCount = 1;
+                                function addNoticeCodeField() {
+                                    const idx = noticeCodeCount;
+                                    const row = document.createElement('div');
+                                    row.className = 'notice-code-row';
+                                    row.style.marginBottom = '4px';
+                                    row.innerHTML = `
+                                        <label for="addNoticeCode_${idx}" style="flex:0 0 90px;"></label>
+                                        <input type="text" name="notice_Code[]" id="addNoticeCode_${idx}" required style="flex:1;" />
+                                        <button type="button" class="remove-notice-btn">
+                                            <img src="../assets/Minus_Icon.svg" alt="Remove" >
+                                        </button>
+                                    `;
+                                    // Remove label for subsequent fields
+                                    row.querySelector('label').textContent = '';
+                                    // Attach remove handler
+                                    row.querySelector('.remove-notice-btn').addEventListener('click', function() {
+                                        fieldsContainer.removeChild(row);
+                                    });
+                                    fieldsContainer.appendChild(row);
+                                    noticeCodeCount++;
+                                }
+                                // Attach add handler to first Add button
+                                fieldsContainer.querySelector('.add-notice-btn').addEventListener('click', function() {
+                                    addNoticeCodeField();
+                                });
+                            });
+                            </script>
                         <div>
                             <label for="addDateAfd">Date Released to AFD*</label>
                             <input type="date" name="dateReleased" id="addDateAfd" required>
@@ -512,7 +614,9 @@ HREDRD-EMES
 </div>
 
         <div class="table-scroll-area">
-            <table style="width:100%; border-collapse: collapse; background: rgba(255,255,255,0.95); max-width: ;">
+            <div class="tracking-table-container">
+                <div class="tracking-table-scroll">
+                    <table class="listview-table tracking-table">
                 <thead>
                         <tr>
                             <th style="width:32px;">
@@ -583,11 +687,9 @@ HREDRD-EMES
                                                 $fileHref = $pdfName !== '' ? '../JRS_PDFs/' . rawurlencode($pdfName) : '';
                                                 $linkLabel = $fileName !== '' ? basename($fileName) : '';
                                             ?>
-                                            <td data-col="<?= htmlspecialchars($colName) ?>">
+                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell">
                                                 <?php if ($fileHref && $linkLabel !== ''): ?>
-                                                    <a href="<?= htmlspecialchars($fileHref) ?>" target="_blank" rel="noopener">
-                                                        <?= htmlspecialchars($linkLabel) ?>
-                                                    </a>
+                                                    <a href="<?= htmlspecialchars($fileHref) ?>" target="_blank" rel="noopener" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
@@ -613,6 +715,8 @@ HREDRD-EMES
                     <?php endif; ?>
                 </tbody>
             </table>
+                </div>
+            </div>
         </div>
         <div id="rowMenuDropdown" class="row-menu-dropdown" style="display:none; position:fixed; left:0; top:0; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
             <button class="row-menu-item" onclick="editRowFromMenu()" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
