@@ -80,7 +80,7 @@ $columns = [
 ];
 
 // Status options
-$statusOptions = ['DELIVERED','RETURNED TO SENDER','ON GOING DELIVERY', 'PERSONALLY RECEIVED',];
+$statusOptions = ['DELIVERED','RETURNED TO SENDER','ONGOING DELIVERY', 'PERSONALLY RECEIVED',];
 
 // Compute counts per status
 $statusCounts = array_fill_keys($statusOptions, 0);
@@ -99,7 +99,7 @@ foreach ($rows as $r) {
 
 $del = (int)($statusCounts['DELIVERED'] ?? 0);
 $rts = (int)$statusCounts['RETURNED TO SENDER'] ?? 0;
-$ogd = (int)$statusCounts['ON GOING DELIVERY'] ?? 0;
+$ogd = (int)$statusCounts['ONGOING DELIVERY'] ?? 0;
 
 // Totals and non-delivery rate
 $totalCount = count($rows);
