@@ -46,7 +46,6 @@ td { max-width: 200px; border:1px solid #000; padding:4px; font-size:9px; word-w
 <th>No.</th>
 <th>Recipient Details</th>
 <th>Parcel Details</th>
-<th>Tracking No.</th>
 </tr>';
 
 $no = 1;
@@ -56,7 +55,6 @@ foreach ($rows as $r) {
         <td>{$no}</td>
         <td>{$r['Recipient Details']}</td>
         <td>{$r['Parcel Details']}</td>
-        <td>{$r['Tracking No.']}</td>
     </tr>";
     $no++;
 }

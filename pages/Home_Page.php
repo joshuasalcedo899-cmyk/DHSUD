@@ -54,6 +54,15 @@ try {
     $message = 'Failed to load records: ' . $e->getMessage();
 }
 
+function extractBatchIdFromSenderDetails($senderDetails) {
+    $text = trim((string)$senderDetails);
+    if ($text === '') return '';
+    if (preg_match('/Batch ID:\s*([A-Za-z0-9\-]+)/i', $text, $m)) {
+        return trim($m[1]);
+    }
+    return '';
+}
+
 // Column order to render (matches table header in UI)
 $columns = [
     'Notice/Order Code',
@@ -96,6 +105,16 @@ $ogd = (int)$statusCounts['ON GOING DELIVERY'] ?? 0;
 $totalCount = count($rows);
 $ndrPercent = ($totalCount > 0) ? round((($rts + $ogd )/ $totalCount) * 100, 1) : 0;
 
+// Build counts per batch ID so only true batch groups are highlighted.
+$batchIdCounts = [];
+foreach ($rows as $r) {
+    $bid = extractBatchIdFromSenderDetails($r['Sender Details'] ?? '');
+    if ($bid !== '') {
+        if (!isset($batchIdCounts[$bid])) $batchIdCounts[$bid] = 0;
+        $batchIdCounts[$bid]++;
+    }
+}
+
 function formatDateCell($value) {
     if ($value === null) return '';
     $value = trim((string)$value);
@@ -120,6 +139,7 @@ function formatDateCell($value) {
             top: 0;
             z-index: 3;
             background: #22336A;
+            padding: 0px;
         }
         form.inline { margin:0; }
         select { padding:4px; }
@@ -137,6 +157,19 @@ function formatDateCell($value) {
         .status-returned { color: #c62828; }
         .status-ongoing { color: #b39b00; }
         .status-personal { color: #22336A; }
+        tr.batch-row td { background: #ececec !important; }
+        .batch-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 6px;
+            border-radius: 999px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: #fff;
+            background: #6b7280;
+            vertical-align: middle;
+        }
         .message { padding:8px; margin:10px 0; }
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
         .stats { margin-bottom:10px; }
@@ -153,21 +186,25 @@ function formatDateCell($value) {
             box-shadow: 0 2px 16px rgba(0,0,0,0.18);
             padding: 32px 32px 24px 32px;
             max-width: 780px;
-            width: 100%;
-            margin: 40px auto;
+            width: min(780px, calc(100vw - 24px));
+            margin: 0 auto;
             position: relative;
             box-sizing: border-box;
+            max-height: calc(100vh - 24px);
+            overflow: auto;
         }
         @media (max-width: 768px) {
             .edit-modal {
                 padding: 20px 20px 16px 20px;
-                max-width: 90vw;
+                width: calc(100vw - 20px);
+                border-width: 8px;
             }
         }
         @media (max-width: 480px) {
             .edit-modal {
                 padding: 16px 16px 12px 16px;
-                max-width: 95vw;
+                width: calc(100vw - 12px);
+                border-width: 6px;
             }
         }
         .edit-modal h2 {
@@ -197,7 +234,8 @@ function formatDateCell($value) {
             display: block;
         }
         .edit-modal input,
-        .edit-modal select {
+        .edit-modal select,
+        .edit-modal textarea {
             width: 100%;
             padding: 8px 10px;
             border: 1px solid #bdbdbd;
@@ -206,6 +244,10 @@ function formatDateCell($value) {
             background: #f7f8fa;
             margin-bottom: 10px;
             display: block;
+        }
+        .edit-modal textarea {
+            resize: vertical;
+            min-height: 42px;
         }
         .edit-modal select {
             background: #b6bed3;
@@ -217,6 +259,7 @@ function formatDateCell($value) {
             grid-column: 1 / span 2;
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             gap: 1em;
             margin-top: 10px;
             margin-bottom: 0;
@@ -265,8 +308,86 @@ function formatDateCell($value) {
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 12px;
+            box-sizing: border-box;
+            overflow: auto;
             z-index: 1000;
             backdrop-filter: blur(4px);
+        }
+        .add-pairs-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .add-pair-row {
+            display: grid;
+            grid-template-columns: 1fr 34px 1fr;
+            gap: 10px;
+            align-items: start;
+        }
+        .pair-row-btn {
+            width: 30px;
+            height: 30px;
+            align-self: center;
+            border: 2px solid #22336A;
+            border-radius: 4px;
+            background: #fff;
+            color: #22336A;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+        }
+        .pair-row-btn:hover {
+            background: #22336A;
+            color: #fff;
+        }
+        #trackingModal,
+        #scannerModal {
+            padding: 12px;
+            box-sizing: border-box;
+        }
+        #trackingModal .modal-panel,
+        #scannerModal .modal-panel {
+            width: min(980px, calc(100vw - 24px));
+            max-height: calc(100vh - 24px);
+            overflow: auto;
+            border-radius: 10px;
+        }
+        #scannerModal .modal-panel {
+            overflow: hidden;
+        }
+        #scannerModal #scannerFrame {
+            height: min(75vh, 760px);
+        }
+        @media (max-width: 768px) {
+            .add-pair-row {
+                grid-template-columns: 1fr;
+            }
+            .pair-row-btn {
+                width: 36px;
+                height: 36px;
+                justify-self: start;
+            }
+            .edit-modal .modal-actions {
+                grid-column: 1 / span 1;
+            }
+            .edit-modal .modal-btn {
+                width: 100%;
+            }
+            #trackingModal,
+            #scannerModal {
+                padding: 8px;
+            }
+            #trackingModal .modal-panel,
+            #scannerModal .modal-panel {
+                width: calc(100vw - 16px);
+                max-height: calc(100vh - 16px);
+            }
+            #scannerModal #scannerFrame {
+                height: 68vh;
+            }
         }
         .top-bar {
             display: flex;
@@ -455,17 +576,23 @@ function formatDateCell($value) {
                         }
                     </style>
                 <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
-                <h2 style="text-align:center;color:#1a237e;font-size:1.3em;font-weight:bold;margin-bottom:18px;letter-spacing:1px;">ADD NEW RECORD</h2>
+                <h2>ADD RECORD</h2>
                 <form id="addForm" action="../api/Add.php" method="post" autocomplete="off">
 
                     <div style="display:contents">
-                        <div id="noticeCodeFields">
-                            <div class="notice-code-row" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                                <label for="addNoticeCode_0" style="flex:0 0 90px;">Notice/Order Code*</label>
-                                <input type="text" name="notice_Code[]" id="addNoticeCode_0" required style="flex:1;" />
-                                <button type="button" class="add-notice-btn" >
-                                    <img src="../assets/Add_Icon.svg" alt="Add" style="width:22px;height:22px;">
-                                </button>
+                        <div style="grid-column:1/span 2;">
+                            <div id="addPairRows" class="add-pairs-grid">
+                                <div class="add-pair-row">
+                                    <div>
+                                        <label>Code*</label>
+                                        <input type="text" name="noticeCodes[]" placeholder="Notice/Order Code" required>
+                                    </div>
+                                    <button type="button" class="pair-row-btn" title="Add row">+</button>
+                                    <div>
+                                        <label>Parcel Details</label>
+                                        <textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details" required></textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                             <style>
@@ -535,17 +662,13 @@ function formatDateCell($value) {
                             <label for="addParcelNo">Parcel No.</label>
                             <input type="number" name="parcelNo" id="addParcelNo">
                         </div>
-                        <div>
+                        <div style="grid-column:1/span 2;">
                             <label for="addTrackingNo">Tracking No.</label>
                             <input type="text" name="trackingNo" id="addTrackingNo">
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addRecipient">Recipient Details</label>
                             <textarea name="recipientDetails" rows="2" id="addRecipient"></textarea>
-                        </div>
-                        <div style="grid-column:1/span 2;">
-                            <label for="addParcelDetails">Parcel Details</label>
-                            <textarea name="parcelDetails" rows="2" id="addParcelDetails"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addSender">Sender Details</label>
@@ -559,8 +682,8 @@ HREDRD-EMES
                         </div>
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" class="modal-btn save" style="background:#22336A; color:#fff;">Add Record</button>
-                        <button type="button" class="modal-btn cancel" style="background:#b94a48; color:#fff;" onclick="clearAddForm()">Clear Form</button>
+                        <button type="submit" class="modal-btn save">Add Record</button>
+                        <button type="button" class="modal-btn cancel" onclick="clearAddForm()">Clear Form</button>
                     </div>
                 </form>
             </div>
@@ -571,8 +694,28 @@ HREDRD-EMES
         <button type="button" class="export-btn" style="margin-right:8px;" onclick="scanSelectedRow()">Scan</button>
         <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
             <script>
+            let scannerSelectedNoticeCode = '';
+
+            function openScannerModal(noticeCode) {
+                const modal = document.getElementById('scannerModal');
+                const frame = document.getElementById('scannerFrame');
+                if (!modal || !frame) return;
+                scannerSelectedNoticeCode = (noticeCode || '').trim();
+                if (!scannerSelectedNoticeCode) return;
+                frame.src = '../test.php?code=' + encodeURIComponent(scannerSelectedNoticeCode) + '&embedded=1';
+                modal.style.display = 'flex';
+            }
+
+            function closeScannerModal() {
+                const modal = document.getElementById('scannerModal');
+                const frame = document.getElementById('scannerFrame');
+                if (!modal || !frame) return;
+                modal.style.display = 'none';
+                frame.src = 'about:blank';
+                scannerSelectedNoticeCode = '';
+            }
+
             function scanSelectedRow() {
-                // Find checked row-checkbox
                 const checked = document.querySelectorAll('.row-checkbox:checked');
                 if (checked.length === 0) {
                     alert('Please select a record to scan.');
@@ -582,9 +725,7 @@ HREDRD-EMES
                     alert('Please select only one record to scan.');
                     return;
                 }
-                const noticeCode = checked[0].value;
-                // Redirect to test.php with code
-                window.location.href = '../test.php?code=' + encodeURIComponent(noticeCode);
+                openScannerModal(checked[0].value);
             }
             </script>
         <div class="table-sort-bar">
@@ -632,8 +773,23 @@ HREDRD-EMES
                         <?php if (empty($rows)): ?>
                             <tr><td colspan="<?= count($columns) + 2 ?>">No records found.</td></tr>
                         <?php else: ?>
-                            <?php foreach ($rows as $row): ?>
-                                <tr data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
+                            <?php for ($ri = 0; $ri < count($rows); $ri++): ?>
+                                <?php
+                                    $row = $rows[$ri];
+                                    $rowBatchId = extractBatchIdFromSenderDetails($row['Sender Details'] ?? '');
+                                    $isBatchRow = ($rowBatchId !== '' && (($batchIdCounts[$rowBatchId] ?? 0) > 1));
+
+                                    $prevBatchId = '';
+                                    if ($ri > 0) {
+                                        $prevBatchId = extractBatchIdFromSenderDetails($rows[$ri - 1]['Sender Details'] ?? '');
+                                    }
+                                    $nextBatchId = '';
+                                    if ($ri + 1 < count($rows)) {
+                                        $nextBatchId = extractBatchIdFromSenderDetails($rows[$ri + 1]['Sender Details'] ?? '');
+                                    }
+                                    $showBatchBadge = $isBatchRow && ($rowBatchId !== '' && $rowBatchId !== $prevBatchId);
+                                ?>
+                                <tr class="<?= $isBatchRow ? 'batch-row' : '' ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     <td style="width:32px;">
                                         <input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
@@ -644,7 +800,12 @@ HREDRD-EMES
                                                     <span style="font-size:1.5em;line-height:1;">&#8942;</span>
                                                 </button>
                                             </div>
-                                            <span><?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?></span>
+                                            <span>
+                                                <?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>
+                                                <?php if ($showBatchBadge): ?>
+                                                    <span class="batch-badge" title="Consecutive batch row">BATCH</span>
+                                                <?php endif; ?>
+                                            </span>
                                         </div>
                                     </td>
                                 <?php foreach ($columns as $idx => $colName): ?>
@@ -677,6 +838,10 @@ HREDRD-EMES
                                             $cellValue = $row[$colName] ?? '';
                                             if ($colName === 'Date released to AFD' || $colName === 'Date') {
                                                 $cellValue = formatDateCell($cellValue);
+                                            }
+                                            if ($colName === 'Sender Details') {
+                                                $cellValue = preg_replace('/\R?Batch ID:\s*[A-Za-z0-9\-]+\s*/i', '', (string)$cellValue);
+                                                $cellValue = trim((string)$cellValue);
                                             }
                                         ?>
                                         <?php if ($colName === 'File Name (PDF)'): ?>
@@ -711,7 +876,7 @@ HREDRD-EMES
                                 </td>
                                 
                             </tr>
-                        <?php endforeach; ?>
+                        <?php endfor; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -726,8 +891,8 @@ HREDRD-EMES
                 <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
             </button>
         </div>
-        <div id="trackingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999; align-content: center;">
-            <div style="background:#fff;width:80%;max-width:900px;margin:5% auto;padding:20px;border-radius:8px;max-height:80vh;overflow:auto;">
+        <div id="trackingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-content:center;">
+            <div class="modal-panel" style="background:#fff;margin:0 auto;padding:20px;">
                 <button onclick="closeTrackingModal()" style="display: flex;color: black;text-decoration: none;font-weight: 600;margin-right: 18px;padding: 8px 16px;border-radius: 6px;transition: background 0.2s, color 0.2s; border: none;"><img src="../assets/Return_Icon.svg" alt="Return" style="width:22px;height:22px;vertical-align:middle;margin-right:6px;"> Return</button>
                 <h2>JRS Tracking</h2>
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
@@ -737,6 +902,15 @@ HREDRD-EMES
                     </span>
                 </div>
                 <div id="trackingContent">Loading...</div>
+            </div>
+        </div>
+        <div id="scannerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10000;justify-content:center;align-items:center;">
+            <div class="modal-panel" style="background:#fff;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.28);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <h2 style="margin:0;color:#22336A;font-size:1.1rem;">Scan QR Code</h2>
+                    <button type="button" onclick="closeScannerModal()" style="border:none;background:#f3f4f6;color:#22336A;font-weight:700;border-radius:6px;padding:6px 10px;cursor:pointer;">Close</button>
+                </div>
+                <iframe id="scannerFrame" src="about:blank" title="QR Scanner" style="width:100%;border:1px solid #d1d5db;border-radius:8px;"></iframe>
             </div>
         </div>
 
@@ -938,14 +1112,90 @@ HREDRD-EMES
         function clearAddForm() {
             var form = document.getElementById('addForm');
             if (form) form.reset();
+            var rowsWrap = document.getElementById('addPairRows');
+            if (rowsWrap) {
+                rowsWrap.innerHTML = '';
+                addAddPairRow();
+            }
+            refreshAddPairButtons();
+        }
+
+        function addAddPairRow(noticeValue = '', parcelValue = '') {
+            var rowsWrap = document.getElementById('addPairRows');
+            if (!rowsWrap) return;
+            var row = document.createElement('div');
+            row.className = 'add-pair-row';
+            row.innerHTML =
+                '<div><label>Code*</label><input type="text" name="noticeCodes[]" placeholder="Notice/Order Code" required></div>' +
+                '<button type="button" class="pair-row-btn" title="Add row">+</button>' +
+                '<div><label>Parcel Details</label><textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details" required></textarea></div>';
+            rowsWrap.appendChild(row);
+            var inputs = row.querySelectorAll('input, textarea');
+            if (inputs[0]) inputs[0].value = noticeValue;
+            if (inputs[1]) inputs[1].value = parcelValue;
+            refreshAddPairButtons();
+        }
+
+        function removeAddPairRow(btn) {
+            var rowsWrap = document.getElementById('addPairRows');
+            if (!rowsWrap) return;
+            var rows = rowsWrap.querySelectorAll('.add-pair-row');
+            if (rows.length <= 1) {
+                alert('At least one Notice/Order Code + Parcel Details pair is required.');
+                return;
+            }
+            var row = btn.closest('.add-pair-row');
+            if (row) row.remove();
+            refreshAddPairButtons();
+        }
+
+        function refreshAddPairButtons() {
+            var rowsWrap = document.getElementById('addPairRows');
+            if (!rowsWrap) return;
+            var rows = rowsWrap.querySelectorAll('.add-pair-row');
+            rows.forEach(function(row, index) {
+                var btn = row.querySelector('.pair-row-btn');
+                if (!btn) return;
+                if (index === 0) {
+                    btn.textContent = '+';
+                    btn.title = 'Add row';
+                    btn.onclick = function() { addAddPairRow(); };
+                } else {
+                    btn.textContent = '-';
+                    btn.title = 'Remove row';
+                    btn.onclick = function() { removeAddPairRow(btn); };
+                }
+            });
         }
         // Submit handler (AJAX)
         document.addEventListener('DOMContentLoaded', function() {
             var addForm = document.getElementById('addForm');
             if (addForm) {
+                var rowsWrap = document.getElementById('addPairRows');
+                if (rowsWrap && rowsWrap.querySelectorAll('.add-pair-row').length === 0) {
+                    addAddPairRow();
+                }
+                refreshAddPairButtons();
                 addForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     var formData = new FormData(addForm);
+
+                    var noticeCodes = formData.getAll('noticeCodes[]').map(function(v){ return (v || '').trim(); });
+                    var parcelDetails = formData.getAll('parcelDetailsList[]').map(function(v){ return (v || '').trim(); });
+                    if (!noticeCodes.length) {
+                        alert('Please add at least one Notice/Order Code.');
+                        return;
+                    }
+                    for (var i = 0; i < noticeCodes.length; i++) {
+                        if (!noticeCodes[i]) {
+                            alert('Notice/Order Code is required for pair #' + (i + 1) + '.');
+                            return;
+                        }
+                        if (!parcelDetails[i]) {
+                            alert('Parcel Details is required for pair #' + (i + 1) + '.');
+                            return;
+                        }
+                    }
                     
                     // Debug: Log form data
                     console.log('Form Data being sent:');
@@ -1136,6 +1386,18 @@ HREDRD-EMES
             }
         }
 
+        function updateTrackingRowsByBatch(batchId, data) {
+            const rows = document.querySelectorAll('tr[data-batch-id]');
+            rows.forEach(row => {
+                if ((row.dataset.batchId || '').trim() === (batchId || '').trim()) {
+                    const notice = (row.dataset.notice || '').trim();
+                    if (notice) {
+                        updateTrackingRow(notice, data);
+                    }
+                }
+            });
+        }
+
         function showTrackingModal(trackingNo) {
             const content = document.getElementById('trackingContent');
             const label = document.getElementById('trackingNumberLabel');
@@ -1272,6 +1534,24 @@ HREDRD-EMES
                 filterTableRows();
             });
             yearSelect.addEventListener('change', filterTableRows);
+
+            const scannerModal = document.getElementById('scannerModal');
+            if (scannerModal) {
+                scannerModal.addEventListener('click', function(e) {
+                    if (e.target === scannerModal) {
+                        closeScannerModal();
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('message', function(event) {
+            if (event.origin !== window.location.origin) return;
+            const data = event.data || {};
+            if (data.type === 'scanner-success') {
+                closeScannerModal();
+                location.reload();
+            }
         });
         
         function exportSelectedToPDF() {
@@ -1343,7 +1623,11 @@ HREDRD-EMES
                                 setTimeout(function () { result.innerHTML = ""; }, 2000);
                             }
                             const trackingNo = (data.trackingNo || fallbackTracking || "").trim();
-                            updateTrackingRow(noticeCode, data);
+                            if ((data.batchId || '').trim() !== '') {
+                                updateTrackingRowsByBatch(data.batchId, data);
+                            } else {
+                                updateTrackingRow(noticeCode, data);
+                            }
                             showTrackingModal(trackingNo);
                             button.disabled = false;
                             button.innerText = "Track";

@@ -1,5 +1,6 @@
 <?php
     $noticeCode = $_GET['code'] ?? '';
+    $embedded = isset($_GET['embedded']) && $_GET['embedded'] === '1';
 ?>
 <!DOCTYPE html>
 <html>
@@ -62,6 +63,8 @@
 
 // get Notice/Order Code from URL
 const noticeCode = "<?= htmlspecialchars($noticeCode) ?>";
+const isEmbedded = <?= $embedded ? 'true' : 'false' ?>;
+const isInIframe = window.self !== window.top;
 
 
 let codeReader = null;
@@ -111,6 +114,16 @@ function onScanSuccess(decodedText) {
 
         // Generate and save the PDF on the server before returning to table.
         await generateReceiptPDF(trackingNumber);
+
+        if ((isEmbedded || isInIframe) && window.parent && window.parent !== window) {
+            await stopCurrentStream();
+            window.parent.postMessage({
+                type: "scanner-success",
+                noticeCode: noticeCode,
+                trackingNumber: trackingNumber
+            }, window.location.origin);
+            return;
+        }
 
         // return to table
         window.location.href = "pages/Home_Page.php?updated=1";
