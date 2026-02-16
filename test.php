@@ -7,7 +7,7 @@
     <title>QR Scanner</title>
 
 
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
 
 
     <style>
@@ -17,8 +17,20 @@
             background:#f2f2f2;
         }
         #reader{
-            width:350px;
+            width:640px;
             margin:auto;
+        }
+        #preview{
+            width:640px;
+            max-width:100%;
+            border-radius:8px;
+            background:#000;
+        }
+        #cameraSelect{
+            margin:12px auto 0;
+            padding:8px;
+            width:640px;
+            max-width:100%;
         }
         .result{
             margin-top:20px;
@@ -34,7 +46,10 @@
 <h2>Scan QR Code</h2>
 
 
-<div id="reader"></div>
+<div id="reader">
+    <video id="preview" autoplay muted playsinline></video>
+</div>
+<select id="cameraSelect"></select>
 
 
 <div class="result" id="result">Waiting for scan...</div>
@@ -49,16 +64,32 @@
 const noticeCode = "<?= htmlspecialchars($noticeCode) ?>";
 
 
-function onScanSuccess(decodedText, decodedResult) {
+let codeReader = null;
+let activeControls = null;
+let isProcessing = false;
+const ZXING_HINTS = new Map();
+ZXING_HINTS.set(ZXing.DecodeHintType.TRY_HARDER, true);
+ZXING_HINTS.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
 
-
+function extractTrackingNumber(decodedText) {
     let trackingNumber = decodedText;
-
-
     if (decodedText.includes("or=")) {
-        let url = new URL(decodedText);
-        trackingNumber = url.searchParams.get("or");
+        try {
+            const url = new URL(decodedText);
+            trackingNumber = url.searchParams.get("or") || decodedText;
+        } catch (e) {
+            // Keep original decoded text if not a valid URL.
+        }
     }
+    return trackingNumber;
+}
+
+function onScanSuccess(decodedText) {
+    if (isProcessing) return;
+    isProcessing = true;
+
+
+    const trackingNumber = extractTrackingNumber(decodedText);
 
 
     document.getElementById("result").innerHTML =
@@ -83,13 +114,12 @@ function onScanSuccess(decodedText, decodedResult) {
 
         // return to table
         window.location.href = "pages/Home_Page.php?updated=1";
+    })
+    .catch((error) => {
+        console.error("Tracking update failed:", error);
+        document.getElementById("result").innerHTML = "Failed to process scanned QR.";
+        isProcessing = false;
     });
-
-
-    html5QrcodeScanner.clear();
-
-
-   
 }
 
 async function generateReceiptPDF(trackingNumber) {
@@ -121,13 +151,129 @@ async function generateReceiptPDF(trackingNumber) {
 }
 
 
-var html5QrcodeScanner = new Html5QrcodeScanner(
-    "reader",
-    { fps: 10, qrbox: 250 }
-);
+async function stopCurrentStream() {
+    if (activeControls && typeof activeControls.stop === "function") {
+        try { activeControls.stop(); } catch (e) {}
+        activeControls = null;
+    }
+}
 
+async function tryApplyZoomIfSupported(targetZoom) {
+    const video = document.getElementById("preview");
+    if (!video || !video.srcObject) return;
 
-html5QrcodeScanner.render(onScanSuccess);
+    const tracks = video.srcObject.getVideoTracks ? video.srcObject.getVideoTracks() : [];
+    if (!tracks.length) return;
+
+    const track = tracks[0];
+    if (!track.getCapabilities || !track.applyConstraints) return;
+
+    try {
+        const caps = track.getCapabilities();
+        if (!caps.zoom) return;
+
+        const min = Number(caps.zoom.min);
+        const max = Number(caps.zoom.max);
+        const step = Number(caps.zoom.step || 0.1);
+        let zoom = targetZoom;
+
+        if (Number.isFinite(min)) zoom = Math.max(min, zoom);
+        if (Number.isFinite(max)) zoom = Math.min(max, zoom);
+        if (Number.isFinite(step) && step > 0) {
+            zoom = Math.round(zoom / step) * step;
+        }
+
+        await track.applyConstraints({ advanced: [{ zoom: zoom }] });
+    } catch (e) {
+        console.warn("Zoom not supported:", e);
+    }
+}
+
+async function startScanner(deviceId) {
+    if (!codeReader) {
+        codeReader = new ZXing.BrowserMultiFormatReader(ZXING_HINTS, 120);
+    }
+
+    await stopCurrentStream();
+    isProcessing = false;
+
+    const constraints = {
+        video: {
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30, max: 30 },
+            focusMode: "continuous",
+            advanced: [{ focusMode: "continuous" }]
+        }
+    };
+
+    try {
+        activeControls = await codeReader.decodeFromConstraints(constraints, "preview", (result, err) => {
+            if (result) {
+                onScanSuccess(result.getText ? result.getText() : String(result));
+            }
+        });
+    } catch (e) {
+        // Fallback for cameras/browsers that reject advanced constraints.
+        activeControls = await codeReader.decodeFromVideoDevice(
+            deviceId || undefined,
+            "preview",
+            (result, err) => {
+                if (result) {
+                    onScanSuccess(result.getText ? result.getText() : String(result));
+                }
+            }
+        );
+    }
+
+    localStorage.setItem("preferredCameraId", deviceId || "");
+    setTimeout(() => { tryApplyZoomIfSupported(2.0); }, 1000);
+}
+
+async function initScanner() {
+    const cameraSelect = document.getElementById("cameraSelect");
+
+    if (!window.ZXing || !ZXing.BrowserMultiFormatReader) {
+        document.getElementById("result").innerHTML = "ZXing library failed to load.";
+        return;
+    }
+
+    codeReader = new ZXing.BrowserMultiFormatReader(ZXING_HINTS, 120);
+    const devices = await codeReader.listVideoInputDevices();
+
+    if (!devices || devices.length === 0) {
+        document.getElementById("result").innerHTML = "No camera device found.";
+        return;
+    }
+
+    cameraSelect.innerHTML = "";
+    devices.forEach((device, index) => {
+        const opt = document.createElement("option");
+        opt.value = device.deviceId;
+        opt.text = device.label || ("Camera " + (index + 1));
+        cameraSelect.appendChild(opt);
+    });
+
+    const savedCamera = localStorage.getItem("preferredCameraId");
+    const defaultDevice = devices.find(d => d.deviceId === savedCamera) || devices[0];
+    cameraSelect.value = defaultDevice.deviceId;
+
+    cameraSelect.addEventListener("change", async function() {
+        await startScanner(cameraSelect.value);
+    });
+
+    await startScanner(defaultDevice.deviceId);
+}
+
+window.addEventListener("beforeunload", function() {
+    stopCurrentStream();
+});
+
+initScanner().catch((e) => {
+    console.error(e);
+    document.getElementById("result").innerHTML = "Unable to initialize camera scanner.";
+});
 </script>
 
 
