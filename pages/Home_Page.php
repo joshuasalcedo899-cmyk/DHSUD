@@ -397,21 +397,31 @@ function formatDateCell($value) {
             }
         }
         .top-bar {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
             align-items: center;
-            justify-content: space-between;
             width: 100%;
             box-sizing: border-box;
-            gap: 1px;
-            flex-wrap: wrap;
+            gap: 12px;
             overflow-x: hidden;
+        }
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .top-bar-title {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #22336A;
+            white-space: nowrap;
         }
         .table-sort-bar {
             display: flex;
             align-items: center;
             justify-content: flex-end;
             gap: 8px;
-            flex: 1 1 auto;
             max-width: 100%;
             flex-wrap: wrap;
             box-sizing: border-box;
@@ -452,12 +462,16 @@ function formatDateCell($value) {
         }
         @media (max-width: 768px) {
             .top-bar {
-                flex-direction: column;
+                grid-template-columns: 1fr;
                 align-items: stretch;
                 gap: 8px;
             }
-            .export-btn {
-                align-self: flex-start;
+            .top-bar-left {
+                justify-content: flex-start;
+            }
+            .top-bar-title {
+                order: -1;
+                text-align: center;
             }
             .table-sort-bar {
                 width: 100%;
@@ -696,9 +710,11 @@ HREDRD-EMES
             </div>
         </div>
     <div class="admin-table-container">
-        <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:30px;text-align:center;">MAIL TRACKING RECORDS</div>
     <div class="top-bar">
-        <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
+        <div class="top-bar-left">
+            <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
+        </div>
+        <div class="top-bar-title">MAIL TRACKING RECORDS</div>
             <script>
             let scannerSelectedNoticeCode = '';
 
