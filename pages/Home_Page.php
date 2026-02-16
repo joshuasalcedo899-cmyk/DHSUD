@@ -138,7 +138,7 @@ function formatDateCell($value) {
             position: sticky;
             top: 0;
             z-index: 3;
-            background: #22336A;
+            background: #22336A !important;
             padding: 0px;
         }
         form.inline { margin:0; }
@@ -158,6 +158,10 @@ function formatDateCell($value) {
         .status-ongoing { color: #b39b00; }
         .status-personal { color: #22336A; }
         tr.batch-row td { background: #ececec !important; }
+        tr.scanned-row-focus td {
+            background: #fff7c2 !important;
+            transition: background 0.8s ease;
+        }
         .batch-badge {
             display: inline-block;
             margin-left: 6px;
@@ -174,8 +178,11 @@ function formatDateCell($value) {
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
         .stats { margin-bottom:10px; }
         .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
-        .btn-track { padding:6px 12px; font-weight: 600; background-color:#22336A; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.7rem; }
+        .btn-track, .btn-scan { padding:6px 12px; font-weight: 600; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.7rem; }
+        .btn-track { background-color:#22336A; }
         .btn-track:hover { background-color:black; }
+        .btn-scan { background-color:#2e7d32; }
+        .btn-scan:hover { background-color:#1b5e20; }
         .status-delivered { color:#1b7f3b; font-weight:700; }
 
         /* Modal Form UI - Two Column Grid */
@@ -691,7 +698,6 @@ HREDRD-EMES
     <div class="admin-table-container">
         <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:30px;text-align:center;">MAIL TRACKING RECORDS</div>
     <div class="top-bar">
-        <button type="button" class="export-btn" style="margin-right:8px;" onclick="scanSelectedRow()">Scan</button>
         <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
             <script>
             let scannerSelectedNoticeCode = '';
@@ -715,18 +721,6 @@ HREDRD-EMES
                 scannerSelectedNoticeCode = '';
             }
 
-            function scanSelectedRow() {
-                const checked = document.querySelectorAll('.row-checkbox:checked');
-                if (checked.length === 0) {
-                    alert('Please select a record to scan.');
-                    return;
-                }
-                if (checked.length > 1) {
-                    alert('Please select only one record to scan.');
-                    return;
-                }
-                openScannerModal(checked[0].value);
-            }
             </script>
         <div class="table-sort-bar">
             <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;">
@@ -871,7 +865,7 @@ HREDRD-EMES
                                         <button type="button" class="btn-track" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking="<?= htmlspecialchars($trackingNo) ?>" style="display:inline-block;text-decoration:none;">Track</button>
                                         <div class="track-result"></div>
                                     <?php else: ?>
-                                        <span style="color:#999; font-size:12px;">No tracking #</span>
+                                        <button type="button" class="btn-scan" onclick="openScannerModal('<?= htmlspecialchars($row['Notice/Order Code'] ?? '', ENT_QUOTES) ?>')" style="display:inline-block;text-decoration:none;">Scan</button>
                                     <?php endif; ?>
                                 </td>
                                 
@@ -1059,19 +1053,16 @@ HREDRD-EMES
             function deleteRecord(noticeCode) {
                 if (confirm('Are you sure you want to delete this record?')) {
                    if (!noticeCode) return;
-                        // Redirect to PHP delete handler via POST using a form
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '../api/Delete.php'; // your PHP file that handles deletion
-
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'noticeCode';       // the field name your table uses
-                        input.value = noticeCode;
-
-                        form.appendChild(input);
-                        document.body.appendChild(form);
-                        form.submit();
+                        fetch('../api/Delete.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: 'noticeCode=' + encodeURIComponent(noticeCode)
+                        })
+                        .then(function () { return refreshHomeData(); })
+                        .catch(function (err) {
+                            console.error(err);
+                            alert('Failed to delete record.');
+                        });
                 }
             }
             // Select all checkboxes logic
@@ -1081,15 +1072,15 @@ HREDRD-EMES
                     cb.checked = master.checked;
                 });
             }
-        document.addEventListener('DOMContentLoaded', function() {
-                // Uncheck master if any row is unchecked
-                document.querySelectorAll('.row-checkbox').forEach(function(cb) {
-                    cb.addEventListener('change', function() {
-                        var allChecked = Array.from(document.querySelectorAll('.row-checkbox')).every(function(c) { return c.checked; });
-                        document.getElementById('selectAllCheckbox').checked = allChecked;
-                    });
-                });
-        });
+        function bindRowCheckboxListeners() {
+            document.querySelectorAll('.row-checkbox').forEach(function(cb) {
+                cb.onchange = function() {
+                    var allChecked = Array.from(document.querySelectorAll('.row-checkbox')).every(function(c) { return c.checked; });
+                    var master = document.getElementById('selectAllCheckbox');
+                    if (master) master.checked = allChecked;
+                };
+            });
+        }
         // Add Modal logic
         function openAddModal() {
             document.getElementById('addModalOverlay').style.display = 'flex';
@@ -1216,7 +1207,8 @@ HREDRD-EMES
                         if (data.success) {
                             clearAddForm();
                             closeAddModal();
-                            location.reload();
+                            const firstAddedNotice = (data.firstNotice || '').trim();
+                            refreshHomeData({ focusNotice: firstAddedNotice });
                         } else {
                             alert(data.message || 'Failed to add record.');
                         }
@@ -1240,23 +1232,52 @@ HREDRD-EMES
         });
 
                         // Modal logic
+                        function normalizeDateForInput(value) {
+                            var v = (value || '').trim();
+                            if (!v) return '';
+                            if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+                            var parsed = new Date(v);
+                            if (!isNaN(parsed.getTime())) {
+                                var y = parsed.getFullYear();
+                                var m = String(parsed.getMonth() + 1).padStart(2, '0');
+                                var d = String(parsed.getDate()).padStart(2, '0');
+                                return y + '-' + m + '-' + d;
+                            }
+                            return '';
+                        }
+
+                        function getRowDataFromTable(noticeCode) {
+                            var tr = document.querySelector('tr[data-notice="' + CSS.escape((noticeCode || '').trim()) + '"]');
+                            if (!tr) return null;
+                            var row = {'Notice/Order Code': (noticeCode || '').trim()};
+                            tr.querySelectorAll('td[data-col]').forEach(function(td) {
+                                var key = td.getAttribute('data-col');
+                                row[key] = (td.textContent || '').trim();
+                            });
+                            return row;
+                        }
+
                         function openEditModal(rowData) {
                             document.getElementById('editModalOverlay').style.display = 'flex';
                             // Fill form fields - CRITICAL: original_notice_code must be set for lookup
                             var noticeCode = (rowData['Notice/Order Code'] || '').trim();
                             document.getElementById('editNoticeCode').value = noticeCode;
                             document.getElementById('editNoticeCodeDisplay').value = noticeCode;
-                            document.getElementById('editDateAfd').value = rowData['Date released to AFD'] || '';
+                            document.getElementById('editDateAfd').value = normalizeDateForInput(rowData['Date released to AFD'] || '');
                             document.getElementById('editParcelNo').value = rowData['Parcel No.'] || '';
                             document.getElementById('editRecipient').value = rowData['Recipient Details'] || '';
                             document.getElementById('editParcelDetails').value = rowData['Parcel Details'] || '';
                             document.getElementById('editSender').value = rowData['Sender Details'] || '';
                             document.getElementById('editFileName').value = rowData['File Name (PDF)'] || '';
                             document.getElementById('editTrackingNo').value = rowData['Tracking No.'] || '';
-                            document.getElementById('editStatus').value = rowData['Status'] || '';
-                            document.getElementById('editTransmittal').value = rowData['Transmittal Remarks/Received By'] || '';
-                            document.getElementById('editDate').value = rowData['Date'] || '';
-                            document.getElementById('editEvaluator').value = rowData['Evaluator'] || '';
+                            var editStatus = document.getElementById('editStatus');
+                            if (editStatus) editStatus.value = rowData['Status'] || '';
+                            var editTransmittal = document.getElementById('editTransmittal');
+                            if (editTransmittal) editTransmittal.value = rowData['Transmittal Remarks/Received By'] || '';
+                            var editDate = document.getElementById('editDate');
+                            if (editDate) editDate.value = rowData['Date'] || '';
+                            var editEvaluator = document.getElementById('editEvaluator');
+                            if (editEvaluator) editEvaluator.value = rowData['Evaluator'] || '';
                             console.log('Modal opened for Notice Code: "' + noticeCode + '"');
                         }
 
@@ -1285,8 +1306,11 @@ HREDRD-EMES
                         // Attach to edit icon
                         function editRow(noticeCode) {
                             if (!noticeCode) return;
-                            // Find row data in JS (from PHP array rendered as JS object)
-                            var row = window.mailRows.find(r => r['Notice/Order Code'] === noticeCode);
+                            // Prefer current DOM values to avoid stale cached row data.
+                            var row = getRowDataFromTable(noticeCode);
+                            if (!row && Array.isArray(window.mailRows)) {
+                                row = window.mailRows.find(r => r['Notice/Order Code'] === noticeCode);
+                            }
                             if (row) openEditModal(row);
                         }
 
@@ -1311,8 +1335,9 @@ HREDRD-EMES
                                 .then(data => {
                                     console.log('Response:', data);
                                     if (data.success) {
+                                        var focusNotice = (document.getElementById('editNoticeCodeDisplay').value || '').trim();
                                         closeEditModal();
-                                        location.reload();
+                                        refreshHomeData({ focusNotice: focusNotice });
                                     } else {
                                         alert(data.message || 'Failed to save changes.');
                                     }
@@ -1326,6 +1351,67 @@ HREDRD-EMES
 
                         // Expose PHP rows as JS array for modal
                         window.mailRows = <?php echo json_encode($rows, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
+
+        function rebuildMailRowsFromTable() {
+            const trs = document.querySelectorAll('.admin-table-container table tbody tr[data-notice]');
+            const rows = [];
+            trs.forEach(function(tr) {
+                const row = {'Notice/Order Code': (tr.dataset.notice || '').trim()};
+                tr.querySelectorAll('td[data-col]').forEach(function(td) {
+                    const key = td.getAttribute('data-col');
+                    row[key] = (td.textContent || '').trim();
+                });
+                rows.push(row);
+            });
+            window.mailRows = rows;
+        }
+
+        function refreshHomeData(options = {}) {
+            const focusNotice = (options.focusNotice || '').trim();
+            const url = new URL(window.location.href);
+            url.searchParams.set('_ts', Date.now().toString());
+
+            return fetch(url.pathname + '?' + url.searchParams.toString(), { cache: 'no-store' })
+                .then(function(resp) { return resp.text(); })
+                .then(function(html) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    const currentArea = document.querySelector('.admin-table-container .table-scroll-area');
+                    const nextArea = doc.querySelector('.admin-table-container .table-scroll-area');
+                    if (currentArea && nextArea) {
+                        currentArea.innerHTML = nextArea.innerHTML;
+                    }
+
+                    const currentStats = document.querySelector('.statistics-bar');
+                    const nextStats = doc.querySelector('.statistics-bar');
+                    if (currentStats && nextStats) {
+                        currentStats.innerHTML = nextStats.innerHTML;
+                    }
+
+                    const currentYear = document.getElementById('tableSortYear');
+                    const nextYear = doc.getElementById('tableSortYear');
+                    if (currentYear && nextYear) {
+                        const selected = currentYear.value;
+                        currentYear.innerHTML = nextYear.innerHTML;
+                        if (selected && Array.from(currentYear.options).some(function(o){ return o.value === selected; })) {
+                            currentYear.value = selected;
+                        }
+                    }
+
+                    bindRowCheckboxListeners();
+                    rebuildMailRowsFromTable();
+                    filterTableRows();
+
+                    if (focusNotice) {
+                        sessionStorage.setItem('dhsud_focus_notice', focusNotice);
+                        focusScannedRow();
+                    }
+                })
+                .catch(function(err) {
+                    console.error('refreshHomeData failed:', err);
+                });
+        }
 
         let currentTrackingNo = '';
 
@@ -1534,6 +1620,9 @@ HREDRD-EMES
                 filterTableRows();
             });
             yearSelect.addEventListener('change', filterTableRows);
+            bindRowCheckboxListeners();
+            rebuildMailRowsFromTable();
+            focusScannedRow();
 
             const scannerModal = document.getElementById('scannerModal');
             if (scannerModal) {
@@ -1543,6 +1632,11 @@ HREDRD-EMES
                     }
                 });
             }
+
+            setInterval(function() {
+                if (document.hidden) return;
+                refreshHomeData();
+            }, 12000);
         });
 
         window.addEventListener('message', function(event) {
@@ -1550,9 +1644,36 @@ HREDRD-EMES
             const data = event.data || {};
             if (data.type === 'scanner-success') {
                 closeScannerModal();
-                location.reload();
+                if ((data.noticeCode || '').trim() !== '') {
+                    sessionStorage.setItem('dhsud_focus_notice', data.noticeCode.trim());
+                }
+                refreshHomeData({ focusNotice: (data.noticeCode || '').trim() });
             }
         });
+
+        function focusScannedRow() {
+            const url = new URL(window.location.href);
+            const urlNotice = (url.searchParams.get('scanned_notice') || '').trim();
+            const storedNotice = (sessionStorage.getItem('dhsud_focus_notice') || '').trim();
+            const noticeCode = urlNotice || storedNotice;
+            if (!noticeCode) return;
+
+            const row = document.querySelector('tr[data-notice="' + CSS.escape(noticeCode) + '"]');
+            if (!row) {
+                sessionStorage.removeItem('dhsud_focus_notice');
+                return;
+            }
+
+            row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            row.classList.add('scanned-row-focus');
+            setTimeout(function() { row.classList.remove('scanned-row-focus'); }, 2600);
+
+            sessionStorage.removeItem('dhsud_focus_notice');
+            if (urlNotice) {
+                url.searchParams.delete('scanned_notice');
+                window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+            }
+        }
         
         function exportSelectedToPDF() {
             let checked = document.querySelectorAll('.row-checkbox:checked');
@@ -1580,13 +1701,9 @@ HREDRD-EMES
             form.submit();
         }
 
-        document.addEventListener("DOMContentLoaded", function () {
-            const buttons = document.querySelectorAll(".btn-track");
-
-            if (!buttons.length) return;
-
-            buttons.forEach(function (button) {
-                button.addEventListener("click", function () {
+        document.addEventListener("click", function (evt) {
+                    const button = evt.target.closest(".btn-track");
+                    if (!button) return;
                     const noticeCode = (button.dataset.notice || "").trim();
                     const fallbackTracking = (button.dataset.tracking || "").trim();
                     const result = button.parentElement
@@ -1642,8 +1759,6 @@ HREDRD-EMES
                         button.disabled = false;
                         button.innerText = "Track";
                     });
-                });
-            });
         });
 
 

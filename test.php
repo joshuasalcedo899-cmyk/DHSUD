@@ -126,7 +126,7 @@ function onScanSuccess(decodedText) {
         }
 
         // return to table
-        window.location.href = "pages/Home_Page.php?updated=1";
+        window.location.href = "pages/Home_Page.php?updated=1&scanned_notice=" + encodeURIComponent(noticeCode);
     })
     .catch((error) => {
         console.error("Tracking update failed:", error);

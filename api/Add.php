@@ -155,10 +155,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Return JSON for AJAX requests
     if ($isAjax) {
         header('Content-Type: application/json');
+        $insertedNotices = array_map(function($p) {
+            return $p['notice'] ?? '';
+        }, $pairs ?? []);
+        $insertedNotices = array_values(array_filter(array_map('trim', $insertedNotices), function($v) {
+            return $v !== '';
+        }));
         echo json_encode([
             'success' => $success,
             'message' => $message,
-            'messageType' => $messageType
+            'messageType' => $messageType,
+            'insertedNotices' => $insertedNotices,
+            'firstNotice' => $insertedNotices[0] ?? ''
         ]);
         exit;
     }
