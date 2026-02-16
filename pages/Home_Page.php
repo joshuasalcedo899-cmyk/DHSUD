@@ -350,12 +350,10 @@ function formatDateCell($value) {
             background: #22336A;
             color: #fff;
         }
-        #trackingModal,
         #scannerModal {
             padding: 12px;
             box-sizing: border-box;
         }
-        #trackingModal .modal-panel,
         #scannerModal .modal-panel {
             width: min(980px, calc(100vw - 24px));
             max-height: calc(100vh - 24px);
@@ -383,11 +381,9 @@ function formatDateCell($value) {
             .edit-modal .modal-btn {
                 width: 100%;
             }
-            #trackingModal,
             #scannerModal {
                 padding: 8px;
             }
-            #trackingModal .modal-panel,
             #scannerModal .modal-panel {
                 width: calc(100vw - 16px);
                 max-height: calc(100vh - 16px);
@@ -901,19 +897,6 @@ HREDRD-EMES
                 <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
             </button>
         </div>
-        <div id="trackingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-content:center;">
-            <div class="modal-panel" style="background:#fff;margin:0 auto;padding:20px;">
-                <button onclick="closeTrackingModal()" style="display: flex;color: black;text-decoration: none;font-weight: 600;margin-right: 18px;padding: 8px 16px;border-radius: 6px;transition: background 0.2s, color 0.2s; border: none;"><img src="../assets/Return_Icon.svg" alt="Return" style="width:22px;height:22px;vertical-align:middle;margin-right:6px;"> Return</button>
-                <h2>JRS Tracking</h2>
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
-                    <div id="trackingNumberLabel" style="font-weight:600;color:#22336A;"></div>
-                    <span class="jrs-download" title="Download" onclick="saveToPDF()">
-                        <img src="../assets/Download_Icon.svg" alt="Download" style="width:28px;height:28px;vertical-align:middle;cursor:pointer;">
-                    </span>
-                </div>
-                <div id="trackingContent">Loading...</div>
-            </div>
-        </div>
         <div id="scannerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10000;justify-content:center;align-items:center;">
             <div class="modal-panel" style="background:#fff;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.28);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -1237,16 +1220,6 @@ HREDRD-EMES
             }
         });
          
-        function closeTrackingModal() {
-            document.getElementById('trackingModal').style.display = 'none';
-        }                                   
-        document.addEventListener('DOMContentLoaded', function() {
-            const downloadBtn = document.getElementById('trackingDownloadBtn');
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', downloadTrackingPDF);
-            }
-        });
-
                         // Modal logic
                         function normalizeDateForInput(value) {
                             var v = (value || '').trim();
@@ -1429,8 +1402,6 @@ HREDRD-EMES
                 });
         }
 
-        let currentTrackingNo = '';
-
         function getStatusClass(statusValue) {
             switch ((statusValue || '').trim()) {
                 case 'DELIVERED':
@@ -1498,86 +1469,6 @@ HREDRD-EMES
                     }
                 }
             });
-        }
-
-        function showTrackingModal(trackingNo) {
-            const content = document.getElementById('trackingContent');
-            const label = document.getElementById('trackingNumberLabel');
-            const downloadBtn = document.getElementById('trackingDownloadBtn');
-
-            if (!trackingNo || trackingNo === '0') {
-                if (content) content.innerHTML = '<div style="color:#AA4444;">No valid tracking number found.</div>';
-                document.getElementById('trackingModal').style.display = 'flex';
-                return;
-            }
-
-            currentTrackingNo = trackingNo;
-            if (label) label.textContent = 'Tracking Number: ' + trackingNo;
-            if (downloadBtn) downloadBtn.disabled = false;
-            if (content) content.innerHTML = 'Loading...';
-
-            fetch('../api/jrs-track.php?tracking=' + encodeURIComponent(trackingNo))
-                .then(res => res.json())
-                .then(data => {
-                    if (!Array.isArray(data)) {
-                        throw new Error('Invalid response');
-                    }
-
-                    let html = `
-                        <table style="width:100%;border-collapse:collapse;">
-                            <tr>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Location</th>
-                                <th>Receiver</th>
-                            </tr>
-                    `;
-
-                    data.forEach(row => {
-                        const date = row.dateReceived
-                            ? new Date(row.dateReceived).toLocaleString()
-                            : '';
-                        const statusText = row.statusText ?? '';
-                        const statusClass = (typeof statusText === 'string' && statusText.toLowerCase().startsWith('delivered'))
-                            ? 'status-delivered'
-                            : '';
-
-                        let receiverText = '';
-                        if (row.receiver) {
-                            receiverText = row.receiver;
-                            if (row.relation) {
-                                receiverText += `<br><small style="color:#666;">${row.relation}</small>`;
-                            }
-                        }
-
-                        html += `
-                            <tr>
-                                <td>${date}</td>
-                                <td><span class="${statusClass}">${statusText}</span></td>
-                                <td>${row.branchLocation ?? row.location ?? ''}</td>
-                                <td>${receiverText}</td>
-                            </tr>
-                        `;
-                    });
-
-                    html += '</table>';
-
-                    if (content) content.innerHTML = html;
-                    document.getElementById('trackingModal').style.display = 'flex';
-                })
-                .catch(err => {
-                    if (content) content.innerHTML = '<div style="color:#AA4444;">Unable to fetch tracking info.</div>';
-                    document.getElementById('trackingModal').style.display = 'flex';
-                    console.error(err);
-                });
-        }
-
-        function downloadTrackingPDF() {
-            if (!currentTrackingNo) {
-                alert('No tracking number found.');
-                return;
-            }
-            window.open('../api/jrs-download.php?tracking=' + encodeURIComponent(currentTrackingNo), '_blank');
         }
 
 
@@ -1761,7 +1652,6 @@ HREDRD-EMES
                             } else {
                                 updateTrackingRow(noticeCode, data);
                             }
-                            showTrackingModal(trackingNo);
                             button.disabled = false;
                             button.innerText = "Track";
                         }
