@@ -32,6 +32,15 @@ $originalNoticeRaw = $_POST['original_notice_code'] ?? '';
 error_log('Original Notice (raw): "' . $originalNoticeRaw . '" (len: ' . strlen($originalNoticeRaw) . ')');
 error_log('Original Notice (trimmed): "' . $originalNotice . '" (len: ' . strlen($originalNotice) . ')');
 
+function extractBatchIdFromSenderDetails($senderDetails) {
+    $text = trim((string)$senderDetails);
+    if ($text === '') return '';
+    if (preg_match('/Batch ID:\s*([A-Za-z0-9\-]+)/i', $text, $m)) {
+        return trim($m[1]);
+    }
+    return '';
+}
+
 // Validate original notice code is provided
 if ($originalNotice === '') {
     http_response_code(400);
@@ -63,6 +72,7 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 try {
     $updates = [];
     $params = [];
+    $columnValues = [];
 
     // Process each editable column
     foreach ($columns as $col => $postKeys) {
@@ -104,6 +114,7 @@ try {
         // Add to update list
         $updates[] = "`$col` = $pname";
         $params[$pname] = $val;
+        $columnValues[$col] = $val;
         
         error_log("  Column '{$col}' (POST key: '{$foundKey}') = '{$val}'");
     }
@@ -141,20 +152,81 @@ try {
         exit;
     }
 
-    // Build UPDATE query
-    $sql = 'UPDATE mailtracking SET ' . implode(', ', $updates) . ' WHERE `Notice/Order Code` = :where_notice LIMIT 1';
-    $params[':where_notice'] = $originalNotice;
-
-    error_log('SQL: ' . $sql);
-    error_log('Parameters: ' . json_encode($params));
+    // Determine if this record belongs to a batch.
+    $batchId = '';
+    $senderStmt = $pdo->prepare('SELECT `Sender Details` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1');
+    $senderStmt->execute([':notice' => $originalNotice]);
+    $currentSenderDetails = (string)($senderStmt->fetchColumn() ?: '');
+    $batchId = extractBatchIdFromSenderDetails($currentSenderDetails);
 
     // Execute in transaction
     $pdo->beginTransaction();
     
     try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $affected = $stmt->rowCount();
+        $affected = 0;
+
+        // If batch row: apply shared fields to all rows in batch.
+        // Keep Parcel Details row-specific.
+        if ($batchId !== '') {
+            $sharedCols = array_diff(array_keys($columnValues), ['Parcel Details']);
+            if (!empty($sharedCols)) {
+                $sharedUpdates = [];
+                $sharedParams = [];
+                foreach ($sharedCols as $col) {
+                    $pname = ':s_' . preg_replace('/[^a-z0-9_]/i', '_', $col);
+                    $val = $columnValues[$col];
+                    // Preserve Batch ID marker for batch rows.
+                    if ($col === 'Sender Details') {
+                        $val = preg_replace('/\R?Batch ID:\s*[A-Za-z0-9\-]+\s*/i', '', (string)$val);
+                        $val = trim((string)$val);
+                        $val .= "\nBatch ID: " . $batchId;
+                    }
+                    $sharedUpdates[] = "`$col` = $pname";
+                    $sharedParams[$pname] = $val;
+                }
+
+                $sharedSql = 'UPDATE mailtracking SET ' . implode(', ', $sharedUpdates) . ' WHERE `Sender Details` LIKE :batch_like';
+                $sharedParams[':batch_like'] = '%Batch ID: ' . $batchId . '%';
+                error_log('Batch SQL: ' . $sharedSql);
+                error_log('Batch Parameters: ' . json_encode($sharedParams));
+                $sharedStmt = $pdo->prepare($sharedSql);
+                $sharedStmt->execute($sharedParams);
+                $affected += $sharedStmt->rowCount();
+            }
+        }
+
+        // Always update row-specific fields on the selected record
+        // (Parcel Details and optional Notice/Order Code change).
+        $rowOnlyUpdates = [];
+        $rowOnlyParams = [];
+        if (array_key_exists('Parcel Details', $columnValues)) {
+            $rowOnlyUpdates[] = '`Parcel Details` = :r_parcel_details';
+            $rowOnlyParams[':r_parcel_details'] = $columnValues['Parcel Details'];
+        }
+        if (isset($params[':new_notice'])) {
+            $rowOnlyUpdates[] = '`Notice/Order Code` = :r_new_notice';
+            $rowOnlyParams[':r_new_notice'] = $params[':new_notice'];
+        }
+
+        // Non-batch: update all submitted fields on selected row exactly as before.
+        if ($batchId === '') {
+            $rowOnlyUpdates = $updates;
+            $rowOnlyParams = [];
+            foreach ($params as $k => $v) {
+                if ($k === ':where_notice') continue;
+                $rowOnlyParams[$k] = $v;
+            }
+        }
+
+        if (!empty($rowOnlyUpdates)) {
+            $rowSql = 'UPDATE mailtracking SET ' . implode(', ', $rowOnlyUpdates) . ' WHERE `Notice/Order Code` = :where_notice LIMIT 1';
+            $rowOnlyParams[':where_notice'] = $originalNotice;
+            error_log('Row SQL: ' . $rowSql);
+            error_log('Row Parameters: ' . json_encode($rowOnlyParams));
+            $rowStmt = $pdo->prepare($rowSql);
+            $rowStmt->execute($rowOnlyParams);
+            $affected += $rowStmt->rowCount();
+        }
         
         if ($affected === 0) {
             $pdo->rollBack();

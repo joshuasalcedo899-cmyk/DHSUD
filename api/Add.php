@@ -22,62 +22,131 @@ error_log("POST data: " . json_encode($_POST));
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Support both full column names and snake_case names
-    $noticeCode = trim ($_POST['Notice/Order Code'] ?? $_POST['notice_Code'] ?? '');
     $dateReleased = trim($_POST['Date released to AFD'] ?? $_POST['dateReleased'] ?? '');
     $parcelNo = trim($_POST['Parcel No.'] ?? $_POST['parcelNo'] ?? '');
     $recipientDetails = trim($_POST['Recipient Details'] ?? $_POST['recipientDetails'] ?? '');
-    $parcelDetails = trim($_POST['Parcel Details'] ?? $_POST['parcelDetails'] ?? '');
-    // Sender Details is fixed for all new records.
-    $st = strtotime($dateReleased);
-    $formattedDate = date('F-d-Y', $st);
-    $senderDetails = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538" . "\n\n" . "(".$formattedDate .")";
-    $df = strtotime($dateReleased);
-    $newFormatDate = date('ymd', $df);
-    $formattedParcelNo = sprintf("%03d", (int)$parcelNo);
-    $fileName = "EMES-" . $newFormatDate ."-". $formattedParcelNo;
     $trackingNo = trim($_POST['Tracking No.'] ?? $_POST['trackingNo'] ?? '');
-    $transmittalRemarks = trim($_POST['Transmittal Remarks/Received By'] ?? $_POST['transmittalRemarks'] ?? '');
 
-    error_log("noticeCode: '$noticeCode'");
+    // Backward-compatible single inputs
+    $singleNoticeCode = trim($_POST['Notice/Order Code'] ?? $_POST['notice_Code'] ?? '');
+    $singleParcelDetails = trim($_POST['Parcel Details'] ?? $_POST['parcelDetails'] ?? '');
+
+    // New multi inputs from Add modal
+    $noticeCodes = $_POST['noticeCodes'] ?? [];
+    $parcelDetailsList = $_POST['parcelDetailsList'] ?? [];
+    if (!is_array($noticeCodes)) $noticeCodes = [];
+    if (!is_array($parcelDetailsList)) $parcelDetailsList = [];
+
+    if (count($noticeCodes) === 0 && $singleNoticeCode !== '') {
+        $noticeCodes = [$singleNoticeCode];
+    }
+    if (count($parcelDetailsList) === 0 && $singleParcelDetails !== '') {
+        $parcelDetailsList = [$singleParcelDetails];
+    }
+
+    // Normalize and pair entries by index.
+    $pairs = [];
+    $maxCount = max(count($noticeCodes), count($parcelDetailsList));
+    for ($i = 0; $i < $maxCount; $i++) {
+        $notice = trim((string)($noticeCodes[$i] ?? ''));
+        $parcelDetails = trim((string)($parcelDetailsList[$i] ?? ''));
+        if ($notice === '' && $parcelDetails === '') {
+            continue;
+        }
+        $pairs[] = [
+            'notice' => $notice,
+            'parcel_details' => $parcelDetails
+        ];
+    }
+
     error_log("dateReleased: '$dateReleased'");
-    
+    error_log("pairs count: " . count($pairs));
 
-    // Validation
-    if ($noticeCode === '') {
-        $message = 'Notice/Order Code is required.';
-        $messageType = 'error';
-        error_log("ERROR: Notice code is empty");
-    } elseif ($dateReleased === '') {
+    if ($dateReleased === '') {
         $message = 'Date Released to AFD is required.';
         $messageType = 'error';
         error_log("ERROR: Date released is empty");
+    } elseif (count($pairs) === 0) {
+        $message = 'At least one Notice/Order Code + Parcel Details pair is required.';
+        $messageType = 'error';
+        error_log("ERROR: No pairs were provided");
     } else {
+        foreach ($pairs as $index => $pair) {
+            if ($pair['notice'] === '') {
+                $message = 'Notice/Order Code is required for pair #' . ($index + 1) . '.';
+                $messageType = 'error';
+                error_log("ERROR: Empty notice code in pair index " . $index);
+                break;
+            }
+            if ($pair['parcel_details'] === '') {
+                $message = 'Parcel Details is required for pair #' . ($index + 1) . '.';
+                $messageType = 'error';
+                error_log("ERROR: Empty parcel details in pair index " . $index);
+                break;
+            }
+        }
+    }
+
+    if ($messageType !== 'error') {
         try {
+            $st = strtotime($dateReleased);
+            if ($st === false) {
+                throw new Exception('Invalid Date Released to AFD.');
+            }
+
+            $formattedDate = date('F-d-Y', $st);
+            $senderDetailsBase = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538" . "\n\n" . "(" . $formattedDate . ")";
+            $newFormatDate = date('ymd', $st);
+            $formattedParcelNo = sprintf("%03d", (int)$parcelNo);
+            $baseFileName = "EMES-" . $newFormatDate . "-" . $formattedParcelNo;
+
+            $batchId = null;
+            if (count($pairs) > 1) {
+                $batchId = 'BATCH-' . date('Ymd-His') . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
+            }
+
             $sql = 'INSERT INTO mailtracking 
                     (`Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, 
                      `Parcel Details`, `Sender Details`, `File Name (PDF)`, `Tracking No.`) 
                     VALUES (:notice_code, :date_released, :parcel_no, :recipient_details, 
                             :parcel_details, :sender_details, :file_name, :tracking_no)';
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                ':notice_code' => $noticeCode,
-                ':date_released' => $dateReleased,
-                ':parcel_no' => $parcelNo ? (int)$parcelNo : 0,
-                ':recipient_details' => $recipientDetails,
-                ':parcel_details' => $parcelDetails,
-                ':sender_details' => $senderDetails,
-                ':file_name' => $fileName,
-                ':tracking_no' => $trackingNo
-            ]);
-            $message = 'Record added successfully!';
+
+            $pdo->beginTransaction();
+            $inserted = 0;
+            foreach ($pairs as $index => $pair) {
+                $senderDetails = $senderDetailsBase;
+                if ($batchId !== null) {
+                    $senderDetails .= "\nBatch ID: " . $batchId;
+                }
+
+                $stmt->execute([
+                    ':notice_code' => $pair['notice'],
+                    ':date_released' => $dateReleased,
+                    ':parcel_no' => $parcelNo !== '' ? (int)$parcelNo : 0,
+                    ':recipient_details' => $recipientDetails,
+                    ':parcel_details' => $pair['parcel_details'],
+                    ':sender_details' => $senderDetails,
+                    ':file_name' => $baseFileName,
+                    ':tracking_no' => $trackingNo
+                ]);
+                $inserted++;
+            }
+            $pdo->commit();
+
+            $message = $inserted . ' record(s) added successfully.';
+            if ($batchId !== null) {
+                $message .= ' Batch ID: ' . $batchId;
+            }
             $messageType = 'success';
             $success = true;
-            error_log("SUCCESS: Record added");
-            // Reset form
+            error_log("SUCCESS: Added records = " . $inserted . ($batchId ? " | Batch ID: " . $batchId : ""));
             $_POST = [];
-        } catch (PDOException $e) {
-            $message = 'Error adding record: ' . $e->getMessage();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $message = 'Error adding record(s): ' . $e->getMessage();
             $messageType = 'error';
             error_log("ERROR: " . $e->getMessage());
         }
