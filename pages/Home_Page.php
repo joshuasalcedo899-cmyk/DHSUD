@@ -284,7 +284,7 @@ function formatDateCell($value) {
             justify-content: space-between;
             width: 100%;
             box-sizing: border-box;
-            gap: 12px;
+            gap: 1px;
             flex-wrap: wrap;
             overflow-x: hidden;
         }
@@ -466,7 +466,25 @@ HREDRD-EMES
     <div class="admin-table-container">
         <div class="table-title" style="font-size:1.3em;font-weight:700;color:#22336A;margin-bottom:30px;text-align:center;">MAIL TRACKING RECORDS</div>
     <div class="top-bar">
+        <button type="button" class="export-btn" style="margin-right:8px;" onclick="scanSelectedRow()">Scan</button>
         <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
+            <script>
+            function scanSelectedRow() {
+                // Find checked row-checkbox
+                const checked = document.querySelectorAll('.row-checkbox:checked');
+                if (checked.length === 0) {
+                    alert('Please select a record to scan.');
+                    return;
+                }
+                if (checked.length > 1) {
+                    alert('Please select only one record to scan.');
+                    return;
+                }
+                const noticeCode = checked[0].value;
+                // Redirect to test.php with code
+                window.location.href = '../test.php?code=' + encodeURIComponent(noticeCode);
+            }
+            </script>
         <div class="table-sort-bar">
             <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;">
                 <option value="" disabled selected hidden>Year</option>
@@ -584,18 +602,12 @@ HREDRD-EMES
                                     ?>
                                     <?php if (!empty($trackingNo) && $trackingNo !== '0'): ?>
                                         <button type="button" class="btn-track" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking="<?= htmlspecialchars($trackingNo) ?>" style="display:inline-block;text-decoration:none;">Track</button>
-                                        
                                         <div class="track-result"></div>
                                     <?php else: ?>
                                         <span style="color:#999; font-size:12px;">No tracking #</span>
                                     <?php endif; ?>
-                                    <a href="../test.php?code=<?= urlencode($row['Notice/Order Code']) ?>"
-                                        class="scan-track"
-                                        style="display:inline-block;text-decoration:none;">
-                                        <button type="button">Scan</button>
-                                    </a>
-
                                 </td>
+                                
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
