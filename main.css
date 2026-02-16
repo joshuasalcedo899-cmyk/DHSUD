@@ -348,8 +348,7 @@
 	box-sizing: border-box;
 }
 .admin-table-container .table-scroll-area .tracking-table-scroll {
-	overflow-x: auto;
-	overflow-y: visible;
+	overflow: visible;
 	width: 100%;
 	-webkit-overflow-scrolling: touch;
 }
