@@ -27,7 +27,14 @@ try {
 
     $pdo->commit();
 
-    header("Location: ../pages/Archive_Page.php?recovered=1");
+    // Send user back to Home and focus the first recovered row.
+    $focusNotice = '';
+    foreach ($codes as $code) {
+        $focusNotice = trim((string)$code);
+        if ($focusNotice !== '') break;
+    }
+
+    header("Location: ../pages/Home_Page.php?recovered=1&scanned_notice=" . urlencode($focusNotice));
     exit;
 
 } catch (Exception $e) {
