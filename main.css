@@ -24,6 +24,7 @@
 	font-weight: 700;
 	padding: 0.8rem 0.5rem;
 	letter-spacing: 0.03em;
+	border: 2px solid #8fa0c7;
 
 }
 
@@ -66,6 +67,7 @@
 	background: #fff;
 	color: #222;
 	font-weight: 500;
+	border: 2px solid #b6c1d8;
 }
 .tracking-edit-btn {
 	background: #23409A;

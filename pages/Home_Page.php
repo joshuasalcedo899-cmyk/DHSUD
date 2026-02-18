@@ -124,6 +124,68 @@ function formatDateCell($value) {
     return date('F-d-Y', $ts);
 }
 
+function normalizedCellValueForMerge($row, $colName) {
+    if ($colName === '__ACTION__') {
+        $trackingValue = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? ''));
+        return (!empty($trackingValue) && $trackingValue !== '0') ? 'AUTO_TRACKING' : 'SCAN';
+    }
+
+    $cellValue = $row[$colName] ?? '';
+    if ($colName === 'Date released to AFD' || $colName === 'Date') {
+        return formatDateCell($cellValue);
+    }
+    if ($colName === 'Sender Details') {
+        $cellValue = preg_replace('/\R?Batch ID:\s*[A-Za-z0-9\-]+\s*/i', '', (string)$cellValue);
+        return trim((string)$cellValue);
+    }
+    return trim((string)$cellValue);
+}
+
+// Build rowspan metadata for consecutive batch rows.
+// Cells are merged only when same batch ID and same displayed value.
+$mergeSkip = [];
+$mergeRowspan = [];
+$mergeColumns = array_values(array_filter($columns, function($c) {
+    return $c !== 'Notice/Order Code';
+}));
+$mergeColumns[] = '__ACTION__';
+
+$rowCount = count($rows);
+for ($ri = 0; $ri < $rowCount; $ri++) {
+    $batchId = extractBatchIdFromSenderDetails($rows[$ri]['Sender Details'] ?? '');
+    if ($batchId === '' || (($batchIdCounts[$batchId] ?? 0) <= 1)) {
+        continue;
+    }
+
+    foreach ($mergeColumns as $colName) {
+        if (!empty($mergeSkip[$ri][$colName])) {
+            continue;
+        }
+
+        $baseValue = normalizedCellValueForMerge($rows[$ri], $colName);
+        $span = 1;
+
+        for ($rj = $ri + 1; $rj < $rowCount; $rj++) {
+            $nextBatchId = extractBatchIdFromSenderDetails($rows[$rj]['Sender Details'] ?? '');
+            if ($nextBatchId !== $batchId) {
+                break;
+            }
+
+            $nextValue = normalizedCellValueForMerge($rows[$rj], $colName);
+            if ($nextValue !== $baseValue) {
+                break;
+            }
+
+            $span++;
+            $mergeSkip[$rj][$colName] = true;
+        }
+
+        if ($span > 1) {
+            $mergeRowspan[$ri][$colName] = $span;
+        }
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -555,7 +617,7 @@ function formatDateCell($value) {
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="editFileName">File Name (PDF)</label>
-                            <input type="text" name="File Name (PDF)" id="ewhiteditFileName">
+                            <input type="text" name="File Name (PDF)" id="editFileName">
                         </div>
                         
                     </div>
@@ -795,7 +857,10 @@ HREDRD-EMES
                                     }
                                     $showBatchBadge = $isBatchRow && ($rowBatchId !== '' && $rowBatchId !== $prevBatchId);
                                 ?>
-                                <tr class="<?= $isBatchRow ? 'batch-row' : '' ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
+                                <?php
+                                    $rowTrackingNo = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? ''));
+                                ?>
+                                <tr class="<?= $isBatchRow ? 'batch-row' : '' ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking-no="<?= htmlspecialchars($rowTrackingNo) ?>">
                                     <td style="width:32px;">
                                         <input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
@@ -816,6 +881,8 @@ HREDRD-EMES
                                     </td>
                                 <?php foreach ($columns as $idx => $colName): ?>
                                     <?php if ($idx === 0) continue; // skip Notice/Order Code, already rendered ?>
+                                    <?php if (!empty($mergeSkip[$ri][$colName])) continue; ?>
+                                    <?php $rowspanAttr = !empty($mergeRowspan[$ri][$colName]) ? (' rowspan="' . (int)$mergeRowspan[$ri][$colName] . '"') : ''; ?>
                                     <?php if ($idx === 8): // STATUS column (9th)
                                     ?>
                                         <?php
@@ -836,7 +903,7 @@ HREDRD-EMES
                                                     break;
                                             }
                                         ?>
-                                        <td class="status-cell" data-col="Status">
+                                        <td class="status-cell" data-col="Status"<?= $rowspanAttr ?>>
                                             <span class="<?= $statusClass ?>"><?= htmlspecialchars($current) ?></span>
                                         </td>
                                     <?php else: ?>
@@ -858,28 +925,27 @@ HREDRD-EMES
                                                 $fileHref = $pdfName !== '' ? '../JRS_PDFs/' . rawurlencode($pdfName) : '';
                                                 $linkLabel = $fileName !== '' ? basename($fileName) : '';
                                             ?>
-                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell">
+                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell"<?= $rowspanAttr ?>>
                                                 <?php if ($fileHref && $linkLabel !== ''): ?>
                                                     <a href="<?= htmlspecialchars($fileHref) ?>" target="_blank" rel="noopener" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
-                                            <td data-col="<?= htmlspecialchars($colName) ?>"><?= htmlspecialchars($cellValue) ?></td>
+                                            <td data-col="<?= htmlspecialchars($colName) ?>"<?= $rowspanAttr ?>><?= htmlspecialchars($cellValue) ?></td>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
-                                <td>
-                                    <?php 
-                                    // Try different column name variations
-                                    $trackingNo = trim($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? '');
-                                    ?>
-                                    <?php if (!empty($trackingNo) && $trackingNo !== '0'): ?>
-                                        <button type="button" class="btn-track" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking="<?= htmlspecialchars($trackingNo) ?>" style="display:inline-block;text-decoration:none;">Track</button>
-                                        <div class="track-result"></div>
-                                    <?php else: ?>
-                                        <button type="button" class="btn-scan" onclick="openScannerModal('<?= htmlspecialchars($row['Notice/Order Code'] ?? '', ENT_QUOTES) ?>')" style="display:inline-block;text-decoration:none;">Scan</button>
-                                    <?php endif; ?>
-                                </td>
+                                <?php if (empty($mergeSkip[$ri]['__ACTION__'])): ?>
+                                    <?php $actionRowspanAttr = !empty($mergeRowspan[$ri]['__ACTION__']) ? (' rowspan="' . (int)$mergeRowspan[$ri]['__ACTION__'] . '"') : ''; ?>
+                                    <td<?= $actionRowspanAttr ?>>
+                                        <?php if (!empty($rowTrackingNo) && $rowTrackingNo !== '0'): ?>
+                                            <span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span>
+                                            <div class="track-result"></div>
+                                        <?php else: ?>
+                                            <button type="button" class="btn-scan" onclick="openScannerModal('<?= htmlspecialchars($row['Notice/Order Code'] ?? '', ENT_QUOTES) ?>')" style="display:inline-block;text-decoration:none;">Scan</button>
+                                        <?php endif; ?>
+                                    </td>
+                                <?php endif; ?>
                                 
                             </tr>
                         <?php endfor; ?>
@@ -1257,8 +1323,10 @@ HREDRD-EMES
                             document.getElementById('editRecipient').value = rowData['Recipient Details'] || '';
                             document.getElementById('editParcelDetails').value = rowData['Parcel Details'] || '';
                             document.getElementById('editSender').value = rowData['Sender Details'] || '';
-                            document.getElementById('editFileName').value = rowData['File Name (PDF)'] || '';
-                            document.getElementById('editTrackingNo').value = rowData['Tracking No.'] || '';
+                            var editFileName = document.getElementById('editFileName');
+                            if (editFileName) editFileName.value = rowData['File Name (PDF)'] || '';
+                            var editTrackingNo = document.getElementById('editTrackingNo');
+                            if (editTrackingNo) editTrackingNo.value = rowData['Tracking No.'] || '';
                             var editStatus = document.getElementById('editStatus');
                             if (editStatus) editStatus.value = rowData['Status'] || '';
                             var editTransmittal = document.getElementById('editTransmittal');
@@ -1324,6 +1392,9 @@ HREDRD-EMES
                                 .then(data => {
                                     console.log('Response:', data);
                                     if (data.success) {
+                                        if (data.pdfWarning) {
+                                            alert(data.pdfWarning);
+                                        }
                                         var focusNotice = (document.getElementById('editNoticeCodeDisplay').value || '').trim();
                                         closeEditModal();
                                         refreshHomeData({ focusNotice: focusNotice });
@@ -1391,6 +1462,7 @@ HREDRD-EMES
                     bindRowCheckboxListeners();
                     rebuildMailRowsFromTable();
                     filterTableRows();
+                    autoTrackEligibleRows();
 
                     if (focusNotice) {
                         sessionStorage.setItem('dhsud_focus_notice', focusNotice);
@@ -1530,6 +1602,7 @@ HREDRD-EMES
             bindRowCheckboxListeners();
             rebuildMailRowsFromTable();
             focusScannedRow();
+            autoTrackEligibleRows();
 
             const scannerModal = document.getElementById('scannerModal');
             if (scannerModal) {
@@ -1608,63 +1681,127 @@ HREDRD-EMES
             form.submit();
         }
 
-        document.addEventListener("click", function (evt) {
-                    const button = evt.target.closest(".btn-track");
-                    if (!button) return;
-                    const noticeCode = (button.dataset.notice || "").trim();
-                    const fallbackTracking = (button.dataset.tracking || "").trim();
-                    const result = button.parentElement
-                        ? button.parentElement.querySelector(".track-result")
-                        : null;
+        const AUTO_TRACK_INTERVAL_MS = 5 * 60 * 1000;
+        const autoTrackLastRunByKey = new Map();
+        let autoTrackInProgress = false;
 
-                    if (!noticeCode) {
-                        alert("No notice/order code found.");
-                        return;
+        function getTrackResultElementForNotice(noticeCode) {
+            const row = findRowByNoticeCode(noticeCode);
+            if (!row) return null;
+            const actionCell = row.lastElementChild;
+            return actionCell ? actionCell.querySelector(".track-result") : null;
+        }
+
+        function runTrackingUpdate(noticeCode, options = {}) {
+            const safeNotice = (noticeCode || "").trim();
+            const silent = options.silent === true;
+            const result = getTrackResultElementForNotice(safeNotice);
+
+            if (!safeNotice) {
+                return Promise.resolve({ ok: false, reason: "missing-notice" });
+            }
+
+            if (result) result.innerHTML = "";
+
+            return fetch("../api/remarks.php", {
+                method: "POST",
+                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                body: "notice_code=" + encodeURIComponent(safeNotice)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    if (result && !silent) {
+                        result.innerHTML = `<span style="color:red">${data.error}</span>`;
+                        setTimeout(function () { result.innerHTML = ""; }, 2000);
                     }
+                    return { ok: false, reason: "api-error", data: data };
+                }
 
-                    // Optional: disable button while fetching
-                    button.disabled = true;
-                    button.innerText = "Updating...";
-                    if (result) result.innerHTML = "";
+                if ((data.batchId || '').trim() !== '') {
+                    updateTrackingRowsByBatch(data.batchId, data);
+                } else {
+                    updateTrackingRow(safeNotice, data);
+                }
 
-                    fetch("../api/remarks.php", {
-                        method: "POST",
-                        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                        body: "notice_code=" + encodeURIComponent(noticeCode)
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.error) {
-                            if (result) {
-                                result.innerHTML = `<span style="color:red">${data.error}</span>`;
-                                setTimeout(function () { result.innerHTML = ""; }, 2000);
-                            }
-                            button.disabled = false;
-                            button.innerText = "Track";
-                        } else {
-                            if (result) {
-                                result.innerHTML = `<span style="color:green">Tracking updated successfully!</span>`;
-                                setTimeout(function () { result.innerHTML = ""; }, 2000);
-                            }
-                            const trackingNo = (data.trackingNo || fallbackTracking || "").trim();
-                            if ((data.batchId || '').trim() !== '') {
-                                updateTrackingRowsByBatch(data.batchId, data);
-                            } else {
-                                updateTrackingRow(noticeCode, data);
-                            }
-                            button.disabled = false;
-                            button.innerText = "Track";
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        if (result) {
-                            result.innerHTML = `<span style="color:red">An error occurred</span>`;
-                            setTimeout(function () { result.innerHTML = ""; }, 2000);
-                        }
-                        button.disabled = false;
-                        button.innerText = "Track";
+                if (result && !silent) {
+                    result.innerHTML = `<span style="color:green">Tracking updated successfully!</span>`;
+                    setTimeout(function () { result.innerHTML = ""; }, 2000);
+                }
+                return { ok: true, data: data };
+            })
+            .catch(err => {
+                console.error(err);
+                if (result && !silent) {
+                    result.innerHTML = `<span style="color:red">An error occurred</span>`;
+                    setTimeout(function () { result.innerHTML = ""; }, 2000);
+                }
+                return { ok: false, reason: "request-failed", error: err };
+            });
+        }
+
+        function collectAutoTrackItems() {
+            const rows = document.querySelectorAll('tr[data-notice][data-tracking-no]');
+            const items = [];
+            const seenBatchIds = new Set();
+
+            rows.forEach(function(row) {
+                const noticeCode = (row.dataset.notice || '').trim();
+                const batchId = (row.dataset.batchId || '').trim();
+                const trackingNo = (row.dataset.trackingNo || '').trim();
+                const statusCell = row.querySelector('td[data-col="Status"]');
+                const statusText = ((statusCell && statusCell.textContent) ? statusCell.textContent : '').trim().toUpperCase();
+
+                if (!noticeCode || !trackingNo || trackingNo === '0') return;
+                if (statusText !== 'ONGOING DELIVERY') return;
+
+                if (batchId) {
+                    if (seenBatchIds.has(batchId)) return;
+                    seenBatchIds.add(batchId);
+                    items.push({ key: 'batch:' + batchId, noticeCode: noticeCode });
+                    return;
+                }
+
+                items.push({ key: 'notice:' + noticeCode, noticeCode: noticeCode });
+            });
+
+            return items;
+        }
+
+        function autoTrackEligibleRows() {
+            if (autoTrackInProgress) return;
+            autoTrackInProgress = true;
+
+            const now = Date.now();
+            const items = collectAutoTrackItems().filter(function(item) {
+                const lastRun = autoTrackLastRunByKey.get(item.key) || 0;
+                return (now - lastRun) >= AUTO_TRACK_INTERVAL_MS;
+            });
+
+            if (items.length === 0) {
+                autoTrackInProgress = false;
+                return;
+            }
+
+            items.reduce(function(chain, item) {
+                return chain.then(function() {
+                    return runTrackingUpdate(item.noticeCode, { silent: true }).finally(function() {
+                        autoTrackLastRunByKey.set(item.key, Date.now());
                     });
+                }).then(function() {
+                    return new Promise(function(resolve) { setTimeout(resolve, 200); });
+                });
+            }, Promise.resolve())
+            .finally(function() {
+                autoTrackInProgress = false;
+            });
+        }
+
+        document.addEventListener("click", function (evt) {
+            const button = evt.target.closest(".btn-track");
+            if (!button) return;
+            const noticeCode = (button.dataset.notice || "").trim();
+            runTrackingUpdate(noticeCode, { silent: false });
         });
 
 

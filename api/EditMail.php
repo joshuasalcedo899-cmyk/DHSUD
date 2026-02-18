@@ -41,6 +41,66 @@ function extractBatchIdFromSenderDetails($senderDetails) {
     return '';
 }
 
+function generateProofPdfForTracking($trackingNo, &$error = null) {
+    $trackingNo = trim((string)$trackingNo);
+    if ($trackingNo === '' || $trackingNo === '0') {
+        $error = 'Invalid tracking number';
+        return false;
+    }
+
+    $url = 'https://jrs-express.com/track?or=' . urlencode($trackingNo);
+    $nodeScript = realpath(__DIR__ . '/script/savepdf.js');
+    if ($nodeScript === false) {
+        $error = 'savepdf.js not found';
+        return false;
+    }
+
+    $outputDir = realpath(__DIR__ . '/../JRS_PDFs');
+    if ($outputDir === false) {
+        $outputDir = __DIR__ . '/../JRS_PDFs';
+        if (!is_dir($outputDir) && !mkdir($outputDir, 0777, true)) {
+            $error = 'Failed to create JRS_PDFs directory';
+            return false;
+        }
+    }
+
+    $pdfFile = rtrim($outputDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'proof_' . $trackingNo . '.pdf';
+
+    $nodeCandidates = [
+        getenv('NODE_PATH') ?: null,
+        'C:\\Program Files\\nodejs\\node.exe',
+        'C:\\Program Files (x86)\\nodejs\\node.exe',
+        'node',
+    ];
+    $nodeExecutable = null;
+    foreach ($nodeCandidates as $candidate) {
+        if (!$candidate) continue;
+        if ($candidate === 'node' || file_exists($candidate)) {
+            $nodeExecutable = $candidate;
+            break;
+        }
+    }
+    if ($nodeExecutable === null) {
+        $error = 'Node.js executable not found';
+        return false;
+    }
+
+    $command = escapeshellarg($nodeExecutable) . ' '
+        . escapeshellarg($nodeScript) . ' '
+        . escapeshellarg($url) . ' '
+        . escapeshellarg($pdfFile) . ' 2>&1';
+    $output = [];
+    $returnCode = 1;
+    exec($command, $output, $returnCode);
+
+    if ($returnCode !== 0 || !file_exists($pdfFile)) {
+        $error = 'PDF generation failed (code ' . $returnCode . '): ' . implode("\n", $output);
+        return false;
+    }
+
+    return true;
+}
+
 // Validate original notice code is provided
 if ($originalNotice === '') {
     http_response_code(400);
@@ -73,6 +133,8 @@ try {
     $updates = [];
     $params = [];
     $columnValues = [];
+    $trackingSubmitted = false;
+    $submittedTrackingNo = '';
 
     // Process each editable column
     foreach ($columns as $col => $postKeys) {
@@ -115,6 +177,10 @@ try {
         $updates[] = "`$col` = $pname";
         $params[$pname] = $val;
         $columnValues[$col] = $val;
+        if ($col === 'Tracking No.') {
+            $trackingSubmitted = true;
+            $submittedTrackingNo = (string)$val;
+        }
         
         error_log("  Column '{$col}' (POST key: '{$foundKey}') = '{$val}'");
     }
@@ -154,9 +220,12 @@ try {
 
     // Determine if this record belongs to a batch.
     $batchId = '';
-    $senderStmt = $pdo->prepare('SELECT `Sender Details` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1');
+    $senderStmt = $pdo->prepare('SELECT `Sender Details`, `Tracking No.`, `File Name (PDF)` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1');
     $senderStmt->execute([':notice' => $originalNotice]);
-    $currentSenderDetails = (string)($senderStmt->fetchColumn() ?: '');
+    $currentRecord = $senderStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $currentSenderDetails = (string)($currentRecord['Sender Details'] ?? '');
+    $existingTrackingNo = trim((string)($currentRecord['Tracking No.'] ?? ''));
+    $existingFileName = trim((string)($currentRecord['File Name (PDF)'] ?? ''));
     $batchId = extractBatchIdFromSenderDetails($currentSenderDetails);
 
     // Execute in transaction
@@ -262,11 +331,54 @@ try {
         
         $pdo->commit();
         error_log('Update successful - Rows affected: ' . $affected);
+
+        $pdfGenerated = false;
+        $pdfWarning = '';
+        if ($trackingSubmitted) {
+            $trackingClean = trim($submittedTrackingNo);
+            $proofFileName = 'proof_' . $trackingClean . '.pdf';
+            $proofFilePath = __DIR__ . '/../JRS_PDFs/' . $proofFileName;
+            $trackingChanged = ($trackingClean !== '' && $trackingClean !== $existingTrackingNo);
+            $fileMissing = (!file_exists($proofFilePath));
+            $shouldGeneratePdf = ($trackingClean !== '' && $trackingClean !== '0') && ($trackingChanged || $existingFileName === '' || $fileMissing);
+
+            if ($shouldGeneratePdf) {
+                $pdfError = null;
+                $pdfGenerated = generateProofPdfForTracking($trackingClean, $pdfError);
+                if (!$pdfGenerated) {
+                    $pdfWarning = 'Tracking saved, but PDF was not generated. ' . (string)$pdfError;
+                    error_log($pdfWarning);
+                }
+            }
+
+            // Apply generated/existing proof file name to all affected rows.
+            // For batches: all rows with same Batch ID. For non-batch: only edited row.
+            if ($trackingClean !== '' && $trackingClean !== '0' && file_exists($proofFilePath)) {
+                if ($batchId !== '') {
+                    $fileStmt = $pdo->prepare('UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `Sender Details` LIKE :batch_like');
+                    $fileStmt->execute([
+                        ':file_name' => $proofFileName,
+                        ':batch_like' => '%Batch ID: ' . $batchId . '%'
+                    ]);
+                } else {
+                    $targetNotice = isset($params[':new_notice']) ? trim((string)$params[':new_notice']) : $originalNotice;
+                    if ($targetNotice !== '') {
+                        $fileStmt = $pdo->prepare('UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `Notice/Order Code` = :notice LIMIT 1');
+                        $fileStmt->execute([
+                            ':file_name' => $proofFileName,
+                            ':notice' => $targetNotice
+                        ]);
+                    }
+                }
+            }
+        }
         
         echo json_encode([
             'success' => true,
             'message' => 'Record updated successfully',
-            'affected' => $affected
+            'affected' => $affected,
+            'pdfGenerated' => $pdfGenerated,
+            'pdfWarning' => $pdfWarning
         ]);
         exit;
         
