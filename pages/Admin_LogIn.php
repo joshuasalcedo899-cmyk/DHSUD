@@ -50,6 +50,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 1rem;
             border-left: 4px solid #388e3c;
         }
+        .login-form {
+            position: relative;
+        }
+        .return-button {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 6px;
+            border-radius: 6px;
+            background: transparent;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            z-index: 1;
+        }
+        .return-button:hover {
+            background-color: rgba(35, 64, 154, 0.1);
+        }
+        .return-button img {
+            width: 18px;
+            height: 12px;
+            display: block;
+        }
         @media (max-width: 768px) {
             .login-form {
                 min-width: 85vw !important;
@@ -84,6 +111,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="admin-login-bg">
     <div class="bottom-container" style="position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:flex-end;min-height:0;padding-bottom:2rem;z-index:10;">
         <form class="login-form" method="post" action="Admin_LogIn.php" style="margin-bottom:50px;">
+            <a href="../index.php" class="return-button" title="Return to home">
+                <img src="../assets/Return_Icon.svg" alt="Return">
+            </a>
             <h2>Log in to your account</h2>
             <?php if (!empty($error_message)): ?>
                 <div class="error-message"><?php echo htmlspecialchars($error_message); ?></div>
