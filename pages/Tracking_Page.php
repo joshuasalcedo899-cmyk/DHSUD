@@ -99,6 +99,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #22336a;
             margin-top: 1.2rem;
         }
+        .tracking-return-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem 0 2rem;
+        }
+        .tracking-return-container .return-link {
+            color: black;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 2px 16px 2px 16px;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .tracking-return-container .return-link:hover {
+            background: #e3e6f3;
+            color: black;
+        }
+        .page-shell .page-title {
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
@@ -106,7 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
         <div class="admin-home-header-border"></div>
     </div>
-
+    <div class="tracking-return-container">
+        <a href="../index.php" class="return-link" style="display:inline-flex;align-items:center;">
+            <img src="../assets/Return_Icon.svg" alt="Return" style="height:20px;width:20px;margin-right:8px;"> <span>Return</span>
+        </a>
+    </div>
 
     <div class="page-shell">
         <h1 class="page-title">MAIL TRACKING RECORDS</h1>
