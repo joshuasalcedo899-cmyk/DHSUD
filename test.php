@@ -102,18 +102,24 @@ function onScanSuccess(decodedText) {
     fetch("api/get-tracking.php", {
         method: "POST",
         headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-Requested-With": "XMLHttpRequest"
         },
         body:
             "tracking=" + encodeURIComponent(trackingNumber) +
             "&codes[]=" + encodeURIComponent(noticeCode)
     })
-    .then(res => res.text())
-    .then(async (data) => {
-        document.getElementById("result").innerHTML = data;
+    .then(async (res) => {
+        if (!res.ok || res.redirected) {
+            throw new Error("Failed to save tracking number.");
+        }
+        document.getElementById("result").innerHTML = "Tracking number saved.";
 
-        // Generate and save the PDF on the server before returning to table.
-        await generateReceiptPDF(trackingNumber);
+        // Only generate PDF for final statuses.
+        const shouldDownloadPdf = await shouldGeneratePdfByStatus(noticeCode);
+        if (shouldDownloadPdf) {
+            await generateReceiptPDF(trackingNumber);
+        }
 
         if ((isEmbedded || isInIframe) && window.parent && window.parent !== window) {
             await stopCurrentStream();
@@ -133,6 +139,30 @@ function onScanSuccess(decodedText) {
         document.getElementById("result").innerHTML = "Failed to process scanned QR.";
         isProcessing = false;
     });
+}
+
+async function shouldGeneratePdfByStatus(noticeCode) {
+    if (!noticeCode) return false;
+    try {
+        const response = await fetch("api/remarks.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: "notice_code=" + encodeURIComponent(noticeCode)
+        });
+
+        if (!response.ok) return false;
+        const data = await response.json();
+        if (data.error) return false;
+
+        const status = ((data.status || "") + "").trim().toUpperCase();
+        return status === "DELIVERED" || status === "RETURNED TO SENDER";
+    } catch (error) {
+        console.error("Status check failed:", error);
+        return false;
+    }
 }
 
 async function generateReceiptPDF(trackingNumber) {

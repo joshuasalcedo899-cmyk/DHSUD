@@ -66,7 +66,7 @@ foreach ($data as $record) {
 
 // Normalize status to match DB values
 $statusUpper = strtoupper($statusText);
-if ($hasReturnToOrigin) {
+if ($hasReturnToOrigin || $statusUpper === "RTS RECEIVED" || $statusUpper === "INCOMPLETE ADDRESS") {
     $statusText = "RETURNED TO SENDER";
 } elseif ($statusUpper === "DELIVERED TO" || $statusUpper === "DELIVERED") {
     $statusText = "DELIVERED";

@@ -67,7 +67,25 @@
 	background: #fff;
 	color: #222;
 	font-weight: 500;
-	border: 2px solid #b6c1d8;
+	border: 4px solid #b6c1d8;
+}
+
+.tracking-table tbody tr td {
+	border-bottom: 3px solid #000;
+}
+
+/* In batch groups, keep internal row separators thin. */
+.tracking-table tbody tr.batch-row td {
+	border-bottom: 1px solid #000;
+}
+
+/* Keep a strong divider only at the end of the batch group. */
+.tracking-table tbody tr.batch-row.batch-end-row td {
+	border-bottom: 3px solid #000;
+}
+
+.tracking-table td.batch-span-end {
+	border-bottom: 3px solid #000 !important;
 }
 .tracking-edit-btn {
 	background: #23409A;

@@ -856,11 +856,15 @@ HREDRD-EMES
                                         $nextBatchId = extractBatchIdFromSenderDetails($rows[$ri + 1]['Sender Details'] ?? '');
                                     }
                                     $showBatchBadge = $isBatchRow && ($rowBatchId !== '' && $rowBatchId !== $prevBatchId);
+                                    $isBatchEnd = $isBatchRow && ($rowBatchId !== '' && $rowBatchId !== $nextBatchId);
+                                    $rowClasses = [];
+                                    if ($isBatchRow) $rowClasses[] = 'batch-row';
+                                    if ($isBatchEnd) $rowClasses[] = 'batch-end-row';
                                 ?>
                                 <?php
                                     $rowTrackingNo = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? ''));
                                 ?>
-                                <tr class="<?= $isBatchRow ? 'batch-row' : '' ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking-no="<?= htmlspecialchars($rowTrackingNo) ?>">
+                                <tr class="<?= htmlspecialchars(implode(' ', $rowClasses)) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking-no="<?= htmlspecialchars($rowTrackingNo) ?>">
                                     <td style="width:32px;">
                                         <input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
@@ -882,7 +886,22 @@ HREDRD-EMES
                                 <?php foreach ($columns as $idx => $colName): ?>
                                     <?php if ($idx === 0) continue; // skip Notice/Order Code, already rendered ?>
                                     <?php if (!empty($mergeSkip[$ri][$colName])) continue; ?>
-                                    <?php $rowspanAttr = !empty($mergeRowspan[$ri][$colName]) ? (' rowspan="' . (int)$mergeRowspan[$ri][$colName] . '"') : ''; ?>
+                                    <?php
+                                        $rowspanVal = !empty($mergeRowspan[$ri][$colName]) ? (int)$mergeRowspan[$ri][$colName] : 1;
+                                        $rowspanAttr = $rowspanVal > 1 ? (' rowspan="' . $rowspanVal . '"') : '';
+                                        $spanToBatchEndClass = '';
+                                        if ($rowspanVal > 1) {
+                                            $endRi = $ri + $rowspanVal - 1;
+                                            $endBatchId = extractBatchIdFromSenderDetails($rows[$endRi]['Sender Details'] ?? '');
+                                            $nextAfterEndBatchId = '';
+                                            if ($endRi + 1 < count($rows)) {
+                                                $nextAfterEndBatchId = extractBatchIdFromSenderDetails($rows[$endRi + 1]['Sender Details'] ?? '');
+                                            }
+                                            if ($endBatchId !== '' && (($batchIdCounts[$endBatchId] ?? 0) > 1) && $endBatchId !== $nextAfterEndBatchId) {
+                                                $spanToBatchEndClass = ' batch-span-end';
+                                            }
+                                        }
+                                    ?>
                                     <?php if ($idx === 8): // STATUS column (9th)
                                     ?>
                                         <?php
@@ -903,7 +922,7 @@ HREDRD-EMES
                                                     break;
                                             }
                                         ?>
-                                        <td class="status-cell" data-col="Status"<?= $rowspanAttr ?>>
+                                        <td class="status-cell<?= $spanToBatchEndClass ?>" data-col="Status"<?= $rowspanAttr ?>>
                                             <span class="<?= $statusClass ?>"><?= htmlspecialchars($current) ?></span>
                                         </td>
                                     <?php else: ?>
@@ -925,19 +944,34 @@ HREDRD-EMES
                                                 $fileHref = $pdfName !== '' ? '../JRS_PDFs/' . rawurlencode($pdfName) : '';
                                                 $linkLabel = $fileName !== '' ? basename($fileName) : '';
                                             ?>
-                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell"<?= $rowspanAttr ?>>
+                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell<?= $spanToBatchEndClass ?>"<?= $rowspanAttr ?>>
                                                 <?php if ($fileHref && $linkLabel !== ''): ?>
                                                     <a href="<?= htmlspecialchars($fileHref) ?>" target="_blank" rel="noopener" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
-                                            <td data-col="<?= htmlspecialchars($colName) ?>"<?= $rowspanAttr ?>><?= htmlspecialchars($cellValue) ?></td>
+                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="<?= trim($spanToBatchEndClass) ?>"<?= $rowspanAttr ?>><?= htmlspecialchars($cellValue) ?></td>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
                                 <?php if (empty($mergeSkip[$ri]['__ACTION__'])): ?>
-                                    <?php $actionRowspanAttr = !empty($mergeRowspan[$ri]['__ACTION__']) ? (' rowspan="' . (int)$mergeRowspan[$ri]['__ACTION__'] . '"') : ''; ?>
-                                    <td<?= $actionRowspanAttr ?>>
+                                    <?php
+                                        $actionRowspanVal = !empty($mergeRowspan[$ri]['__ACTION__']) ? (int)$mergeRowspan[$ri]['__ACTION__'] : 1;
+                                        $actionRowspanAttr = $actionRowspanVal > 1 ? (' rowspan="' . $actionRowspanVal . '"') : '';
+                                        $actionSpanToBatchEndClass = '';
+                                        if ($actionRowspanVal > 1) {
+                                            $actionEndRi = $ri + $actionRowspanVal - 1;
+                                            $actionEndBatchId = extractBatchIdFromSenderDetails($rows[$actionEndRi]['Sender Details'] ?? '');
+                                            $nextAfterActionEndBatchId = '';
+                                            if ($actionEndRi + 1 < count($rows)) {
+                                                $nextAfterActionEndBatchId = extractBatchIdFromSenderDetails($rows[$actionEndRi + 1]['Sender Details'] ?? '');
+                                            }
+                                            if ($actionEndBatchId !== '' && (($batchIdCounts[$actionEndBatchId] ?? 0) > 1) && $actionEndBatchId !== $nextAfterActionEndBatchId) {
+                                                $actionSpanToBatchEndClass = ' batch-span-end';
+                                            }
+                                        }
+                                    ?>
+                                    <td class="<?= trim($actionSpanToBatchEndClass) ?>"<?= $actionRowspanAttr ?>>
                                         <?php if (!empty($rowTrackingNo) && $rowTrackingNo !== '0'): ?>
                                             <span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span>
                                             <div class="track-result"></div>
@@ -1273,7 +1307,12 @@ HREDRD-EMES
                             clearAddForm();
                             closeAddModal();
                             const firstAddedNotice = (data.firstNotice || '').trim();
-                            refreshHomeData({ focusNotice: firstAddedNotice });
+                            const addedTrackingNo = ((formData.get('trackingNo') || formData.get('Tracking No.') || '') + '').trim();
+                            const immediateTrackNotices = addedTrackingNo !== '' ? (data.insertedNotices || []) : [];
+                            refreshHomeData({
+                                focusNotice: firstAddedNotice,
+                                immediateTrackNotices: immediateTrackNotices
+                            });
                         } else {
                             alert(data.message || 'Failed to add record.');
                         }
@@ -1301,10 +1340,22 @@ HREDRD-EMES
                             return '';
                         }
 
+                        const tableDataColumns = <?php echo json_encode(array_values(array_filter($columns, function($c){ return $c !== 'Notice/Order Code'; })), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
+
                         function getRowDataFromTable(noticeCode) {
-                            var tr = document.querySelector('tr[data-notice="' + CSS.escape((noticeCode || '').trim()) + '"]');
+                            var safeNotice = (noticeCode || '').trim();
+                            if (!safeNotice) return null;
+
+                            if (Array.isArray(window.mailRows)) {
+                                var cached = window.mailRows.find(function(r) {
+                                    return ((r['Notice/Order Code'] || '').trim() === safeNotice);
+                                });
+                                if (cached) return cached;
+                            }
+
+                            var tr = document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
                             if (!tr) return null;
-                            var row = {'Notice/Order Code': (noticeCode || '').trim()};
+                            var row = {'Notice/Order Code': safeNotice};
                             tr.querySelectorAll('td[data-col]').forEach(function(td) {
                                 var key = td.getAttribute('data-col');
                                 row[key] = (td.textContent || '').trim();
@@ -1363,11 +1414,14 @@ HREDRD-EMES
                         // Attach to edit icon
                         function editRow(noticeCode) {
                             if (!noticeCode) return;
-                            // Prefer current DOM values to avoid stale cached row data.
-                            var row = getRowDataFromTable(noticeCode);
-                            if (!row && Array.isArray(window.mailRows)) {
-                                row = window.mailRows.find(r => r['Notice/Order Code'] === noticeCode);
+                            // Prefer rowspan-safe cached rows.
+                            var row = null;
+                            if (Array.isArray(window.mailRows)) {
+                                row = window.mailRows.find(function(r) {
+                                    return ((r['Notice/Order Code'] || '').trim() === (noticeCode || '').trim());
+                                });
                             }
+                            if (!row) row = getRowDataFromTable(noticeCode);
                             if (row) openEditModal(row);
                         }
 
@@ -1396,8 +1450,12 @@ HREDRD-EMES
                                             alert(data.pdfWarning);
                                         }
                                         var focusNotice = (document.getElementById('editNoticeCodeDisplay').value || '').trim();
+                                        var submittedTrackingNo = (formData.get('Tracking No.') || '').trim();
                                         closeEditModal();
-                                        refreshHomeData({ focusNotice: focusNotice });
+                                        refreshHomeData({
+                                            focusNotice: focusNotice,
+                                            immediateTrackNotices: (submittedTrackingNo !== '' ? [focusNotice] : [])
+                                        });
                                     } else {
                                         alert(data.message || 'Failed to save changes.');
                                     }
@@ -1415,19 +1473,57 @@ HREDRD-EMES
         function rebuildMailRowsFromTable() {
             const trs = document.querySelectorAll('.admin-table-container table tbody tr[data-notice]');
             const rows = [];
+            const activeSpans = {};
+
             trs.forEach(function(tr) {
                 const row = {'Notice/Order Code': (tr.dataset.notice || '').trim()};
+
+                // Fill values inherited via rowspan from previous rows.
+                Object.keys(activeSpans).forEach(function(col) {
+                    row[col] = activeSpans[col].value;
+                });
+
+                // Read explicit cells present on this row.
                 tr.querySelectorAll('td[data-col]').forEach(function(td) {
                     const key = td.getAttribute('data-col');
                     row[key] = (td.textContent || '').trim();
                 });
+
+                // Keep row objects complete.
+                tableDataColumns.forEach(function(col) {
+                    if (!Object.prototype.hasOwnProperty.call(row, col)) {
+                        row[col] = '';
+                    }
+                });
+
                 rows.push(row);
+
+                // Consume one row from currently active spans.
+                Object.keys(activeSpans).forEach(function(col) {
+                    activeSpans[col].remaining -= 1;
+                    if (activeSpans[col].remaining <= 0) {
+                        delete activeSpans[col];
+                    }
+                });
+
+                // Register new rowspans starting from this row.
+                tr.querySelectorAll('td[data-col]').forEach(function(td) {
+                    const key = td.getAttribute('data-col');
+                    const span = parseInt(td.getAttribute('rowspan') || '1', 10);
+                    if (span > 1) {
+                        activeSpans[key] = {
+                            value: (td.textContent || '').trim(),
+                            remaining: span - 1
+                        };
+                    }
+                });
             });
             window.mailRows = rows;
         }
 
         function refreshHomeData(options = {}) {
             const focusNotice = (options.focusNotice || '').trim();
+            const immediateTrackNotices = Array.isArray(options.immediateTrackNotices) ? options.immediateTrackNotices : [];
             const url = new URL(window.location.href);
             url.searchParams.set('_ts', Date.now().toString());
 
@@ -1463,6 +1559,9 @@ HREDRD-EMES
                     rebuildMailRowsFromTable();
                     filterTableRows();
                     autoTrackEligibleRows();
+                    immediateTrackNotices.forEach(function(notice) {
+                        triggerImmediateTrackingOnce(notice);
+                    });
 
                     if (focusNotice) {
                         sessionStorage.setItem('dhsud_focus_notice', focusNotice);
@@ -1554,27 +1653,56 @@ HREDRD-EMES
             let selectedYear = yearSelect.value;
             if (selectedYear === 'all' || !selectedYear) selectedYear = '';
             const table = document.querySelector('.admin-table-container table');
-            const trs = table.querySelectorAll('tbody tr');
-            trs.forEach(tr => {
-                const tds = tr.querySelectorAll('td');
-                if (!tds.length) {
-                    tr.style.display = '';
+            const trs = table.querySelectorAll('tbody tr[data-notice]');
+            const rowDataByNotice = new Map();
+            if (Array.isArray(window.mailRows)) {
+                window.mailRows.forEach(function(r) {
+                    const n = (r['Notice/Order Code'] || '').trim();
+                    if (n) rowDataByNotice.set(n, r);
+                });
+            }
+
+            const groups = new Map();
+            Array.from(trs).forEach(function(tr, idx) {
+                const notice = (tr.dataset.notice || '').trim();
+                const batchId = (tr.dataset.batchId || '').trim();
+                const isBatchRow = tr.classList.contains('batch-row') && batchId !== '';
+                const key = isBatchRow ? ('batch:' + batchId) : ('row:' + notice + ':' + idx);
+                if (!groups.has(key)) {
+                    groups.set(key, { rows: [], notices: [] });
+                }
+                const g = groups.get(key);
+                g.rows.push(tr);
+                if (notice) g.notices.push(notice);
+            });
+
+            groups.forEach(function(group) {
+                const hasChecked = group.rows.some(function(tr) {
+                    const cb = tr.querySelector('.row-checkbox');
+                    return !!(cb && cb.checked);
+                });
+                if (hasChecked) {
+                    group.rows.forEach(function(tr) { tr.style.display = ''; });
                     return;
                 }
-                const checkbox = tr.querySelector('.row-checkbox');
-                if (checkbox && checkbox.checked) {
-                    tr.style.display = '';
-                    return;
-                }
-                // With the checkbox column, Notice/Order Code is td index 1 and Date released to AFD is td index 2.
-                const code = tds[1] ? tds[1].textContent.toLowerCase() : '';
-                const dateAfd = tds[2] ? tds[2].textContent : '';
+
+                const codeMatch = group.notices.some(function(n) {
+                    return n.toLowerCase().indexOf(filter) > -1;
+                });
+
                 let yearMatch = true;
                 if (selectedYear) {
-                    yearMatch = dateAfd.indexOf(selectedYear) > -1;
+                    yearMatch = group.notices.some(function(n) {
+                        const rowObj = rowDataByNotice.get(n);
+                        const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
+                        return dateAfd.indexOf(selectedYear) > -1;
+                    });
                 }
-                const codeMatch = code.indexOf(filter) > -1;
-                tr.style.display = (codeMatch && yearMatch) ? '' : 'none';
+
+                const visible = codeMatch && yearMatch;
+                group.rows.forEach(function(tr) {
+                    tr.style.display = visible ? '' : 'none';
+                });
             });
         }
         document.addEventListener('DOMContentLoaded', function() {
@@ -1627,7 +1755,11 @@ HREDRD-EMES
                 if ((data.noticeCode || '').trim() !== '') {
                     sessionStorage.setItem('dhsud_focus_notice', data.noticeCode.trim());
                 }
-                refreshHomeData({ focusNotice: (data.noticeCode || '').trim() });
+                const scannerNotice = (data.noticeCode || '').trim();
+                refreshHomeData({
+                    focusNotice: scannerNotice,
+                    immediateTrackNotices: (scannerNotice !== '' ? [scannerNotice] : [])
+                });
             }
         });
 
@@ -1681,8 +1813,9 @@ HREDRD-EMES
             form.submit();
         }
 
-        const AUTO_TRACK_INTERVAL_MS = 5 * 60 * 1000;
+        const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
         const autoTrackLastRunByKey = new Map();
+        const immediateTrackOnceKeys = new Set();
         let autoTrackInProgress = false;
 
         function getTrackResultElementForNotice(noticeCode) {
@@ -1738,6 +1871,26 @@ HREDRD-EMES
                 }
                 return { ok: false, reason: "request-failed", error: err };
             });
+        }
+
+        function triggerImmediateTrackingOnce(noticeCode) {
+            const safeNotice = (noticeCode || '').trim();
+            if (!safeNotice) return;
+
+            const row = findRowByNoticeCode(safeNotice);
+            if (!row) return;
+
+            const trackingNo = (row.dataset.trackingNo || '').trim();
+            if (!trackingNo || trackingNo === '0') return;
+
+            const batchId = (row.dataset.batchId || '').trim();
+            const key = (batchId ? ('batch:' + batchId) : ('notice:' + safeNotice)) + '|tracking:' + trackingNo;
+            if (immediateTrackOnceKeys.has(key)) return;
+            immediateTrackOnceKeys.add(key);
+
+            const throttleKey = batchId ? ('batch:' + batchId) : ('notice:' + safeNotice);
+            autoTrackLastRunByKey.set(throttleKey, Date.now());
+            runTrackingUpdate(safeNotice, { silent: true });
         }
 
         function collectAutoTrackItems() {

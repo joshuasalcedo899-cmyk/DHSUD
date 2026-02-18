@@ -41,6 +41,23 @@ function extractBatchIdFromSenderDetails($senderDetails) {
     return '';
 }
 
+function buildDefaultSenderDetails($dateReleasedValue, $batchId = '') {
+    $dateText = '';
+    $ts = strtotime((string)$dateReleasedValue);
+    if ($ts !== false) {
+        $dateText = date('F-d-Y', $ts);
+    }
+
+    $sender = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538";
+    if ($dateText !== '') {
+        $sender .= "\n\n(" . $dateText . ")";
+    }
+    if (trim((string)$batchId) !== '') {
+        $sender .= "\nBatch ID: " . trim((string)$batchId);
+    }
+    return $sender;
+}
+
 function generateProofPdfForTracking($trackingNo, &$error = null) {
     $trackingNo = trim((string)$trackingNo);
     if ($trackingNo === '' || $trackingNo === '0') {
@@ -99,6 +116,11 @@ function generateProofPdfForTracking($trackingNo, &$error = null) {
     }
 
     return true;
+}
+
+function isPdfEligibleStatus($statusValue) {
+    $s = strtoupper(trim((string)$statusValue));
+    return ($s === 'DELIVERED' || $s === 'RETURNED TO SENDER');
 }
 
 // Validate original notice code is provided
@@ -220,13 +242,33 @@ try {
 
     // Determine if this record belongs to a batch.
     $batchId = '';
-    $senderStmt = $pdo->prepare('SELECT `Sender Details`, `Tracking No.`, `File Name (PDF)` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1');
+    $senderStmt = $pdo->prepare('SELECT `Sender Details`, `Tracking No.`, `File Name (PDF)`, `Date released to AFD`, `Status` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1');
     $senderStmt->execute([':notice' => $originalNotice]);
     $currentRecord = $senderStmt->fetch(PDO::FETCH_ASSOC) ?: [];
     $currentSenderDetails = (string)($currentRecord['Sender Details'] ?? '');
     $existingTrackingNo = trim((string)($currentRecord['Tracking No.'] ?? ''));
     $existingFileName = trim((string)($currentRecord['File Name (PDF)'] ?? ''));
+    $existingStatus = trim((string)($currentRecord['Status'] ?? ''));
     $batchId = extractBatchIdFromSenderDetails($currentSenderDetails);
+    $dateForDefaultSender = array_key_exists('Date released to AFD', $columnValues)
+        ? $columnValues['Date released to AFD']
+        : ($currentRecord['Date released to AFD'] ?? '');
+
+    // Always enforce canonical sender details on edit.
+    $defaultSender = buildDefaultSenderDetails($dateForDefaultSender, $batchId);
+    $columnValues['Sender Details'] = $defaultSender;
+    $senderParamName = ':p_' . preg_replace('/[^a-z0-9_]/i', '_', 'Sender Details');
+    $params[$senderParamName] = $defaultSender;
+    $hasSenderUpdate = false;
+    foreach ($updates as $u) {
+        if (strpos($u, '`Sender Details`') !== false) {
+            $hasSenderUpdate = true;
+            break;
+        }
+    }
+    if (!$hasSenderUpdate) {
+        $updates[] = '`Sender Details` = ' . $senderParamName;
+    }
 
     // Execute in transaction
     $pdo->beginTransaction();
@@ -244,23 +286,25 @@ try {
                 foreach ($sharedCols as $col) {
                     $pname = ':s_' . preg_replace('/[^a-z0-9_]/i', '_', $col);
                     $val = $columnValues[$col];
-                    // Preserve Batch ID marker for batch rows.
-                    if ($col === 'Sender Details') {
-                        $val = preg_replace('/\R?Batch ID:\s*[A-Za-z0-9\-]+\s*/i', '', (string)$val);
-                        $val = trim((string)$val);
-                        $val .= "\nBatch ID: " . $batchId;
+
+                    // Safety: in batch updates, avoid wiping Recipient if modal sent it empty.
+                    if ($col === 'Recipient Details' && trim((string)$val) === '') {
+                        continue;
                     }
+
                     $sharedUpdates[] = "`$col` = $pname";
                     $sharedParams[$pname] = $val;
                 }
 
-                $sharedSql = 'UPDATE mailtracking SET ' . implode(', ', $sharedUpdates) . ' WHERE `Sender Details` LIKE :batch_like';
-                $sharedParams[':batch_like'] = '%Batch ID: ' . $batchId . '%';
-                error_log('Batch SQL: ' . $sharedSql);
-                error_log('Batch Parameters: ' . json_encode($sharedParams));
-                $sharedStmt = $pdo->prepare($sharedSql);
-                $sharedStmt->execute($sharedParams);
-                $affected += $sharedStmt->rowCount();
+                if (!empty($sharedUpdates)) {
+                    $sharedSql = 'UPDATE mailtracking SET ' . implode(', ', $sharedUpdates) . ' WHERE `Sender Details` LIKE :batch_like';
+                    $sharedParams[':batch_like'] = '%Batch ID: ' . $batchId . '%';
+                    error_log('Batch SQL: ' . $sharedSql);
+                    error_log('Batch Parameters: ' . json_encode($sharedParams));
+                    $sharedStmt = $pdo->prepare($sharedSql);
+                    $sharedStmt->execute($sharedParams);
+                    $affected += $sharedStmt->rowCount();
+                }
             }
         }
 
@@ -338,9 +382,11 @@ try {
             $trackingClean = trim($submittedTrackingNo);
             $proofFileName = 'proof_' . $trackingClean . '.pdf';
             $proofFilePath = __DIR__ . '/../JRS_PDFs/' . $proofFileName;
+            $finalStatus = array_key_exists('Status', $columnValues) ? $columnValues['Status'] : $existingStatus;
+            $statusAllowsPdf = isPdfEligibleStatus($finalStatus);
             $trackingChanged = ($trackingClean !== '' && $trackingClean !== $existingTrackingNo);
             $fileMissing = (!file_exists($proofFilePath));
-            $shouldGeneratePdf = ($trackingClean !== '' && $trackingClean !== '0') && ($trackingChanged || $existingFileName === '' || $fileMissing);
+            $shouldGeneratePdf = ($trackingClean !== '' && $trackingClean !== '0') && $statusAllowsPdf && ($trackingChanged || $existingFileName === '' || $fileMissing);
 
             if ($shouldGeneratePdf) {
                 $pdfError = null;
@@ -353,7 +399,7 @@ try {
 
             // Apply generated/existing proof file name to all affected rows.
             // For batches: all rows with same Batch ID. For non-batch: only edited row.
-            if ($trackingClean !== '' && $trackingClean !== '0' && file_exists($proofFilePath)) {
+            if ($trackingClean !== '' && $trackingClean !== '0' && $statusAllowsPdf && file_exists($proofFilePath)) {
                 if ($batchId !== '') {
                     $fileStmt = $pdo->prepare('UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `Sender Details` LIKE :batch_like');
                     $fileStmt->execute([

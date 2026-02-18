@@ -53,8 +53,8 @@ $no = 1;
 foreach ($rows as $r) {
     $html .= "<tr>
         <td>{$no}</td>
-        <td>{$r['Recipient Details']}</td>
-        <td>{$r['Parcel Details']}<br>{$r['Notice/Order Code']}</td>
+        <td style=\"white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;\">{$r['Recipient Details']}</td>
+        <td style=\"white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;\">{$r['Parcel Details']}<br>{$r['Notice/Order Code']}</td>
     </tr>";
     $no++;
 }

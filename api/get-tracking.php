@@ -2,11 +2,28 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
-if (!isset($_POST['tracking']) || !isset($_POST['codes'])) {
-    die("Invalid request");
+// Scanner/test.php calls this endpoint via fetch and expects JSON.
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+if ($isAjax) {
+    header('Content-Type: application/json; charset=utf-8');
 }
 
-$trackingNo = trim($_POST['tracking']); // actual tracking number
+function respondError($message, $statusCode = 400, $isAjax = false) {
+    http_response_code($statusCode);
+    if ($isAjax) {
+        echo json_encode(['success' => false, 'message' => $message]);
+    } else {
+        echo $message;
+    }
+    exit;
+}
+
+if (!isset($_POST['tracking']) || !isset($_POST['codes'])) {
+    respondError('Invalid request', 400, $isAjax);
+}
+
+
+$trackingNo = trim($_POST['tracking']);
 $codes = $_POST['codes'];                // selected notice/order codes
 
 // ensure array
@@ -32,7 +49,7 @@ foreach ($codes as $code) {
 $codes = array_keys($normalizedCodes);
 
 if ($trackingNo === '' || empty($codes)) {
-    die("Invalid request");
+    respondError('Invalid request', 400, $isAjax);
 }
 
 try {
@@ -81,8 +98,17 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    http_response_code(500);
-    die("Failed to update tracking number");
+    respondError('Failed to update tracking number', 500, $isAjax);
+}
+
+if ($isAjax) {
+    echo json_encode([
+        'success' => true,
+        'message' => 'Tracking number saved',
+        'tracking' => $trackingNo,
+        'updatedNotices' => array_values(array_keys($targetCodes)),
+    ]);
+    exit;
 }
 
 header("Location: ../pages/Home_Page.php?updated=1");
