@@ -48,7 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['notice_code']) && is
 
 // Fetch all rows to display
 try {
-    $rows = $pdo->query('SELECT * FROM mailtracking')->fetchAll();
+    // Keep rows from the same batch adjacent so merged-cell rendering stays coherent,
+    // including records recovered from archive.
+    $rows = $pdo->query('SELECT * FROM mailtracking ORDER BY `Sender Details` ASC, `Notice/Order Code` ASC')->fetchAll();
 } catch (Exception $e) {
     $rows = [];
     $message = 'Failed to load records: ' . $e->getMessage();
