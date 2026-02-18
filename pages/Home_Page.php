@@ -224,17 +224,16 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             background: #fff7c2 !important;
             transition: background 0.8s ease;
         }
-        .batch-badge {
-            display: inline-block;
-            margin-left: 6px;
-            padding: 2px 6px;
-            border-radius: 999px;
-            font-size: 0.62rem;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            color: #fff;
-            background: #6b7280;
-            vertical-align: middle;
+        .notice-code-cell {
+            position: relative;
+        }
+        .batch-icon {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
         }
         .message { padding:8px; margin:10px 0; }
         .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
@@ -868,7 +867,7 @@ HREDRD-EMES
                                     <td style="width:32px;">
                                         <input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
-                                    <td>
+                                    <td class="notice-code-cell">
                                         <div style="display: flex; align-items: center; gap: 0.3em;">
                                             <div class="row-menu-container">
                                                 <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, '<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')">
@@ -877,10 +876,10 @@ HREDRD-EMES
                                             </div>
                                             <span>
                                                 <?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>
-                                                <?php if ($showBatchBadge): ?>
-                                                    <span class="batch-badge" title="Consecutive batch row">BATCH</span>
-                                                <?php endif; ?>
                                             </span>
+                                            <?php if ($showBatchBadge): ?>
+                                                <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon" title="Consecutive batch row">
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 <?php foreach ($columns as $idx => $colName): ?>
