@@ -268,7 +268,7 @@
 	outline: none;
 	background: #fff;
 	color: #22336a;
-	margin-right: 0.5em;
+	margin-right: 0.1em;
 	min-width: 90px;
 	cursor: pointer;
 	transition: border 0.2s;
@@ -309,7 +309,7 @@
 	align-items: center;
 }
 .table-search-btn{
-	padding: 0.4rem 1rem;
+	padding: 0.4rem 0.5rem;
 	color: white;
 	background: white;
 	border: 1.5px solid #22336a59;

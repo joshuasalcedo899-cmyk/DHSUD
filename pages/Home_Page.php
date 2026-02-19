@@ -582,6 +582,203 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             height: 16px;
             margin-right: 0;
         }
+        .table-notif-btn {
+            padding: 0.21rem 0.5rem;
+            color: white;
+            background: white;
+            border: 1.5px solid #22336a59;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .table-notif-btn:hover {
+            background: #f5f5f5;
+        }
+        .table-notif-btn img {
+            width: 20px;
+            height: 22px;
+            margin-right: 1px;
+        }
+        .notif-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #d32f2f;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: 2px solid white;
+        }
+        .notif-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: flex-end;
+            align-items: flex-start;
+            padding: 80px 20px 20px 20px;
+            box-sizing: border-box;
+            z-index: 10001;
+        }
+        .notif-modal-overlay.show {
+            display: flex;
+        }
+        .notif-modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 420px;
+            max-height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .notif-modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .notif-modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #22336A;
+        }
+        .notif-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+        .notif-modal-close:hover {
+            background: #f3f4f6;
+            color: #22336A;
+        }
+        .notif-modal-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+        .notif-item {
+            padding: 16px 24px;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .notif-item:hover {
+            background: #f9fafb;
+        }
+        .notif-item:last-child {
+            border-bottom: none;
+        }
+        .notif-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        .notif-indicator.unread {
+            background: #1E1E1E;
+        }
+        .notif-indicator.read {
+            background: transparent;
+            border: 1.5px solid #9ca3af;
+        }
+        .notif-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .notif-text {
+            font-size: 0.9rem;
+            color: #1E1E1E;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        .notif-tracking-id {
+            font-weight: 700;
+            color: #1E1E1E;
+        }
+        .notif-status {
+            font-weight: 700;
+        }
+        .notif-status.delivered {
+            color: #2e7d32;
+        }
+        .notif-status.returned {
+            color: #c62828;
+        }
+        .notif-timestamp {
+            font-size: 0.75rem;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .notif-timestamp span:first-child {
+            font-size: 0.7rem;
+        }
+        .notif-action {
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 1.2rem;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .notif-action:hover {
+            background: #f3f4f6;
+            color: #22336A;
+        }
+        .notif-empty {
+            padding: 40px 24px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
         @media (max-width: 768px) {
             .top-bar {
                 grid-template-columns: 1fr;
@@ -929,6 +1126,10 @@ HREDRD-EMES
                 <button class="table-search-btn" id="tableSearchBtn">
                     <img src="../assets/Search Icon.svg" alt="Search">
                 </button>
+                <button class="table-notif-btn" id="tableNotifBtn" title="Tracking Status Notifications">
+                    <img src="../assets/Notif_Icon.svg" alt="Notifications">
+                    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                </button>
         </div>
 </div>
 
@@ -1114,6 +1315,18 @@ HREDRD-EMES
                     <button type="button" onclick="closeScannerModal()" style="border:none;background:#f3f4f6;color:#22336A;font-weight:700;border-radius:6px;padding:6px 10px;cursor:pointer;">Close</button>
                 </div>
                 <iframe id="scannerFrame" src="about:blank" title="QR Scanner" style="width:100%;border:1px solid #d1d5db;border-radius:8px;"></iframe>
+            </div>
+        </div>
+        <div id="notifModalOverlay" class="notif-modal-overlay">
+            <div class="notif-modal">
+                <div class="notif-modal-header">
+                    <h2>Notifications</h2>
+                    <button class="notif-modal-close" onclick="closeNotifModal()" aria-label="Close">×</button>
+                </div>
+                <div class="notif-modal-content" id="notifModalContent">
+                    <!-- Notifications will be dynamically inserted here -->
+                    <div class="notif-empty">No notifications</div>
+                </div>
             </div>
         </div>
         <div id="pdfViewerModal" class="pdf-viewer-modal" aria-hidden="true">
@@ -2197,6 +2410,157 @@ HREDRD-EMES
             runTrackingUpdate(noticeCode, { silent: false });
         });
 
+        // Notification Modal Functions
+        function openNotifModal() {
+            const overlay = document.getElementById('notifModalOverlay');
+            if (overlay) {
+                overlay.classList.add('show');
+                loadNotifications();
+            }
+        }
+
+        function closeNotifModal() {
+            const overlay = document.getElementById('notifModalOverlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+        }
+
+        function loadNotifications() {
+            const content = document.getElementById('notifModalContent');
+            if (!content) return;
+
+            // Sample notifications - Replace with actual data from your tracking system
+            const notifications = [
+                {
+                    id: 1,
+                    trackingId: 'RO4A-ORD-2026-0114-953',
+                    status: 'DELIVERED',
+                    statusType: 'delivered',
+                    timestamp: '6 February 2026 at 2:00 PM',
+                    read: false
+                },
+                {
+                    id: 2,
+                    trackingId: 'V-2023-0272',
+                    status: 'DELIVERED',
+                    statusType: 'delivered',
+                    timestamp: '5 February 2026 at 10:30 AM',
+                    read: false
+                },
+                {
+                    id: 3,
+                    trackingId: 'RO4A-ORD-2025-1234-567',
+                    status: 'RETURNED TO SENDER',
+                    statusType: 'returned',
+                    timestamp: '4 February 2026 at 3:45 PM',
+                    read: true
+                },
+                {
+                    id: 4,
+                    trackingId: 'V-2023-0156',
+                    status: 'DELIVERED',
+                    statusType: 'delivered',
+                    timestamp: '3 February 2026 at 1:15 PM',
+                    read: true
+                }
+            ];
+
+            if (notifications.length === 0) {
+                content.innerHTML = '<div class="notif-empty">No notifications</div>';
+                updateNotifBadge(0);
+                return;
+            }
+
+            const unreadCount = notifications.filter(n => !n.read).length;
+            updateNotifBadge(unreadCount);
+
+            content.innerHTML = notifications.map(notif => `
+                <div class="notif-item" data-notif-id="${notif.id}" onclick="handleNotifClick(${notif.id})">
+                    <div class="notif-indicator ${notif.read ? 'read' : 'unread'}"></div>
+                    <div class="notif-content">
+                        <div class="notif-text">
+                            <span class="notif-tracking-id">${escapeHtml(notif.trackingId)}</span> is now <span class="notif-status ${notif.statusType}">${escapeHtml(notif.status)}</span>
+                        </div>
+                        <div class="notif-timestamp">
+                            <span>🕐</span> ${escapeHtml(notif.timestamp)}
+                        </div>
+                    </div>
+                    <button class="notif-action" onclick="event.stopPropagation(); handleNotifAction(${notif.id})" aria-label="More options">⋮</button>
+                </div>
+            `).join('');
+        }
+
+        function updateNotifBadge(count) {
+            const badge = document.getElementById('notifBadge');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+
+        function handleNotifClick(notifId) {
+            // Mark as read and handle navigation if needed
+            const notifItem = document.querySelector(`[data-notif-id="${notifId}"]`);
+            if (notifItem) {
+                const indicator = notifItem.querySelector('.notif-indicator');
+                if (indicator && indicator.classList.contains('unread')) {
+                    indicator.classList.remove('unread');
+                    indicator.classList.add('read');
+                    loadNotifications(); // Refresh to update badge
+                }
+            }
+            // You can add navigation logic here to scroll to the tracking record
+        }
+
+        function handleNotifAction(notifId) {
+            // Handle action menu (e.g., mark as read, delete, etc.)
+            console.log('Action for notification:', notifId);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize notification button click handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const notifBtn = document.getElementById('tableNotifBtn');
+            if (notifBtn) {
+                notifBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openNotifModal();
+                });
+            }
+
+            // Close modal when clicking outside
+            const overlay = document.getElementById('notifModalOverlay');
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) {
+                        closeNotifModal();
+                    }
+                });
+            }
+
+            // Close modal on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const overlay = document.getElementById('notifModalOverlay');
+                    if (overlay && overlay.classList.contains('show')) {
+                        closeNotifModal();
+                    }
+                }
+            });
+
+            // Load initial notification count
+            loadNotifications();
+        });
 
         </script>
     </div>
