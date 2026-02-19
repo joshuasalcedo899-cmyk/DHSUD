@@ -650,6 +650,11 @@
 	background: #e5e7eb;
 }
 
+.exit-modal {
+	width: 20px;
+	height: 20px;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
 body {
@@ -998,7 +1003,7 @@ img {
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
 	overflow: auto;
-	max-height: 68vh;
+	max-height: 70vh;
 	-webkit-overflow-scrolling: touch;
 }
 

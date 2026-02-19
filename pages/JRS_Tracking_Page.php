@@ -35,6 +35,7 @@ function formatDateTime($dt) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JRS Tracking</title>
+    <link rel="icon" type="image/x-icon" href="../assets/DHSUDLogo.ico">
     <link rel="stylesheet" href="../main.css">
     <style>
         body { background: #fff; margin: 0; font-family: 'Inter', Arial, Helvetica, sans-serif; }

@@ -25,10 +25,12 @@ foreach ($_POST as $key => $val) {
     error_log("  POST['{$key}'] = '" . $displayVal . "' (length: " . strlen($displayVal) . ")");
 }
 
-// Original notice code stored in hidden field (used to identify record)
+// Original row id (primary key) and notice code (for compatibility/logging).
+$originalId = (int)($_POST['original_id'] ?? 0);
 $originalNotice = trim($_POST['original_notice_code'] ?? '');
 $originalNoticeRaw = $_POST['original_notice_code'] ?? '';
 
+error_log('Original ID: ' . $originalId);
 error_log('Original Notice (raw): "' . $originalNoticeRaw . '" (len: ' . strlen($originalNoticeRaw) . ')');
 error_log('Original Notice (trimmed): "' . $originalNotice . '" (len: ' . strlen($originalNotice) . ')');
 
@@ -123,10 +125,10 @@ function isPdfEligibleStatus($statusValue) {
     return ($s === 'DELIVERED' || $s === 'RETURNED TO SENDER');
 }
 
-// Validate original notice code is provided
-if ($originalNotice === '') {
+// Validate original primary key is provided
+if ($originalId <= 0) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Missing original_notice_code - cannot identify record to update']);
+    echo json_encode(['success' => false, 'message' => 'Missing original_id - cannot identify record to update']);
     exit;
 }
 
@@ -229,7 +231,7 @@ try {
             // Primary key changed - need UPDATE with new key
             $updates[] = "`Notice/Order Code` = :new_notice";
             $params[':new_notice'] = $newNotice;
-            error_log("  Primary Key changed: '{$originalNotice}' -> '{$newNotice}'");
+            error_log("  Notice/Order Code changed: '{$originalNotice}' -> '{$newNotice}'");
         }
     }
 
@@ -242,8 +244,8 @@ try {
 
     // Determine if this record belongs to a batch.
     $batchId = '';
-    $senderStmt = $pdo->prepare('SELECT `Sender Details`, `Tracking No.`, `File Name (PDF)`, `Date released to AFD`, `Status` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1');
-    $senderStmt->execute([':notice' => $originalNotice]);
+    $senderStmt = $pdo->prepare('SELECT `Sender Details`, `Tracking No.`, `File Name (PDF)`, `Date released to AFD`, `Status` FROM mailtracking WHERE `id` = :row_id LIMIT 1');
+    $senderStmt->execute([':row_id' => $originalId]);
     $currentRecord = $senderStmt->fetch(PDO::FETCH_ASSOC) ?: [];
     $currentSenderDetails = (string)($currentRecord['Sender Details'] ?? '');
     $existingTrackingNo = trim((string)($currentRecord['Tracking No.'] ?? ''));
@@ -326,14 +328,14 @@ try {
             $rowOnlyUpdates = $updates;
             $rowOnlyParams = [];
             foreach ($params as $k => $v) {
-                if ($k === ':where_notice') continue;
+                if ($k === ':where_id') continue;
                 $rowOnlyParams[$k] = $v;
             }
         }
 
         if (!empty($rowOnlyUpdates)) {
-            $rowSql = 'UPDATE mailtracking SET ' . implode(', ', $rowOnlyUpdates) . ' WHERE `Notice/Order Code` = :where_notice LIMIT 1';
-            $rowOnlyParams[':where_notice'] = $originalNotice;
+            $rowSql = 'UPDATE mailtracking SET ' . implode(', ', $rowOnlyUpdates) . ' WHERE `id` = :where_id LIMIT 1';
+            $rowOnlyParams[':where_id'] = $originalId;
             error_log('Row SQL: ' . $rowSql);
             error_log('Row Parameters: ' . json_encode($rowOnlyParams));
             $rowStmt = $pdo->prepare($rowSql);
@@ -345,17 +347,18 @@ try {
             $pdo->rollBack();
             
             // Debug: Check if record exists at all
-            $checkSql = 'SELECT `Notice/Order Code` FROM mailtracking WHERE `Notice/Order Code` = :check_notice LIMIT 1';
+            $checkSql = 'SELECT `id` FROM mailtracking WHERE `id` = :check_id LIMIT 1';
             $checkStmt = $pdo->prepare($checkSql);
-            $checkStmt->execute([':check_notice' => $originalNotice]);
+            $checkStmt->execute([':check_id' => $originalId]);
             $recordExists = $checkStmt->fetch() !== false;
             
             // Try to find similar records
-            $allSql = 'SELECT `Notice/Order Code` FROM mailtracking ORDER BY `Notice/Order Code` LIMIT 10';
+            $allSql = 'SELECT `id`, `Notice/Order Code` FROM mailtracking ORDER BY `id` LIMIT 10';
             $allStmt = $pdo->query($allSql);
-            $allRecords = $allStmt->fetchAll(PDO::FETCH_COLUMN);
+            $allRecords = $allStmt->fetchAll(PDO::FETCH_ASSOC);
             
             $debugInfo = [
+                'row_id_sent' => $originalId,
                 'notice_code_sent' => $originalNotice,
                 'notice_code_length' => strlen($originalNotice),
                 'record_found' => $recordExists,
@@ -407,14 +410,11 @@ try {
                         ':batch_like' => '%Batch ID: ' . $batchId . '%'
                     ]);
                 } else {
-                    $targetNotice = isset($params[':new_notice']) ? trim((string)$params[':new_notice']) : $originalNotice;
-                    if ($targetNotice !== '') {
-                        $fileStmt = $pdo->prepare('UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `Notice/Order Code` = :notice LIMIT 1');
-                        $fileStmt->execute([
-                            ':file_name' => $proofFileName,
-                            ':notice' => $targetNotice
-                        ]);
-                    }
+                    $fileStmt = $pdo->prepare('UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `id` = :row_id LIMIT 1');
+                    $fileStmt->execute([
+                        ':file_name' => $proofFileName,
+                        ':row_id' => $originalId
+                    ]);
                 }
             }
         }
