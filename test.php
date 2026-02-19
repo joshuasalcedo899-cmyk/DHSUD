@@ -6,6 +6,7 @@
 <html>
 <head>
     <title>QR Scanner</title>
+    <link rel="icon" type="image/x-icon" href="assets/DHSUDLogo.ico">
 
 
     <script src="https://unpkg.com/@zxing/library@latest"></script>

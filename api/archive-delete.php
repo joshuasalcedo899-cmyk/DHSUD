@@ -2,23 +2,27 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
-if (!isset($_POST['noticeCode'])) {
+if (!isset($_POST['id']) && !isset($_POST['noticeCode'])) {
     die("Invalid request");
 }
 
-$codes = $_POST['noticeCode']; // Can be string or array
+$ids = $_POST['id'] ?? $_POST['noticeCode']; // backward-compatible fallback
 
 // Make it always an array
-if (!is_array($codes)) {
-    $codes = [$codes];
+if (!is_array($ids)) {
+    $ids = [$ids];
 }
 
 // Prepare statement
-$stmt = $pdo->prepare("DELETE FROM archive WHERE `Notice/Order Code` = ?");
+$stmt = $pdo->prepare("DELETE FROM archive WHERE `id` = ?");
 
 // Loop and delete each
-foreach ($codes as $code) {
-    $stmt->execute([$code]);
+foreach ($ids as $id) {
+    $safeId = (int)$id;
+    if ($safeId <= 0) {
+        continue;
+    }
+    $stmt->execute([$safeId]);
 }
 
 // Redirect back

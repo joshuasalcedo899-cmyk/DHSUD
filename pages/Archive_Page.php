@@ -42,6 +42,7 @@ function formatDateCell($value) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Archive</title>
+    <link rel="icon" type="image/x-icon" href="../assets/DHSUDLogo.ico">
     <link rel="stylesheet" href="../main.css">
     <style>
         body { background: #f8f9fa; }
@@ -163,7 +164,7 @@ function formatDateCell($value) {
                 <?php else: ?>
                     <?php foreach ($rows as $row): ?>
                         <tr>
-                            <td><input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code']) ?>"></td>
+                            <td><input type="checkbox" class="row-checkbox" value="<?= (int)($row['id'] ?? 0) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>"></td>
                             <?php foreach ($columns as $col): ?>
                                 <td class="<?= $col === 'Status' ? 'status-cell' : '' ?>">
                                     <?php if ($col === 'Status'): ?>
@@ -192,8 +193,8 @@ function formatDateCell($value) {
                 cb.checked = master.checked;
             });
         }
-        function deleteRecord(noticeCodes) {
-            if (!noticeCodes || noticeCodes.length === 0) return;
+        function deleteRecord(rowIds) {
+            if (!rowIds || rowIds.length === 0) return;
 
             if (!confirm('Are you sure you want to delete selected records?')) return;
 
@@ -201,12 +202,12 @@ function formatDateCell($value) {
             form.method = 'POST';
             form.action = '../api/archive-delete.php';
 
-            // Loop through all selected codes
-            noticeCodes.forEach(code => {
+            // Loop through all selected ids
+            rowIds.forEach(id => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
-                input.name = 'noticeCode[]'; // PHP array
-                input.value = code;
+                input.name = 'id[]'; // PHP array
+                input.value = id;
                 form.appendChild(input);
             });
 
@@ -217,7 +218,7 @@ function formatDateCell($value) {
 
         function getSelectedRecords() {
             // Get all checkboxes
-            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const checkboxes = document.querySelectorAll('.row-checkbox');
             const selected = [];
 
             // Loop through and check if each is checked
@@ -229,27 +230,27 @@ function formatDateCell($value) {
             return selected;
         }
         function deleteSelected() {
-            const noticeCodes = getSelectedRecords();
+            const rowIds = getSelectedRecords();
 
-            if (noticeCodes.length === 0) {
+            if (rowIds.length === 0) {
                 alert("No records selected!");
                 return;
             }
 
-            deleteRecord(noticeCodes);
+            deleteRecord(rowIds);
         }
         function recoverSelected() {
-            const noticeCodes = getSelectedRecords();
+            const rowIds = getSelectedRecords();
 
-            if (noticeCodes.length === 0) {
+            if (rowIds.length === 0) {
                 alert("No records selected!");
                 return;
             }
-            recoverRecord(noticeCodes);
+            recoverRecord(rowIds);
         }
 
-        function recoverRecord(noticeCodes) {
-            if (!noticeCodes || noticeCodes.length === 0) return;
+        function recoverRecord(rowIds) {
+            if (!rowIds || rowIds.length === 0) return;
 
             if (!confirm('Are you sure you want to recover selected records?')) return;
 
@@ -257,12 +258,12 @@ function formatDateCell($value) {
             form.method = 'POST';
             form.action = '../api/archived-recover.php';
 
-            // Loop through all selected codes
-            noticeCodes.forEach(code => {
+            // Loop through all selected ids
+            rowIds.forEach(id => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
-                input.name = 'noticeCode[]'; // PHP array
-                input.value = code;
+                input.name = 'id[]'; // PHP array
+                input.value = id;
                 form.appendChild(input);
             });
 

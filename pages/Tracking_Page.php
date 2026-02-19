@@ -52,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="utf-8">
     <title>Mail Tracking System</title>
+    <link rel="icon" type="image/x-icon" href="../assets/DHSUDLogo.ico">
     <link rel="stylesheet" href="../main.css">
     <style>
         body {

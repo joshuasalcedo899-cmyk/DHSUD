@@ -13,17 +13,25 @@ function extractBatchIdFromSenderDetails($senderDetails) {
 }
 
 
+$rowId = (int)($_POST['row_id'] ?? 0);
 $noticeCode = isset($_POST['notice_code']) ? trim($_POST['notice_code']) : '';
 
-if ($noticeCode === '') {
-    echo json_encode(["error" => "No notice/order code provided"]);
+if ($rowId <= 0 && $noticeCode === '') {
+    echo json_encode(["error" => "No row id or notice/order code provided"]);
     exit;
 }
 
-// Fetch tracking number + sender details from DB using Notice/Order Code
-$stmt = $pdo->prepare("SELECT `Tracking No.`, `Sender Details` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1");
-$stmt->execute([':notice' => $noticeCode]);
+// Fetch tracking number + sender details from DB using primary key when available.
+if ($rowId > 0) {
+    $stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
+    $stmt->execute([':row_id' => $rowId]);
+} else {
+    $stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1");
+    $stmt->execute([':notice' => $noticeCode]);
+}
 $selectedRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+$rowId = (int)($selectedRow['id'] ?? 0);
+$noticeCode = trim((string)($selectedRow['Notice/Order Code'] ?? $noticeCode));
 $trackingNo = trim((string)($selectedRow['Tracking No.'] ?? ''));
 $batchId = extractBatchIdFromSenderDetails($selectedRow['Sender Details'] ?? '');
 
@@ -113,13 +121,13 @@ if ($statusText === "DELIVERED" && !empty($receiver)) {
                     `Transmittal Remarks/Received By` = :receivedBy,
                     `Status` = :status,
                     `Date` = :date
-                WHERE `Notice/Order Code` = :notice";
+                WHERE `id` = :row_id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':receivedBy' => $receivedBy,
             ':status'     => $statusText,
             ':date'       => $mysqlDate,
-            ':notice'     => $noticeCode
+            ':row_id'     => $rowId
         ]);
     }
 } else {
@@ -140,19 +148,19 @@ if ($statusText === "DELIVERED" && !empty($receiver)) {
                 SET 
                     `Status` = :status,
                     `Date` = :date
-                WHERE `Notice/Order Code` = :notice";
+                WHERE `id` = :row_id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':status'   => $statusText,
             ':date'     => $mysqlDate,
-            ':notice'   => $noticeCode
+            ':row_id'   => $rowId
         ]);
     }
 }
 
 // Return the latest saved row values so UI can update without page refresh.
-$rowStmt = $pdo->prepare("SELECT `Status`, `Date`, `Transmittal Remarks/Received By` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1");
-$rowStmt->execute([':notice' => $noticeCode]);
+$rowStmt = $pdo->prepare("SELECT `Status`, `Date`, `Transmittal Remarks/Received By` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
+$rowStmt->execute([':row_id' => $rowId]);
 $savedRow = $rowStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
 $savedDate = $savedRow['Date'] ?? '';
@@ -166,6 +174,8 @@ if (!empty($savedDate) && $savedDate !== '0000-00-00' && $savedDate !== '0000-00
 
 echo json_encode([
     "success" => true,
+    "rowId" => $rowId,
+    "noticeCode" => $noticeCode,
     "trackingNo" => $trackingNo,
     "updated" => (int) $stmt->rowCount(),
     "batchId" => $batchId,

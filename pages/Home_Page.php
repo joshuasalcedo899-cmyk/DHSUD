@@ -10,20 +10,27 @@ requireLogin();
 $message = '';
 $updatedNotice = '';
 $updatedStatus = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['notice_code']) && isset($_POST['status'])) {
-    $notice = trim($_POST['notice_code']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST['row_id']) || !empty($_POST['notice_code'])) && isset($_POST['status'])) {
+    $rowId = (int)($_POST['row_id'] ?? 0);
+    $notice = trim($_POST['notice_code'] ?? '');
     $status = trim($_POST['status']);
     $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest';
-    if ($notice === '') {
-        $message = 'Missing Notice/Order Code.';
+    if ($rowId <= 0 && $notice === '') {
+        $message = 'Missing record id.';
     } elseif ($status === '') {
         // placeholder or empty selection — don't save
         $message = 'No status selected.';
     } else {
         try {
-            $sql = 'UPDATE mailtracking SET `Status` = :status WHERE `Notice/Order Code` = :notice';
+            $sql = ($rowId > 0)
+                ? 'UPDATE mailtracking SET `Status` = :status WHERE `id` = :row_id'
+                : 'UPDATE mailtracking SET `Status` = :status WHERE `Notice/Order Code` = :notice';
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([':status' => $status, ':notice' => $notice]);
+            if ($rowId > 0) {
+                $stmt->execute([':status' => $status, ':row_id' => $rowId]);
+            } else {
+                $stmt->execute([':status' => $status, ':notice' => $notice]);
+            }
             // track which row was updated so we can show a per-row message in the UI
             $updatedNotice = $notice;
             $updatedStatus = $status;
@@ -38,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['notice_code']) && is
         echo json_encode([
             'success' => ($message === ''),
             'message' => $message,
+            'row_id' => $rowId,
             'notice' => $updatedNotice,
             'status' => $updatedStatus,
         ]);
@@ -50,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['notice_code']) && is
 try {
     // Keep rows from the same batch adjacent so merged-cell rendering stays coherent,
     // including records recovered from archive.
-    $rows = $pdo->query('SELECT * FROM mailtracking ORDER BY `Sender Details` ASC, `Notice/Order Code` ASC')->fetchAll();
+    $rows = $pdo->query('SELECT * FROM mailtracking ORDER BY `Sender Details` ASC, `id` ASC')->fetchAll();
 } catch (Exception $e) {
     $rows = [];
     $message = 'Failed to load records: ' . $e->getMessage();
@@ -195,6 +203,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Page</title>
+    <link rel="icon" type="image/x-icon" href="../assets/DHSUDLogo.ico">
     <link rel="stylesheet" href="../main.css">
     <style>
         /* Table uses .listview-table .tracking-table from main.css (same as Tracking_Page) */
@@ -247,6 +256,60 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         .btn-scan { background-color:#2e7d32; }
         .btn-scan:hover { background-color:#1b5e20; }
         .status-delivered { color:#1b7f3b; font-weight:700; }
+        .pdf-link-in-cell {
+            color: #1a237e;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .pdf-viewer-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 12000;
+            background: rgba(0, 0, 0, 0.72);
+            justify-content: center;
+            align-items: center;
+            padding: 14px;
+            box-sizing: border-box;
+        }
+        .pdf-viewer-panel {
+            width: min(95vw, calc(185vh * 210 / 297));
+            height: min(92vh, calc(95vw * 297 / 210));
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.28);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .pdf-viewer-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #d1d5db;
+        }
+        .pdf-viewer-title {
+            margin: 0;
+            color: #22336A;
+            font-size: 0.95rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pdf-viewer-close {
+            border: none;
+            cursor: pointer;
+        }
+        .pdf-viewer-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            flex: 1;
+        }
 
         /* Modal Form UI - Two Column Grid */
         .edit-modal {
@@ -586,6 +649,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 <button class="modal-close" onclick="closeEditModal()" title="Close">&times;</button>
                 <h2>EDIT MAIL RECORD</h2>
                 <form id="editForm" autocomplete="off">
+                    <input type="hidden" name="original_id" id="editRowId">
                     <input type="hidden" name="original_notice_code" id="editNoticeCode">
                     <div style="display:contents">
                         <div>
@@ -796,6 +860,51 @@ HREDRD-EMES
                 scannerSelectedNoticeCode = '';
             }
 
+            function openPdfViewerModal(pdfUrl, pdfTitle) {
+                const modal = document.getElementById('pdfViewerModal');
+                const frame = document.getElementById('pdfViewerFrame');
+                const title = document.getElementById('pdfViewerTitle');
+                if (!modal || !frame || !title || !pdfUrl) return;
+                const cleanUrl = String(pdfUrl).split('#')[0];
+                const fitUrl = cleanUrl + '#zoom=95';
+                frame.src = 'about:blank';
+                frame.src = fitUrl;
+                title.textContent = (pdfTitle || 'PDF Preview');
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+            }
+
+            function closePdfViewerModal() {
+                const modal = document.getElementById('pdfViewerModal');
+                const frame = document.getElementById('pdfViewerFrame');
+                if (!modal || !frame) return;
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden', 'true');
+                frame.src = 'about:blank';
+            }
+
+            document.addEventListener('click', function(event) {
+                const link = event.target.closest('.pdf-link-in-cell[data-pdf-url]');
+                if (link) {
+                    event.preventDefault();
+                    const pdfUrl = link.getAttribute('data-pdf-url') || link.getAttribute('href') || '';
+                    const pdfTitle = link.getAttribute('data-pdf-title') || (link.textContent || '').trim();
+                    if (pdfUrl) openPdfViewerModal(pdfUrl, pdfTitle);
+                    return;
+                }
+
+                const pdfModal = document.getElementById('pdfViewerModal');
+                if (pdfModal && event.target === pdfModal) {
+                    closePdfViewerModal();
+                }
+            });
+
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closePdfViewerModal();
+                }
+            });
+
             </script>
         <div class="table-sort-bar">
             <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;">
@@ -865,14 +974,14 @@ HREDRD-EMES
                                 <?php
                                     $rowTrackingNo = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? ''));
                                 ?>
-                                <tr class="<?= htmlspecialchars(implode(' ', $rowClasses)) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking-no="<?= htmlspecialchars($rowTrackingNo) ?>">
+                                <tr class="<?= htmlspecialchars(implode(' ', $rowClasses)) ?>" data-id="<?= (int)($row['id'] ?? 0) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking-no="<?= htmlspecialchars($rowTrackingNo) ?>">
                                     <td style="width:32px;">
-                                        <input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
+                                        <input type="checkbox" class="row-checkbox" value="<?= (int)($row['id'] ?? 0) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
                                     <td class="notice-code-cell">
                                         <div style="display: flex; align-items: center; gap: 0.3em;">
                                             <div class="row-menu-container">
-                                                <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, '<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>')">
+                                                <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, <?= (int)($row['id'] ?? 0) ?>)">
                                                     <span style="font-size:1.5em;line-height:1;">&#8942;</span>
                                                 </button>
                                             </div>
@@ -947,7 +1056,7 @@ HREDRD-EMES
                                             ?>
                                             <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell<?= $spanToBatchEndClass ?>"<?= $rowspanAttr ?>>
                                                 <?php if ($fileHref && $linkLabel !== ''): ?>
-                                                    <a href="<?= htmlspecialchars($fileHref) ?>" target="_blank" rel="noopener" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
+                                                    <a href="<?= htmlspecialchars($fileHref) ?>" data-pdf-url="<?= htmlspecialchars($fileHref) ?>" data-pdf-title="<?= htmlspecialchars($linkLabel, ENT_QUOTES) ?>" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
@@ -1007,10 +1116,19 @@ HREDRD-EMES
                 <iframe id="scannerFrame" src="about:blank" title="QR Scanner" style="width:100%;border:1px solid #d1d5db;border-radius:8px;"></iframe>
             </div>
         </div>
+        <div id="pdfViewerModal" class="pdf-viewer-modal" aria-hidden="true">
+            <div class="pdf-viewer-panel">
+                <div class="pdf-viewer-head">
+                    <h3 id="pdfViewerTitle" class="pdf-viewer-title">PDF Preview</h3>
+                    <button type="button" class="pdf-viewer-close" onclick="closePdfViewerModal()"><img class="exit-modal" src="../assets/icon.svg" alt="Close"></button>
+                </div>
+                <iframe id="pdfViewerFrame" name="pdfViewerFrame" class="pdf-viewer-frame" src="about:blank" title="PDF Viewer"></iframe>
+            </div>
+        </div>
 
         <!-- Add New Record Modal (hidden by default) -->
         
-        <div style="display: flex; gap: 10px; margin-top: 10px; align-items: center;">
+        <div style="display: flex; gap: 10px; margin-top: 2px; align-items: center;">
             <button class="add-btn" onclick="openAddModal()">Add</button>
             <a href="Archive_Page.php" class="archive-btn">Archive</a>
             <div class="statistics-section">
@@ -1107,21 +1225,22 @@ HREDRD-EMES
                 }
             })();
 
-            var currentRowMenuNoticeCode = '';
+            var currentRowMenuId = 0;
             function hideRowMenuDropdown() {
                 var dropdown = document.getElementById('rowMenuDropdown');
                 if (dropdown) dropdown.style.display = 'none';
-                currentRowMenuNoticeCode = '';
+                currentRowMenuId = 0;
             }
-            function toggleRowMenu(event, noticeCode) {
+            function toggleRowMenu(event, rowId) {
                 event.stopPropagation();
                 var dropdown = document.getElementById('rowMenuDropdown');
                 if (!dropdown) return;
-                if (dropdown.style.display === 'block' && currentRowMenuNoticeCode === noticeCode) {
+                var safeRowId = parseInt(rowId, 10) || 0;
+                if (dropdown.style.display === 'block' && currentRowMenuId === safeRowId) {
                     hideRowMenuDropdown();
                     return;
                 }
-                currentRowMenuNoticeCode = noticeCode || '';
+                currentRowMenuId = safeRowId;
                 dropdown.style.display = 'block';
                 var rect = event.currentTarget.getBoundingClientRect();
                 var left = rect.left;
@@ -1137,31 +1256,37 @@ HREDRD-EMES
                 }
             }
             function editRowFromMenu() {
-                var noticeCode = currentRowMenuNoticeCode;
+                var rowId = currentRowMenuId;
                 hideRowMenuDropdown();
-                if (noticeCode) {
-                    editRow(noticeCode);
+                if (rowId > 0) {
+                    editRow(rowId);
                 }
             }
             function deleteRecordFromMenu() {
-                var noticeCode = currentRowMenuNoticeCode;
+                var rowId = currentRowMenuId;
                 hideRowMenuDropdown();
-                if (noticeCode) {
-                    deleteRecord(noticeCode);
+                if (rowId > 0) {
+                    deleteRecord(rowId);
                 }
             }
-            function deleteRecord(noticeCode) {
+            function deleteRecord(rowId) {
                 if (confirm('Are you sure you want to delete this record?')) {
-                   if (!noticeCode) return;
+                   var safeRowId = parseInt(rowId, 10) || 0;
+                   if (safeRowId <= 0) return;
                         fetch('../api/Delete.php', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                            body: 'noticeCode=' + encodeURIComponent(noticeCode)
+                            body: 'id=' + encodeURIComponent(String(safeRowId))
                         })
-                        .then(function () { return refreshHomeData(); })
+                        .then(function (resp) {
+                            if (!resp.ok) {
+                                return resp.text().then(function (t) { throw new Error(t || 'Delete failed'); });
+                            }
+                            return refreshHomeData();
+                        })
                         .catch(function (err) {
                             console.error(err);
-                            alert('Failed to delete record.');
+                            alert('Failed to delete record: ' + (err && err.message ? err.message : 'Unknown error'));
                         });
                 }
             }
@@ -1343,20 +1468,23 @@ HREDRD-EMES
 
                         const tableDataColumns = <?php echo json_encode(array_values(array_filter($columns, function($c){ return $c !== 'Notice/Order Code'; })), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
 
-                        function getRowDataFromTable(noticeCode) {
-                            var safeNotice = (noticeCode || '').trim();
-                            if (!safeNotice) return null;
+                        function getRowDataFromTable(rowId) {
+                            var safeRowId = parseInt(rowId, 10) || 0;
+                            if (safeRowId <= 0) return null;
 
                             if (Array.isArray(window.mailRows)) {
                                 var cached = window.mailRows.find(function(r) {
-                                    return ((r['Notice/Order Code'] || '').trim() === safeNotice);
+                                    return (parseInt(r.id, 10) || 0) === safeRowId;
                                 });
                                 if (cached) return cached;
                             }
 
-                            var tr = document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
+                            var tr = document.querySelector('tr[data-id="' + String(safeRowId) + '"]');
                             if (!tr) return null;
-                            var row = {'Notice/Order Code': safeNotice};
+                            var row = {
+                                'id': safeRowId,
+                                'Notice/Order Code': (tr.dataset.notice || '').trim()
+                            };
                             tr.querySelectorAll('td[data-col]').forEach(function(td) {
                                 var key = td.getAttribute('data-col');
                                 row[key] = (td.textContent || '').trim();
@@ -1366,8 +1494,10 @@ HREDRD-EMES
 
                         function openEditModal(rowData) {
                             document.getElementById('editModalOverlay').style.display = 'flex';
-                            // Fill form fields - CRITICAL: original_notice_code must be set for lookup
+                            // Fill form fields - both id and notice are kept for compatibility.
+                            var rowId = parseInt(rowData.id, 10) || 0;
                             var noticeCode = (rowData['Notice/Order Code'] || '').trim();
+                            document.getElementById('editRowId').value = String(rowId);
                             document.getElementById('editNoticeCode').value = noticeCode;
                             document.getElementById('editNoticeCodeDisplay').value = noticeCode;
                             document.getElementById('editDateAfd').value = normalizeDateForInput(rowData['Date released to AFD'] || '');
@@ -1413,16 +1543,17 @@ HREDRD-EMES
                         }
 
                         // Attach to edit icon
-                        function editRow(noticeCode) {
-                            if (!noticeCode) return;
+                        function editRow(rowId) {
+                            var safeRowId = parseInt(rowId, 10) || 0;
+                            if (safeRowId <= 0) return;
                             // Prefer rowspan-safe cached rows.
                             var row = null;
                             if (Array.isArray(window.mailRows)) {
                                 row = window.mailRows.find(function(r) {
-                                    return ((r['Notice/Order Code'] || '').trim() === (noticeCode || '').trim());
+                                    return (parseInt(r.id, 10) || 0) === safeRowId;
                                 });
                             }
-                            if (!row) row = getRowDataFromTable(noticeCode);
+                            if (!row) row = getRowDataFromTable(safeRowId);
                             if (row) openEditModal(row);
                         }
 
@@ -1472,12 +1603,15 @@ HREDRD-EMES
                         window.mailRows = <?php echo json_encode($rows, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
 
         function rebuildMailRowsFromTable() {
-            const trs = document.querySelectorAll('.admin-table-container table tbody tr[data-notice]');
+            const trs = document.querySelectorAll('.admin-table-container table tbody tr[data-id]');
             const rows = [];
             const activeSpans = {};
 
             trs.forEach(function(tr) {
-                const row = {'Notice/Order Code': (tr.dataset.notice || '').trim()};
+                const row = {
+                    'id': parseInt(tr.dataset.id || '0', 10) || 0,
+                    'Notice/Order Code': (tr.dataset.notice || '').trim()
+                };
 
                 // Fill values inherited via rowspan from previous rows.
                 Object.keys(activeSpans).forEach(function(col) {
@@ -1524,6 +1658,7 @@ HREDRD-EMES
 
         function refreshHomeData(options = {}) {
             const focusNotice = (options.focusNotice || '').trim();
+            const focusRowId = parseInt(options.focusRowId || 0, 10) || 0;
             const immediateTrackNotices = Array.isArray(options.immediateTrackNotices) ? options.immediateTrackNotices : [];
             const url = new URL(window.location.href);
             url.searchParams.set('_ts', Date.now().toString());
@@ -1564,8 +1699,13 @@ HREDRD-EMES
                         triggerImmediateTrackingOnce(notice);
                     });
 
+                    if (focusRowId > 0) {
+                        sessionStorage.setItem('dhsud_focus_id', String(focusRowId));
+                    }
                     if (focusNotice) {
                         sessionStorage.setItem('dhsud_focus_notice', focusNotice);
+                    }
+                    if (focusRowId > 0 || focusNotice) {
                         focusScannedRow();
                     }
                 })
@@ -1599,14 +1739,69 @@ HREDRD-EMES
             return `${month}-${day}-${year}`;
         }
 
-        function findRowByNoticeCode(noticeCode) {
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            for (const cb of checkboxes) {
-                if ((cb.value || '').trim() === (noticeCode || '').trim()) {
-                    return cb.closest('tr');
-                }
+        function normalizeCellTextForSearchView(colName, rawValue) {
+            const value = (rawValue || '').toString().trim();
+            if (!value) return '';
+            if (colName === 'Date released to AFD' || colName === 'Date') {
+                return formatDisplayDate(value) || value;
             }
-            return null;
+            if (colName === 'Sender Details') {
+                return value.replace(/\r?\n?Batch ID:\s*[A-Za-z0-9\-]+\s*/i, '').trim();
+            }
+            return value;
+        }
+
+        function rebuildVisibleRowCellsForSearch(tr, rowObj) {
+            if (!tr || !rowObj) return;
+            const actionCell = tr.lastElementChild;
+            if (!actionCell) return;
+
+            const cellsByCol = new Map();
+            tr.querySelectorAll('td[data-col]').forEach(function(td) {
+                const col = td.getAttribute('data-col');
+                if (col) cellsByCol.set(col, td);
+            });
+
+            tableDataColumns.forEach(function(colName) {
+                let td = cellsByCol.get(colName);
+                if (!td) {
+                    td = document.createElement('td');
+                    td.setAttribute('data-col', colName);
+                    td.setAttribute('data-temp-fill', '1');
+                    const text = normalizeCellTextForSearchView(colName, rowObj[colName]);
+                    if (colName === 'Status') {
+                        const span = document.createElement('span');
+                        span.className = getStatusClass(text);
+                        span.textContent = text;
+                        td.appendChild(span);
+                    } else if (colName === 'File Name (PDF)') {
+                        const trackingValue = ((rowObj['Tracking No.'] || '') + '').trim();
+                        if (text !== '' && trackingValue !== '') {
+                            const link = document.createElement('a');
+                            const pdfName = 'proof_' + trackingValue + '.pdf';
+                            const pdfUrl = '../JRS_PDFs/' + encodeURIComponent(pdfName);
+                            link.className = 'pdf-link-in-cell';
+                            link.href = pdfUrl;
+                            link.setAttribute('data-pdf-url', pdfUrl);
+                            link.setAttribute('data-pdf-title', text);
+                            link.textContent = text;
+                            td.appendChild(link);
+                        }
+                    } else {
+                        td.textContent = text;
+                    }
+                }
+                if (td.hasAttribute('rowspan')) {
+                    td.removeAttribute('rowspan');
+                }
+                tr.insertBefore(td, actionCell);
+            });
+        }
+
+        function findRowByNoticeCode(noticeCode) {
+            const safeNotice = (noticeCode || '').trim();
+            if (!safeNotice) return null;
+            return document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
         }
 
         function updateTrackingRow(noticeCode, data) {
@@ -1653,58 +1848,68 @@ HREDRD-EMES
             const yearSelect = document.getElementById('tableSortYear');
             let selectedYear = yearSelect.value;
             if (selectedYear === 'all' || !selectedYear) selectedYear = '';
+            const isFiltering = (filter !== '' || selectedYear !== '');
+            const yearBatchMode = (filter === '' && selectedYear !== '');
             const table = document.querySelector('.admin-table-container table');
             const trs = table.querySelectorAll('tbody tr[data-notice]');
-            const rowDataByNotice = new Map();
+            const rowDataById = new Map();
+            const matchedBatchIds = new Set();
             if (Array.isArray(window.mailRows)) {
                 window.mailRows.forEach(function(r) {
-                    const n = (r['Notice/Order Code'] || '').trim();
-                    if (n) rowDataByNotice.set(n, r);
+                    const id = parseInt(r.id, 10) || 0;
+                    if (id > 0) rowDataById.set(id, r);
                 });
             }
 
-            const groups = new Map();
-            Array.from(trs).forEach(function(tr, idx) {
+            Array.from(trs).forEach(function(tr) {
+                const rowId = parseInt(tr.dataset.id || '0', 10) || 0;
                 const notice = (tr.dataset.notice || '').trim();
                 const batchId = (tr.dataset.batchId || '').trim();
-                const isBatchRow = tr.classList.contains('batch-row') && batchId !== '';
-                const key = isBatchRow ? ('batch:' + batchId) : ('row:' + notice + ':' + idx);
-                if (!groups.has(key)) {
-                    groups.set(key, { rows: [], notices: [] });
-                }
-                const g = groups.get(key);
-                g.rows.push(tr);
-                if (notice) g.notices.push(notice);
-            });
+                const cb = tr.querySelector('.row-checkbox');
+                const isChecked = !!(cb && cb.checked);
 
-            groups.forEach(function(group) {
-                const hasChecked = group.rows.some(function(tr) {
-                    const cb = tr.querySelector('.row-checkbox');
-                    return !!(cb && cb.checked);
-                });
-                if (hasChecked) {
-                    group.rows.forEach(function(tr) { tr.style.display = ''; });
+                tr.querySelectorAll('td[data-temp-fill="1"]').forEach(function(td) { td.remove(); });
+                if (isChecked) {
+                    tr.style.display = '';
+                    if (isFiltering && !yearBatchMode) {
+                        const rowObjChecked = rowDataById.get(rowId);
+                        rebuildVisibleRowCellsForSearch(tr, rowObjChecked);
+                    }
                     return;
                 }
 
-                const codeMatch = group.notices.some(function(n) {
-                    return n.toLowerCase().indexOf(filter) > -1;
-                });
+                const codeMatch = notice.toLowerCase().indexOf(filter) > -1;
 
                 let yearMatch = true;
                 if (selectedYear) {
-                    yearMatch = group.notices.some(function(n) {
-                        const rowObj = rowDataByNotice.get(n);
-                        const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
-                        return dateAfd.indexOf(selectedYear) > -1;
-                    });
+                    const rowObj = rowDataById.get(rowId);
+                    const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
+                    yearMatch = dateAfd.indexOf(selectedYear) > -1;
                 }
 
                 const visible = codeMatch && yearMatch;
-                group.rows.forEach(function(tr) {
-                    tr.style.display = visible ? '' : 'none';
-                });
+                if (visible && yearBatchMode && batchId !== '') {
+                    matchedBatchIds.add(batchId);
+                }
+                tr.style.display = visible ? '' : 'none';
+                if (visible && isFiltering && !yearBatchMode) {
+                    const rowObj = rowDataById.get(rowId);
+                    rebuildVisibleRowCellsForSearch(tr, rowObj);
+                }
             });
+
+            // Year-only filter should keep batch rows together.
+            if (yearBatchMode && matchedBatchIds.size > 0) {
+                Array.from(trs).forEach(function(tr) {
+                    const cb = tr.querySelector('.row-checkbox');
+                    const isChecked = !!(cb && cb.checked);
+                    if (isChecked) return;
+                    const batchId = (tr.dataset.batchId || '').trim();
+                    if (batchId && matchedBatchIds.has(batchId)) {
+                        tr.style.display = '';
+                    }
+                });
+            }
         }
         document.addEventListener('DOMContentLoaded', function() {
             document.addEventListener('click', function(e) {
@@ -1766,14 +1971,24 @@ HREDRD-EMES
 
         function focusScannedRow() {
             const url = new URL(window.location.href);
+            const urlRowId = parseInt(url.searchParams.get('scanned_id') || '0', 10) || 0;
             const urlNotice = (url.searchParams.get('scanned_notice') || '').trim();
+            const storedRowId = parseInt(sessionStorage.getItem('dhsud_focus_id') || '0', 10) || 0;
             const storedNotice = (sessionStorage.getItem('dhsud_focus_notice') || '').trim();
+            const rowId = urlRowId || storedRowId;
             const noticeCode = urlNotice || storedNotice;
-            if (!noticeCode) return;
+            if (rowId <= 0 && !noticeCode) return;
 
-            const row = document.querySelector('tr[data-notice="' + CSS.escape(noticeCode) + '"]');
+            let row = null;
+            if (rowId > 0) {
+                row = document.querySelector('tr[data-id="' + String(rowId) + '"]');
+            }
+            if (!row && noticeCode) {
+                row = document.querySelector('tr[data-notice="' + CSS.escape(noticeCode) + '"]');
+            }
             if (!row) {
                 sessionStorage.removeItem('dhsud_focus_notice');
+                sessionStorage.removeItem('dhsud_focus_id');
                 return;
             }
 
@@ -1782,8 +1997,10 @@ HREDRD-EMES
             setTimeout(function() { row.classList.remove('scanned-row-focus'); }, 2600);
 
             sessionStorage.removeItem('dhsud_focus_notice');
-            if (urlNotice) {
+            sessionStorage.removeItem('dhsud_focus_id');
+            if (urlNotice || urlRowId > 0) {
                 url.searchParams.delete('scanned_notice');
+                url.searchParams.delete('scanned_id');
                 window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
             }
         }
@@ -1797,21 +2014,41 @@ HREDRD-EMES
             }
 
             let codes = [];
-            checked.forEach(cb => codes.push(cb.value));
+            checked.forEach(cb => {
+                const code = (cb.dataset.notice || '').trim();
+                if (code) codes.push(code);
+            });
+            if (codes.length === 0) {
+                alert("Selected rows have no Notice/Order Code.");
+                return;
+            }
 
             let form = document.createElement("form");
             form.method = "POST";
             form.action = "../api/jrs_tracking.php";
-            form.target = "_blank";
+            form.target = "pdfViewerFrame";
 
             let input = document.createElement("input");
             input.type = "hidden";
             input.name = "notice_codes";
             input.value = JSON.stringify(codes);
 
+            const modal = document.getElementById('pdfViewerModal');
+            const frame = document.getElementById('pdfViewerFrame');
+            const title = document.getElementById('pdfViewerTitle');
+            if (modal && frame && title) {
+                title.textContent = "Exported PDF";
+                frame.src = 'about:blank';
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+            }
+
             form.appendChild(input);
             document.body.appendChild(form);
             form.submit();
+            setTimeout(function() {
+                if (form && form.parentNode) form.parentNode.removeChild(form);
+            }, 0);
         }
 
         const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
@@ -1830,6 +2067,8 @@ HREDRD-EMES
             const safeNotice = (noticeCode || "").trim();
             const silent = options.silent === true;
             const result = getTrackResultElementForNotice(safeNotice);
+            const targetRow = findRowByNoticeCode(safeNotice);
+            const rowId = targetRow ? (parseInt(targetRow.dataset.id || '0', 10) || 0) : 0;
 
             if (!safeNotice) {
                 return Promise.resolve({ ok: false, reason: "missing-notice" });
@@ -1840,7 +2079,7 @@ HREDRD-EMES
             return fetch("../api/remarks.php", {
                 method: "POST",
                 headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                body: "notice_code=" + encodeURIComponent(safeNotice)
+                body: "row_id=" + encodeURIComponent(String(rowId)) + "&notice_code=" + encodeURIComponent(safeNotice)
             })
             .then(res => res.json())
             .then(data => {
