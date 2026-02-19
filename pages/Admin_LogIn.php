@@ -53,10 +53,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .login-form {
             position: relative;
         }
+        .login-form-header {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .login-form .login-form-header h2 {
+            margin: 0;
+        }
         .return-button {
             position: absolute;
-            top: 12px;
-            left: 12px;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -111,10 +122,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="admin-login-bg">
     <div class="bottom-container" style="position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:flex-end;min-height:0;padding-bottom:2rem;z-index:10;">
         <form class="login-form" method="post" action="Admin_LogIn.php" style="margin-bottom:50px;">
-            <a href="../index.php" class="return-button" title="Return to home">
-                <img src="../assets/Return_Icon.svg" alt="Return">
-            </a>
-            <h2>Log in to your account</h2>
+            <div class="login-form-header">
+                <a href="../index.php" class="return-button" title="Return to home">
+                    <img src="../assets/Return_Icon.svg" alt="Return">
+                </a>
+                <h2>Log in to your account</h2>
+            </div>
             <?php if (!empty($error_message)): ?>
                 <div class="error-message"><?php echo htmlspecialchars($error_message); ?></div>
             <?php endif; ?>
