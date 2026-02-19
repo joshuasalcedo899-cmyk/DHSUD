@@ -1128,7 +1128,7 @@ HREDRD-EMES
 
         <!-- Add New Record Modal (hidden by default) -->
         
-        <div style="display: flex; gap: 10px; margin-top: 2px; align-items: center;">
+        <div style="display: flex; gap: 10px; margin-top: 2 px; align-items: center;">
             <button class="add-btn" onclick="openAddModal()">Add</button>
             <a href="Archive_Page.php" class="archive-btn">Archive</a>
             <div class="statistics-section">
