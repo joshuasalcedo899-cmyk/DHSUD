@@ -303,6 +303,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         .pdf-viewer-close {
             border: none;
             cursor: pointer;
+            background: none;
         }
         .pdf-viewer-frame {
             width: 100%;
@@ -564,7 +565,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             min-width: 0;
             flex: 1;
             padding: 0.4rem;
-            border: 1.5px solid #22336a59;
+            border: 1.5px solid black;
             border-radius: 5px;
             font-size: 0.8rem;
             font-weight: 500;
@@ -583,10 +584,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             margin-right: 0;
         }
         .table-notif-btn {
-            padding: 0.21rem 0.5rem;
+            padding: 0.26rem 0.5rem;
             color: white;
             background: white;
-            border: 1.5px solid #22336a59;
+            border: 1.5px solid black;
             cursor: pointer;
             border-radius: 6px;
             font-size: 0.75rem;
@@ -600,7 +601,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         }
         .table-notif-btn img {
             width: 20px;
-            height: 22px;
+            height: 20px;
             margin-right: 1px;
         }
         .notif-badge {
@@ -1104,7 +1105,7 @@ HREDRD-EMES
 
             </script>
         <div class="table-sort-bar">
-            <select id="tableSortYear" class="table-sort-select" required style="min-width:70px;">
+            <select id="tableSortYear" class="table-sort-select" required style="min-width:65px;">
                 <option value="" disabled selected hidden>Year</option>
                 <option value="all">All</option>
                 <?php
