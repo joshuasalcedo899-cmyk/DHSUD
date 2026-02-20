@@ -1993,3 +1993,66 @@ body {
     object-fit: contain;
 }
 
+/* Final override: align welcome block with admin-home-header image via flex track */
+.admin-home-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+}
+
+.admin-home-header .welcome-block {
+    width: 100% !important;
+    margin: 0 !important;
+    align-self: flex-start !important;
+    padding: 0.4rem 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 0.15rem !important;
+    text-align: left !important;
+}
+
+.admin-home-header .welcome-block > * {
+    display: block !important;
+}
+
+.admin-home-header .welcome-block .logout-btn {
+    display: block !important;
+    margin: 0 !important;
+    align-self: flex-start !important;
+}
+
+/* Final header layout: welcome block aligned beside the logo image */
+.admin-home-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+}
+
+.admin-home-header .admin-home-header-main {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+}
+
+.admin-home-header .admin-home-header-main .welcome-block {
+    width: auto !important;
+    margin: 0 !important;
+    margin-left: 20px !important;
+    padding: 0.35rem 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    justify-self: start !important;
+}
+
+.admin-home-header .admin-home-header-main .admin-home-header-img {
+    align-self: center !important;
+    width: min(100%, 500px) !important;
+    justify-self: center !important;
+}
+
