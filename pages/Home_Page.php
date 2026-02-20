@@ -1134,6 +1134,7 @@ HREDRD-EMES
             const focusNotice = (options.focusNotice || '').trim();
             const focusRowId = parseInt(options.focusRowId || 0, 10) || 0;
             const immediateTrackNotices = Array.isArray(options.immediateTrackNotices) ? options.immediateTrackNotices : [];
+            const previousStatusSnapshot = cloneStatusSnapshot();
             const url = new URL(window.location.href);
             url.searchParams.set('_ts', Date.now().toString());
 
@@ -1168,6 +1169,7 @@ HREDRD-EMES
                     bindRowCheckboxListeners();
                     rebuildMailRowsFromTable();
                     filterTableRows();
+                    notifyStatusDiffsAfterRefresh(previousStatusSnapshot);
                     autoTrackEligibleRows();
                     immediateTrackNotices.forEach(function(notice) {
                         triggerImmediateTrackingOnce(notice);
@@ -1181,6 +1183,12 @@ HREDRD-EMES
                     }
                     if (focusRowId > 0 || focusNotice) {
                         focusScannedRow();
+                    }
+                    const knownVersion = ((options.knownVersion || '') + '').trim();
+                    if (knownVersion) {
+                        smartPollingState.lastKnownVersion = knownVersion;
+                    } else {
+                        syncHomeDataVersionSilently();
                     }
                     return true;
                 })
@@ -1203,7 +1211,8 @@ HREDRD-EMES
             timerId: 0,
             inProgress: false,
             failureCount: 0,
-            lastUserActivityAt: Date.now()
+            lastUserActivityAt: Date.now(),
+            lastKnownVersion: ''
         };
 
         function markPollingActivity() {
@@ -1242,6 +1251,54 @@ HREDRD-EMES
             }, delay);
         }
 
+        function fetchHomeDataVersion() {
+            const url = '../api/home-version.php?_ts=' + Date.now();
+            return fetch(url, {
+                method: 'GET',
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('Version endpoint failed');
+                return resp.json();
+            })
+            .then(function(data) {
+                if (!data || data.success !== true) {
+                    throw new Error((data && data.message) ? data.message : 'Invalid version response');
+                }
+                return ((data.version || '') + '').trim();
+            });
+        }
+
+        function checkForHomeDataChange() {
+            return fetchHomeDataVersion().then(function(currentVersion) {
+                if (!currentVersion) {
+                    return { changed: true, version: '' };
+                }
+
+                const previousVersion = smartPollingState.lastKnownVersion;
+                smartPollingState.lastKnownVersion = currentVersion;
+
+                if (!previousVersion) {
+                    return { changed: true, version: currentVersion };
+                }
+
+                return { changed: previousVersion !== currentVersion, version: currentVersion };
+            });
+        }
+
+        function syncHomeDataVersionSilently() {
+            return fetchHomeDataVersion()
+                .then(function(version) {
+                    if (version) {
+                        smartPollingState.lastKnownVersion = version;
+                    }
+                })
+                .catch(function() {
+                    // Best effort only.
+                });
+        }
+
         function runSmartPollingTick() {
             if (smartPollingState.inProgress) {
                 scheduleSmartPolling();
@@ -1250,7 +1307,14 @@ HREDRD-EMES
 
             smartPollingState.inProgress = true;
 
-            refreshHomeData()
+            checkForHomeDataChange()
+                .then(function(result) {
+                    if (!result.changed) {
+                        autoTrackEligibleRows();
+                        return true;
+                    }
+                    return refreshHomeData({ knownVersion: result.version });
+                })
                 .then(function(success) {
                     if (success) {
                         smartPollingState.failureCount = 0;
@@ -1291,6 +1355,7 @@ HREDRD-EMES
                 scheduleSmartPolling({ immediate: true });
             });
 
+            syncHomeDataVersionSilently();
             scheduleSmartPolling();
         }
 
@@ -1317,6 +1382,55 @@ HREDRD-EMES
             const day = String(dateObj.getDate()).padStart(2, '0');
             const year = dateObj.getFullYear();
             return `${month}-${day}-${year}`;
+        }
+
+        const statusSnapshotByNotice = new Map();
+
+        function cloneStatusSnapshot() {
+            return new Map(statusSnapshotByNotice);
+        }
+
+        function rebuildStatusSnapshotFromMailRows() {
+            statusSnapshotByNotice.clear();
+            if (!Array.isArray(window.mailRows)) return;
+
+            window.mailRows.forEach(function(row) {
+                const notice = ((row['Notice/Order Code'] || '') + '').trim();
+                if (!notice) return;
+                const status = ((row['Status'] || '') + '').trim().toUpperCase();
+                const eventDate = (formatDisplayDate(row['Date'] || '') || ((row['Date'] || '') + '').trim());
+                statusSnapshotByNotice.set(notice, {
+                    status: status,
+                    eventDate: eventDate
+                });
+            });
+        }
+
+        function notifyStatusDiffsAfterRefresh(previousSnapshot) {
+            if (!(previousSnapshot instanceof Map) || previousSnapshot.size === 0) {
+                rebuildStatusSnapshotFromMailRows();
+                return;
+            }
+            if (!Array.isArray(window.mailRows)) return;
+
+            window.mailRows.forEach(function(row) {
+                const notice = ((row['Notice/Order Code'] || '') + '').trim();
+                if (!notice) return;
+
+                const nextStatus = ((row['Status'] || '') + '').trim().toUpperCase();
+                const eventDate = (formatDisplayDate(row['Date'] || '') || ((row['Date'] || '') + '').trim());
+                const prevEntry = previousSnapshot.get(notice);
+                const previousStatus = prevEntry ? (((prevEntry.status || '') + '').trim().toUpperCase()) : '';
+
+                if (prevEntry && previousStatus !== nextStatus) {
+                    maybeNotifyStatusChange(notice, previousStatus, nextStatus, eventDate);
+                }
+
+                statusSnapshotByNotice.set(notice, {
+                    status: nextStatus,
+                    eventDate: eventDate
+                });
+            });
         }
 
         function normalizeCellTextForSearchView(colName, rawValue) {
@@ -1387,6 +1501,7 @@ HREDRD-EMES
         function updateTrackingRow(noticeCode, data) {
             const row = findRowByNoticeCode(noticeCode);
             if (!row) return;
+            const resolvedNotice = ((row.dataset.notice || '').trim() || (noticeCode || '').trim());
 
             const dateCell = row.querySelector('td[data-col="Date"]');
             const existingDateText = ((dateCell && dateCell.textContent) ? dateCell.textContent : '').trim();
@@ -1397,7 +1512,11 @@ HREDRD-EMES
                 const nextStatus = ((data.status || '') + '').trim().toUpperCase();
                 const statusClass = getStatusClass(data.status);
                 statusCell.innerHTML = `<span class="${statusClass}">${data.status || ''}</span>`;
-                maybeNotifyStatusChange((row.dataset.notice || '').trim() || noticeCode, previousStatus, nextStatus, nextDateText);
+                maybeNotifyStatusChange(resolvedNotice, previousStatus, nextStatus, nextDateText);
+                statusSnapshotByNotice.set(resolvedNotice, {
+                    status: nextStatus,
+                    eventDate: nextDateText
+                });
             }
 
             if (dateCell) {
@@ -1519,6 +1638,7 @@ HREDRD-EMES
             yearSelect.addEventListener('change', filterTableRows);
             bindRowCheckboxListeners();
             rebuildMailRowsFromTable();
+            rebuildStatusSnapshotFromMailRows();
             focusScannedRow();
             autoTrackEligibleRows();
             initSmartPolling();
@@ -1539,6 +1659,7 @@ HREDRD-EMES
             const data = event.data || {};
             if (data.type === 'scanner-success') {
                 closeScannerModal();
+                triggerReceiptGenerationFromScanner(data.noticeCode || '', data.trackingNumber || '');
                 if ((data.noticeCode || '').trim() !== '') {
                     sessionStorage.setItem('dhsud_focus_notice', data.noticeCode.trim());
                 }
@@ -1549,6 +1670,39 @@ HREDRD-EMES
                 });
             }
         });
+
+        function triggerReceiptGenerationFromScanner(noticeCode, trackingNumber) {
+            const safeNotice = (noticeCode || '').trim();
+            const safeTracking = (trackingNumber || '').trim();
+            if (!safeNotice || !safeTracking) return;
+
+            fetch('../api/remarks.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: 'notice_code=' + encodeURIComponent(safeNotice)
+            })
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('Status check failed');
+                return resp.json();
+            })
+            .then(function(data) {
+                if (data && data.error) return;
+                const status = (((data && data.status) || '') + '').trim().toUpperCase();
+                if (status !== 'DELIVERED' && status !== 'RETURNED TO SENDER') return;
+                return fetch('../api/download-receipt.php?tracking=' + encodeURIComponent(safeTracking), {
+                    method: 'GET',
+                    cache: 'no-store'
+                }).catch(function() {
+                    return null;
+                });
+            })
+            .catch(function() {
+                // Background task only.
+            });
+        }
 
         function focusScannedRow() {
             const url = new URL(window.location.href);

@@ -256,6 +256,60 @@ try {
         ? $columnValues['Date released to AFD']
         : ($currentRecord['Date released to AFD'] ?? '');
 
+    // If tracking number is present but File Name is empty, auto-assign proof_<tracking>.pdf.
+    if ($trackingSubmitted) {
+        $trackingClean = trim((string)$submittedTrackingNo);
+        $fileNameCol = 'File Name (PDF)';
+        $currentFileNameValue = array_key_exists($fileNameCol, $columnValues)
+            ? trim((string)$columnValues[$fileNameCol])
+            : '';
+
+        if ($trackingClean !== '' && $trackingClean !== '0' && $currentFileNameValue === '') {
+            $autoFileName = 'proof_' . $trackingClean . '.pdf';
+            $columnValues[$fileNameCol] = $autoFileName;
+            $fileParamName = ':p_' . preg_replace('/[^a-z0-9_]/i', '_', $fileNameCol);
+            $params[$fileParamName] = $autoFileName;
+
+            $hasFileNameUpdate = false;
+            foreach ($updates as $u) {
+                if (strpos($u, '`' . $fileNameCol . '`') !== false) {
+                    $hasFileNameUpdate = true;
+                    break;
+                }
+            }
+            if (!$hasFileNameUpdate) {
+                $updates[] = '`' . $fileNameCol . '` = ' . $fileParamName;
+            }
+        }
+    }
+
+    // If tracking number is explicitly cleared, also clear tracking-derived fields.
+    if ($trackingSubmitted && (trim($submittedTrackingNo) === '' || trim($submittedTrackingNo) === '0')) {
+        $dependentTrackingFields = [
+            'Status' => '',
+            'Date' => '',
+            'Transmittal Remarks/Received By' => '',
+            'File Name (PDF)' => '',
+        ];
+
+        foreach ($dependentTrackingFields as $depCol => $depVal) {
+            $columnValues[$depCol] = $depVal;
+            $depParamName = ':p_' . preg_replace('/[^a-z0-9_]/i', '_', $depCol);
+            $params[$depParamName] = $depVal;
+
+            $hasDependentUpdate = false;
+            foreach ($updates as $u) {
+                if (strpos($u, "`{$depCol}`") !== false) {
+                    $hasDependentUpdate = true;
+                    break;
+                }
+            }
+            if (!$hasDependentUpdate) {
+                $updates[] = "`{$depCol}` = {$depParamName}";
+            }
+        }
+    }
+
     // Always enforce canonical sender details on edit.
     $defaultSender = buildDefaultSenderDetails($dateForDefaultSender, $batchId);
     $columnValues['Sender Details'] = $defaultSender;

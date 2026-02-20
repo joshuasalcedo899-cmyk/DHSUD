@@ -116,12 +116,6 @@ function onScanSuccess(decodedText) {
         }
         document.getElementById("result").innerHTML = "Tracking number saved.";
 
-        // Only generate PDF for final statuses.
-        const shouldDownloadPdf = await shouldGeneratePdfByStatus(noticeCode);
-        if (shouldDownloadPdf) {
-            await generateReceiptPDF(trackingNumber);
-        }
-
         if ((isEmbedded || isInIframe) && window.parent && window.parent !== window) {
             await stopCurrentStream();
             window.parent.postMessage({
@@ -130,6 +124,12 @@ function onScanSuccess(decodedText) {
                 trackingNumber: trackingNumber
             }, window.location.origin);
             return;
+        }
+
+        // Only generate PDF for final statuses.
+        const shouldDownloadPdf = await shouldGeneratePdfByStatus(noticeCode);
+        if (shouldDownloadPdf) {
+            await generateReceiptPDF(trackingNumber);
         }
 
         // return to table
