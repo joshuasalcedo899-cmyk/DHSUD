@@ -1,4 +1,4 @@
-﻿ 
+ 
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
@@ -2114,10 +2114,12 @@ HREDRD-EMES
             if (targetId <= 0) return;
             const notifications = readNotifications();
             let noticeCode = '';
+            let statusType = '';
             let changed = false;
             notifications.forEach(function(n) {
                 if ((parseInt(n.id, 10) || 0) === targetId) {
                     noticeCode = ((n.trackingId || '') + '').trim();
+                    statusType = (n.statusType === 'returned' ? 'returned' : 'delivered');
                     if (!n.read) {
                         n.read = true;
                         changed = true;
@@ -2145,19 +2147,22 @@ HREDRD-EMES
             closeNotifModal();
 
             if (noticeCode) {
-                navigateToNoticeRow(noticeCode);
+                navigateToNoticeRow(noticeCode, statusType);
             }
         }
 
-        function navigateToNoticeRow(noticeCode) {
+        function navigateToNoticeRow(noticeCode, statusType) {
             const safeNotice = (noticeCode || '').trim();
             if (!safeNotice) return;
 
             const row = document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
             if (row) {
                 row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-                row.classList.add('scanned-row-focus');
-                setTimeout(function() { row.classList.remove('scanned-row-focus'); }, 2600);
+                var focusClass = statusType === 'returned' ? 'notif-row-focus-returned' : (statusType === 'delivered' ? 'notif-row-focus-delivered' : 'scanned-row-focus');
+                row.classList.add(focusClass);
+                setTimeout(function() {
+                    row.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
+                }, 2600);
                 return;
             }
 

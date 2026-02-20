@@ -1161,6 +1161,14 @@ img {
             background: #fff7c2 !important;
             transition: background 0.8s ease;
         }
+        tr.notif-row-focus-delivered td {
+            background: #dbf3dd !important;
+            transition: background 0.8s ease;
+        }
+        tr.notif-row-focus-returned td {
+            background: #f5dbde !important;
+            transition: background 0.8s ease;
+        }
         .notice-code-cell {
             position: relative;
         }
