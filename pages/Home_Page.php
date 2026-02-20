@@ -1503,6 +1503,46 @@ HREDRD-EMES
             });
         }
 
+        function rebuildVisibleActionCellForSearch(tr, rowObj) {
+            if (!tr || !rowObj) return;
+
+            tr.querySelectorAll('td[data-temp-action="1"]').forEach(function(td) { td.remove(); });
+
+            const lastCell = tr.lastElementChild;
+            if (!lastCell) return;
+
+            const hasActionContent =
+                !!lastCell.querySelector('.btn-scan, .btn-track, .track-result') ||
+                /auto\s*tracking/i.test((lastCell.textContent || '').trim());
+
+            if (hasActionContent) {
+                if (lastCell.hasAttribute('rowspan')) {
+                    lastCell.removeAttribute('rowspan');
+                }
+                return;
+            }
+
+            const trackingValue = ((rowObj['Tracking No.'] || '') + '').trim();
+            const noticeCode = ((rowObj['Notice/Order Code'] || '') + '').trim();
+            const tempAction = document.createElement('td');
+            tempAction.setAttribute('data-temp-action', '1');
+
+            if (trackingValue && trackingValue !== '0') {
+                tempAction.innerHTML = '<span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span><div class="track-result"></div>';
+            } else {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn-scan';
+                btn.style.display = 'inline-block';
+                btn.style.textDecoration = 'none';
+                btn.textContent = 'Scan';
+                btn.addEventListener('click', function() { openScannerModal(noticeCode); });
+                tempAction.appendChild(btn);
+            }
+
+            tr.appendChild(tempAction);
+        }
+
         function findRowByNoticeCode(noticeCode) {
             const safeNotice = (noticeCode || '').trim();
             if (!safeNotice) return null;
@@ -1583,11 +1623,13 @@ HREDRD-EMES
                 const isChecked = !!(cb && cb.checked);
 
                 tr.querySelectorAll('td[data-temp-fill="1"]').forEach(function(td) { td.remove(); });
+                tr.querySelectorAll('td[data-temp-action="1"]').forEach(function(td) { td.remove(); });
                 if (isChecked) {
                     tr.style.display = '';
                     if (isFiltering && !yearBatchMode) {
                         const rowObjChecked = rowDataById.get(rowId);
                         rebuildVisibleRowCellsForSearch(tr, rowObjChecked);
+                        rebuildVisibleActionCellForSearch(tr, rowObjChecked);
                     }
                     return;
                 }
@@ -1609,6 +1651,7 @@ HREDRD-EMES
                 if (visible && isFiltering && !yearBatchMode) {
                     const rowObj = rowDataById.get(rowId);
                     rebuildVisibleRowCellsForSearch(tr, rowObj);
+                    rebuildVisibleActionCellForSearch(tr, rowObj);
                 }
             });
 
@@ -1625,6 +1668,28 @@ HREDRD-EMES
                 });
             }
         }
+
+        let wasSearchFilterActive = false;
+        let searchClearRefreshInFlight = false;
+
+        function handleSearchInputChange() {
+            const input = document.getElementById('tableSearchInput');
+            const currentValue = ((input && input.value) ? input.value : '').trim();
+            const isSearchActiveNow = currentValue !== '';
+
+            filterTableRows();
+
+            if (wasSearchFilterActive && !isSearchActiveNow && !searchClearRefreshInFlight) {
+                searchClearRefreshInFlight = true;
+                refreshHomeData()
+                    .finally(function() {
+                        searchClearRefreshInFlight = false;
+                    });
+            }
+
+            wasSearchFilterActive = isSearchActiveNow;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             document.addEventListener('click', function(e) {
                 var dropdown = document.getElementById('rowMenuDropdown');
@@ -1641,7 +1706,8 @@ HREDRD-EMES
             const searchInput = document.getElementById('tableSearchInput');
             const searchBtn = document.getElementById('tableSearchBtn');
             const yearSelect = document.getElementById('tableSortYear');
-            searchInput.addEventListener('input', filterTableRows);
+            wasSearchFilterActive = ((searchInput && searchInput.value) ? searchInput.value.trim() : '') !== '';
+            searchInput.addEventListener('input', handleSearchInputChange);
             searchBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 filterTableRows();
@@ -1715,6 +1781,29 @@ HREDRD-EMES
             });
         }
 
+        function getRowGroupForHighlight(row) {
+            if (!row) return [];
+            const batchId = (row.dataset.batchId || '').trim();
+            if (!batchId) return [row];
+            return Array.from(document.querySelectorAll('tr[data-batch-id="' + CSS.escape(batchId) + '"]'));
+        }
+
+        function applyTemporaryRowHighlight(row, focusClass, durationMs) {
+            const rows = getRowGroupForHighlight(row);
+            if (!rows.length) return;
+
+            rows.forEach(function(r) {
+                r.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
+                r.classList.add(focusClass);
+            });
+
+            setTimeout(function() {
+                rows.forEach(function(r) {
+                    r.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
+                });
+            }, durationMs || 2600);
+        }
+
         function focusScannedRow() {
             const url = new URL(window.location.href);
             const urlRowId = parseInt(url.searchParams.get('scanned_id') || '0', 10) || 0;
@@ -1739,8 +1828,7 @@ HREDRD-EMES
             }
 
             row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-            row.classList.add('scanned-row-focus');
-            setTimeout(function() { row.classList.remove('scanned-row-focus'); }, 2600);
+            applyTemporaryRowHighlight(row, 'scanned-row-focus', 2600);
 
             sessionStorage.removeItem('dhsud_focus_notice');
             sessionStorage.removeItem('dhsud_focus_id');
@@ -2161,10 +2249,7 @@ HREDRD-EMES
             if (row) {
                 row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                 var focusClass = statusType === 'returned' ? 'notif-row-focus-returned' : (statusType === 'delivered' ? 'notif-row-focus-delivered' : 'scanned-row-focus');
-                row.classList.add(focusClass);
-                setTimeout(function() {
-                    row.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
-                }, 2600);
+                applyTemporaryRowHighlight(row, focusClass, 2600);
                 return;
             }
 
