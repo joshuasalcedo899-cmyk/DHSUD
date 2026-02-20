@@ -1,4 +1,4 @@
- 
+﻿ 
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
@@ -209,12 +209,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
 <body class="admin-home-bg">
     <div class="admin-home-header">
-    <div class="welcome-block">
-        <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:5px;margin-bottom:2px;">Welcome, Admin!</div>
-        <a href="logout.php" class="logout-btn">Logout</a>
-    </div>
-        <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
-        <div class="admin-home-header-border"></div>
+        <div class="welcome-block">
+            <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:5px;margin-bottom:2px;">Welcome, Admin!</div>
+            <a href="logout.php" class="logout-btn">Logout</a>
+        </div>
+            <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
+            <div class="admin-home-header-border"></div>
     </div>
         <!-- Edit Modal (hidden by default) -->
         <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;">
