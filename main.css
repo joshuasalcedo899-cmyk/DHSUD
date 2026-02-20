@@ -1920,3 +1920,70 @@ img {
             color: #fff;
         }
 
+/* Global responsive edge gutter (up to ~0.25in) */
+:root {
+    --page-edge-gutter: clamp(12px, 2.2vw, 0.25in);
+}
+
+body {
+    padding-left: max(var(--page-edge-gutter), env(safe-area-inset-left));
+    padding-right: max(var(--page-edge-gutter), env(safe-area-inset-right));
+    overflow-x: hidden;
+}
+
+/* Fixed shells aligned to gutter */
+.admin-home-header {
+    left: max(var(--page-edge-gutter), env(safe-area-inset-left)) !important;
+    width: calc(
+        100vw - max(var(--page-edge-gutter), env(safe-area-inset-left))
+        - max(var(--page-edge-gutter), env(safe-area-inset-right))
+    ) !important;
+}
+
+.admin-home-header-border {
+    width: 100% !important;
+}
+
+.admin-home-container,
+.admin-table-container,
+.tracking-table-container {
+    max-width: calc(
+        100vw - max(var(--page-edge-gutter), env(safe-area-inset-left))
+        - max(var(--page-edge-gutter), env(safe-area-inset-right))
+    ) !important;
+}
+
+.button-container,
+.bottom-container {
+    left: max(var(--page-edge-gutter), env(safe-area-inset-left)) !important;
+    right: max(var(--page-edge-gutter), env(safe-area-inset-right)) !important;
+}
+
+/* Stretch admin header responsively to available screen width */
+.admin-home-header {
+    position: sticky;
+    top: 0;
+    left: max(var(--page-edge-gutter), env(safe-area-inset-left)) !important;
+    right: max(var(--page-edge-gutter), env(safe-area-inset-right)) !important;
+    width: auto !important;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.welcome-block {
+    width: 100%;
+    margin: 0;
+    padding: 0.35rem 0;
+}
+
+.admin-home-header-img {
+    width: min(100%, 400px);
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    object-fit: contain;
+}
+
