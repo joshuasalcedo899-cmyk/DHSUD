@@ -1934,8 +1934,6 @@ img {
 }
 
 body {
-    padding-left: max(var(--page-edge-gutter), env(safe-area-inset-left));
-    padding-right: max(var(--page-edge-gutter), env(safe-area-inset-right));
     overflow-x: hidden;
 }
 
