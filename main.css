@@ -1235,6 +1235,7 @@ img {
         }
         .pdf-viewer-close {
             border: none;
+            background: none;
             cursor: pointer;
         }
         .pdf-viewer-frame {
