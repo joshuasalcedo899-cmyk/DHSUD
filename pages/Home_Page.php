@@ -1182,10 +1182,116 @@ HREDRD-EMES
                     if (focusRowId > 0 || focusNotice) {
                         focusScannedRow();
                     }
+                    return true;
                 })
                 .catch(function(err) {
                     console.error('refreshHomeData failed:', err);
+                    return false;
                 });
+        }
+
+        const SMART_POLLING = {
+            activeIntervalMs: 12000,
+            idleIntervalMs: 30000,
+            hiddenIntervalMs: 120000,
+            activeWindowMs: 45000,
+            maxBackoffMs: 300000,
+            jitterRatio: 0.1
+        };
+
+        const smartPollingState = {
+            timerId: 0,
+            inProgress: false,
+            failureCount: 0,
+            lastUserActivityAt: Date.now()
+        };
+
+        function markPollingActivity() {
+            smartPollingState.lastUserActivityAt = Date.now();
+        }
+
+        function getSmartPollingDelay() {
+            const now = Date.now();
+            const inactiveForMs = now - smartPollingState.lastUserActivityAt;
+            let delay = SMART_POLLING.activeIntervalMs;
+
+            if (document.hidden) {
+                delay = SMART_POLLING.hiddenIntervalMs;
+            } else if (inactiveForMs > SMART_POLLING.activeWindowMs) {
+                delay = SMART_POLLING.idleIntervalMs;
+            }
+
+            if (smartPollingState.failureCount > 0) {
+                const multiplier = Math.pow(2, smartPollingState.failureCount);
+                delay = Math.min(delay * multiplier, SMART_POLLING.maxBackoffMs);
+            }
+
+            const jitter = Math.round(delay * SMART_POLLING.jitterRatio * Math.random());
+            return delay + jitter;
+        }
+
+        function scheduleSmartPolling(options = {}) {
+            if (smartPollingState.timerId) {
+                clearTimeout(smartPollingState.timerId);
+            }
+            const immediate = options.immediate === true;
+            const delay = immediate ? 250 : getSmartPollingDelay();
+
+            smartPollingState.timerId = window.setTimeout(function() {
+                runSmartPollingTick();
+            }, delay);
+        }
+
+        function runSmartPollingTick() {
+            if (smartPollingState.inProgress) {
+                scheduleSmartPolling();
+                return;
+            }
+
+            smartPollingState.inProgress = true;
+
+            refreshHomeData()
+                .then(function(success) {
+                    if (success) {
+                        smartPollingState.failureCount = 0;
+                    } else {
+                        smartPollingState.failureCount += 1;
+                    }
+                })
+                .catch(function() {
+                    smartPollingState.failureCount += 1;
+                })
+                .finally(function() {
+                    smartPollingState.inProgress = false;
+                    scheduleSmartPolling();
+                });
+        }
+
+        function initSmartPolling() {
+            const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+            activityEvents.forEach(function(evtName) {
+                window.addEventListener(evtName, markPollingActivity, { passive: true });
+            });
+
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    markPollingActivity();
+                    scheduleSmartPolling({ immediate: true });
+                    return;
+                }
+                scheduleSmartPolling();
+            });
+
+            window.addEventListener('focus', function() {
+                markPollingActivity();
+                scheduleSmartPolling({ immediate: true });
+            });
+
+            window.addEventListener('online', function() {
+                scheduleSmartPolling({ immediate: true });
+            });
+
+            scheduleSmartPolling();
         }
 
         function getStatusClass(statusValue) {
@@ -1415,6 +1521,7 @@ HREDRD-EMES
             rebuildMailRowsFromTable();
             focusScannedRow();
             autoTrackEligibleRows();
+            initSmartPolling();
 
             const scannerModal = document.getElementById('scannerModal');
             if (scannerModal) {
@@ -1425,10 +1532,6 @@ HREDRD-EMES
                 });
             }
 
-            setInterval(function() {
-                if (document.hidden) return;
-                refreshHomeData();
-            }, 12000);
         });
 
         window.addEventListener('message', function(event) {

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 19, 2026 at 08:06 AM
+-- Generation Time: Feb 20, 2026 at 02:14 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,6 +44,15 @@ CREATE TABLE `archive` (
   `Evaluator` varchar(100) NOT NULL,
   `deleted_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `archive`
+--
+
+INSERT INTO `archive` (`id`, `original_mail_id`, `Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, `Parcel Details`, `Sender Details`, `File Name (PDF)`, `Tracking No.`, `Status`, `Transmittal Remarks/Received By`, `Date`, `Evaluator`, `deleted_at`) VALUES
+(4, 18, '1', '2026-02-19', 1, '', 'test', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)', 'EMES-260219-001', '', '', '', '0000-00-00', '', '2026-02-19 15:45:39'),
+(5, 20, '142322', '2026-02-19', 0, '', 'test', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)', 'EMES-260219-000', '6088904982508061', 'DELIVERED', 'Noel Rielago (Security Guard)', '2026-01-30', '', '2026-02-19 16:06:20'),
+(6, 21, '4345', '2026-02-19', 0, '', 'test', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)', 'EMES-260219-000', '6088904982508061', 'DELIVERED', 'Noel Rielago (Security Guard)', '2026-01-30', '', '2026-02-19 16:11:40');
 
 -- --------------------------------------------------------
 
@@ -88,7 +97,10 @@ INSERT INTO `mailtracking` (`id`, `Notice/Order Code`, `Date released to AFD`, `
 (14, '3456', '2026-02-13', 4, 'wertyu', 'qwertyukl', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-13-2026)', 'EMES-260213-004', '6088904982508061', 'DELIVERED', 'Noel Rielago (Security Guard)', '2026-01-30', ''),
 (15, 'RO4A-2025-1223-31735', '2026-02-03', 45, 'TEST', 'LIMA TECHNOLOGY CENTER SPECIAL ECONOMIC ZONE PHASE 2B\r\n(January 21, 2026)\r\nACK LETTER', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-03-2026)\nBatch ID: BATCH-20260218-014011-E599', 'proof_6088904982508061.pdf', '6088904982508061', 'DELIVERED', 'Miventte Acosta (Bldg. Staff)', '2026-02-09', ''),
 (16, '1', '2026-02-19', 0, '', 'test1', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)\nBatch ID: BATCH-20260219-023906-7408', 'EMES-260219-000', '8710679919185027', 'DELIVERED', 'Lg Gonzaga  (Bldg. Staff)', '2026-01-30', ''),
-(17, '2', '2026-02-19', 0, '', 'test2', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)\nBatch ID: BATCH-20260219-023906-7408', 'EMES-260219-000', '8710679919185027', 'DELIVERED', 'Lg Gonzaga  (Bldg. Staff)', '2026-01-30', '');
+(17, '2', '2026-02-19', 0, '', 'test2', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)\nBatch ID: BATCH-20260219-023906-7408', 'EMES-260219-000', '8710679919185027', 'DELIVERED', 'Lg Gonzaga  (Bldg. Staff)', '2026-01-30', ''),
+(19, '114', '2026-02-19', 1, '', 'test', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)', 'EMES-260219-001', '8710679919185027', 'DELIVERED', 'Lg Gonzaga  (Bldg. Staff)', '2026-01-30', ''),
+(22, '23', '2026-02-19', 1, '', 'test', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)', 'EMES-260219-001', '6088904982508061', 'DELIVERED', 'Noel Rielago (Security Guard)', '2026-01-30', ''),
+(23, '56', '2026-02-19', 0, '', 'test', 'Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538\n\n(February-19-2026)', 'EMES-260219-000', '6088904982508061', 'DELIVERED', 'Noel Rielago (Security Guard)', '2026-01-30', '');
 
 --
 -- Triggers `mailtracking`
@@ -185,13 +197,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `archive`
 --
 ALTER TABLE `archive`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `mailtracking`
 --
 ALTER TABLE `mailtracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `users`
