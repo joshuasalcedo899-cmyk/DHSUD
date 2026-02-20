@@ -1,4 +1,4 @@
- 
+﻿ 
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
@@ -205,607 +205,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
     <title>Home Page</title>
     <link rel="icon" type="image/x-icon" href="../assets/DHSUDLogo.ico">
     <link rel="stylesheet" href="../main.css">
-    <style>
-        /* Table uses .listview-table .tracking-table from main.css (same as Tracking_Page) */
-        .admin-table-container .table-scroll-area thead th {
-            position: sticky;
-            top: 0;
-            z-index: 3;
-            background: #22336A !important;
-            padding: 0px;
-        }
-        form.inline { margin:0; }
-        select { padding:4px; }
-        button.save { padding:4px 8px; }
-        /* Ensure status column does not overflow */
-        td.status-cell {
-            position: relative;
-            overflow: hidden;
-            padding: 8px;
-            min-width: 0;
-            max-width: 100%;
-        }
-        .status-text { font-weight: 700; }
-        .status-delivered { color: #2e7d32; }
-        .status-returned { color: #c62828; }
-        .status-ongoing { color: #b39b00; }
-        .status-personal { color: #22336A; }
-        tr.batch-row td { background: #ececec !important; }
-        tr.scanned-row-focus td {
-            background: #fff7c2 !important;
-            transition: background 0.8s ease;
-        }
-        .notice-code-cell {
-            position: relative;
-        }
-        .batch-icon {
-            position: absolute;
-            top: 4px;
-            right: 6px;
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
-        }
-        .message { padding:8px; margin:10px 0; }
-        .row-message { font-size:0.9em; color: green; margin-top:6px; opacity:1; transition: opacity 0.5s ease; }
-        .stats { margin-bottom:10px; }
-        .stat-item { display:inline-block; margin-right:12px; padding:4px 6px; background:#f1f1f1; border-radius:4px; font-weight:600; }
-        .btn-track, .btn-scan { padding:6px 12px; font-weight: 600; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.7rem; }
-        .btn-track { background-color:#22336A; }
-        .btn-track:hover { background-color:black; }
-        .btn-scan { background-color:#2e7d32; }
-        .btn-scan:hover { background-color:#1b5e20; }
-        .status-delivered { color:#1b7f3b; font-weight:700; }
-        .pdf-link-in-cell {
-            color: #1a237e;
-            text-decoration: underline;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .pdf-viewer-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 12000;
-            background: rgba(0, 0, 0, 0.72);
-            justify-content: center;
-            align-items: center;
-            padding: 14px;
-            box-sizing: border-box;
-        }
-        .pdf-viewer-panel {
-            width: min(95vw, calc(185vh * 210 / 297));
-            height: min(92vh, calc(95vw * 297 / 210));
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,.28);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .pdf-viewer-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            border-bottom: 1px solid #d1d5db;
-        }
-        .pdf-viewer-title {
-            margin: 0;
-            color: #22336A;
-            font-size: 0.95rem;
-            font-weight: 700;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .pdf-viewer-close {
-            border: none;
-            cursor: pointer;
-            background: none;
-        }
-        .pdf-viewer-frame {
-            width: 100%;
-            height: 100%;
-            border: none;
-            flex: 1;
-        }
-
-        /* Modal Form UI - Two Column Grid */
-        .edit-modal {
-            background: #fff;
-            border-radius: 4px;
-            border: solid 15px #22336A ;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.18);
-            padding: 32px 32px 24px 32px;
-            max-width: 780px;
-            width: min(780px, calc(100vw - 24px));
-            margin: 0 auto;
-            position: relative;
-            box-sizing: border-box;
-            max-height: calc(100vh - 24px);
-            overflow: auto;
-        }
-        @media (max-width: 768px) {
-            .edit-modal {
-                padding: 20px 20px 16px 20px;
-                width: calc(100vw - 20px);
-                border-width: 8px;
-            }
-        }
-        @media (max-width: 480px) {
-            .edit-modal {
-                padding: 16px 16px 12px 16px;
-                width: calc(100vw - 12px);
-                border-width: 6px;
-            }
-        }
-        .edit-modal h2 {
-            text-align: center;
-            color: #22336A;
-            font-size: 1.15em;
-            font-weight: bold;
-            margin-bottom: 30px;
-            letter-spacing: 1px;
-        }
-        .edit-modal form {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0 24px;
-        }
-        @media (max-width: 768px) {
-            .edit-modal form {
-                grid-template-columns: 1fr;
-                gap: 0;
-            }
-        }
-        .edit-modal label {
-            font-size: 0.98em;
-            color: #22336A;
-            margin-bottom: 4px;
-            font-weight: 600;
-            display: block;
-        }
-        .edit-modal input,
-        .edit-modal select,
-        .edit-modal textarea {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid #bdbdbd;
-            border-radius: 4px;
-            font-size: 1em;
-            background: #f7f8fa;
-            margin-bottom: 10px;
-            display: block;
-        }
-        .edit-modal textarea {
-            resize: vertical;
-            min-height: 42px;
-        }
-        .edit-modal select {
-            background: #b6bed3;
-        }
-        .edit-modal input[type="date"] {
-            padding-right: 30px;
-        }
-        .edit-modal .modal-actions {
-            grid-column: 1 / span 2;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 1em;
-            margin-top: 10px;
-            margin-bottom: 0;
-        }
-        .edit-modal .modal-btn {
-            padding: 8px 22px;
-            border-radius: 4px;
-            font-size: 1em;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .edit-modal .modal-btn.save {
-            background: #1a237e;
-            color: #fff;
-        }
-        .edit-modal .modal-btn.save:hover {
-            background: #3949ab;
-        }
-        .edit-modal .modal-btn.cancel {
-            background: #AA4444;
-            color: #ffffffff;
-        }
-        .edit-modal .modal-btn.cancel:hover {
-            background: #bdbdbd;
-        }
-        .edit-modal .modal-close {
-            position: absolute;
-            top: 18px;
-            right: 18px;
-            background: none;
-            border: none;
-            font-size: 2em;
-            color: #1a237e;
-            cursor: pointer;
-            z-index: 2;
-        }
-        .edit-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 12px;
-            box-sizing: border-box;
-            overflow: auto;
-            z-index: 1000;
-            backdrop-filter: blur(4px);
-        }
-        .add-pairs-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .add-pair-row {
-            display: grid;
-            grid-template-columns: 1fr 34px 1fr;
-            gap: 10px;
-            align-items: start;
-        }
-        .pair-row-btn {
-            width: 30px;
-            height: 30px;
-            align-self: center;
-            border: 2px solid #22336A;
-            border-radius: 4px;
-            background: #fff;
-            color: #22336A;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            line-height: 1;
-            padding: 0;
-        }
-        .pair-row-btn:hover {
-            background: #22336A;
-            color: #fff;
-        }
-        #scannerModal {
-            padding: 12px;
-            box-sizing: border-box;
-        }
-        #scannerModal .modal-panel {
-            width: min(980px, calc(100vw - 24px));
-            max-height: calc(100vh - 24px);
-            overflow: auto;
-            border-radius: 10px;
-        }
-        #scannerModal .modal-panel {
-            overflow: hidden;
-        }
-        #scannerModal #scannerFrame {
-            height: min(75vh, 760px);
-        }
-        @media (max-width: 768px) {
-            .add-pair-row {
-                grid-template-columns: 1fr;
-            }
-            .pair-row-btn {
-                width: 36px;
-                height: 36px;
-                justify-self: start;
-            }
-            .edit-modal .modal-actions {
-                grid-column: 1 / span 1;
-            }
-            .edit-modal .modal-btn {
-                width: 100%;
-            }
-            #scannerModal {
-                padding: 8px;
-            }
-            #scannerModal .modal-panel {
-                width: calc(100vw - 16px);
-                max-height: calc(100vh - 16px);
-            }
-            #scannerModal #scannerFrame {
-                height: 68vh;
-            }
-        }
-        .top-bar {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            width: 100%;
-            box-sizing: border-box;
-            gap: 12px;
-            overflow-x: hidden;
-        }
-        .top-bar-left {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-        }
-        .top-bar-title {
-            text-align: center;
-            font-size: 1.3em;
-            font-weight: 700;
-            color: #22336A;
-            white-space: nowrap;
-        }
-        .table-sort-bar {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
-            max-width: 100%;
-            flex-wrap: wrap;
-            box-sizing: border-box;
-            min-width: 0;
-        }
-
-        .table-search-bar {
-            display: flex;
-            align-items: center;
-            gap: 0;
-            margin-left: auto;
-            flex-shrink: 0; /* prevent breaking layout */
-        }
-
-        .table-search-input {
-            max-width: 200px; /* limit input width */
-            width: 150px;
-            min-width: 0;
-            flex: 1;
-            padding: 0.4rem;
-            border: 1.5px solid black;
-            border-radius: 5px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            outline: none;
-            transition: border 0.2s;
-        }
-        @media (max-width: 1024px) {
-            .table-search-input {
-                width: 140px;
-            }
-        }
-
-        .table-search-btn img {
-            width: 16px;
-            height: 16px;
-            margin-right: 0;
-        }
-        .table-notif-btn {
-            padding: 0.26rem 0.5rem;
-            color: white;
-            background: white;
-            border: 1.5px solid black;
-            cursor: pointer;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .table-notif-btn:hover {
-            background: #f5f5f5;
-        }
-        .table-notif-btn img {
-            width: 20px;
-            height: 20px;
-            margin-right: 1px;
-        }
-        .notif-badge {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            background: #d32f2f;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            font-weight: 700;
-            border: 2px solid white;
-        }
-        .notif-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: flex-end;
-            align-items: flex-start;
-            padding: 80px 20px 20px 20px;
-            box-sizing: border-box;
-            z-index: 10001;
-        }
-        .notif-modal-overlay.show {
-            display: flex;
-        }
-        .notif-modal {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 420px;
-            max-height: calc(100vh - 40px);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            animation: slideInRight 0.3s ease-out;
-        }
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        .notif-modal-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .notif-modal-header h2 {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #22336A;
-        }
-        .notif-modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #6b7280;
-            padding: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-        }
-        .notif-modal-close:hover {
-            background: #f3f4f6;
-            color: #22336A;
-        }
-        .notif-modal-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px 0;
-        }
-        .notif-item {
-            padding: 16px 24px;
-            border-bottom: 1px solid #f3f4f6;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .notif-item:hover {
-            background: #f9fafb;
-        }
-        .notif-item:last-child {
-            border-bottom: none;
-        }
-        .notif-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-top: 6px;
-            flex-shrink: 0;
-        }
-        .notif-indicator.unread {
-            background: #1E1E1E;
-        }
-        .notif-indicator.read {
-            background: transparent;
-            border: 1.5px solid #9ca3af;
-        }
-        .notif-content {
-            flex: 1;
-            min-width: 0;
-        }
-        .notif-text {
-            font-size: 0.9rem;
-            color: #1E1E1E;
-            margin-bottom: 6px;
-            line-height: 1.4;
-        }
-        .notif-tracking-id {
-            font-weight: 700;
-            color: #1E1E1E;
-        }
-        .notif-status {
-            font-weight: 700;
-        }
-        .notif-status.delivered {
-            color: #2e7d32;
-        }
-        .notif-status.returned {
-            color: #c62828;
-        }
-        .notif-timestamp {
-            font-size: 0.75rem;
-            color: #6b7280;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .notif-timestamp span:first-child {
-            font-size: 0.7rem;
-        }
-        .notif-action {
-            flex-shrink: 0;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #6b7280;
-            font-size: 1.2rem;
-            padding: 4px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .notif-action:hover {
-            background: #f3f4f6;
-            color: #22336A;
-        }
-        .notif-empty {
-            padding: 40px 24px;
-            text-align: center;
-            color: #6b7280;
-            font-size: 0.9rem;
-        }
-        @media (max-width: 768px) {
-            .top-bar {
-                grid-template-columns: 1fr;
-                align-items: stretch;
-                gap: 8px;
-            }
-            .top-bar-left {
-                justify-content: flex-start;
-            }
-            .top-bar-title {
-                order: -1;
-                text-align: center;
-            }
-            .table-sort-bar {
-                width: 100%;
-                justify-content: flex-end;
-                gap: 8px;
-            }
-            .table-search-input {
-                width: 100%;
-                max-width: 100%;
-            }
-        }
-
-
-    </style>
 </head>
 
 <body class="admin-home-bg">
@@ -820,31 +219,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         <!-- Edit Modal (hidden by default) -->
         <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;">
             <div class="edit-modal edit-modal-scrollable" id="editModal">
-                    <style>
-                        /* Edit Modal scrollable and responsive */
-                        .edit-modal-scrollable {
-                            max-height: 90vh;
-                            overflow-y: auto;
-                            min-width: 320px;
-                            width: 100%;
-                            box-sizing: border-box;
-                        }
-                        @media (max-width: 768px) {
-                            .edit-modal-scrollable {
-                                max-width: 98vw;
-                                min-width: 0;
-                                padding: 12px 6px 8px 6px;
-                            }
-                        }
-                        @media (max-width: 480px) {
-                            .edit-modal-scrollable {
-                                max-width: 100vw;
-                                min-width: 0;
-                                padding: 8px 2px 6px 2px;
-                            }
-                        }
-                    </style>
-                <button class="modal-close" onclick="closeEditModal()" title="Close">&times;</button>
+<button class="modal-close" onclick="closeEditModal()" title="Close">&times;</button>
                 <h2>EDIT MAIL RECORD</h2>
                 <form id="editForm" autocomplete="off">
                     <input type="hidden" name="original_id" id="editRowId">
@@ -893,31 +268,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         </div>
         <div id="addModalOverlay" class="edit-modal-overlay" style="display:none;">
             <div class="edit-modal add-modal-scrollable" id="addModal">
-                    <style>
-                        /* Add Modal scrollable and responsive */
-                        .add-modal-scrollable {
-                            max-height: 90vh;
-                            overflow-y: auto;
-                            min-width: 320px;
-                            width: 100%;
-                            box-sizing: border-box;
-                        }
-                        @media (max-width: 768px) {
-                            .add-modal-scrollable {
-                                max-width: 98vw;
-                                min-width: 0;
-                                padding: 12px 6px 8px 6px;
-                            }
-                        }
-                        @media (max-width: 480px) {
-                            .add-modal-scrollable {
-                                max-width: 100vw;
-                                min-width: 0;
-                                padding: 8px 2px 6px 2px;
-                            }
-                        }
-                    </style>
-                <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
+<button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
                 <h2>ADD RECORD</h2>
                 <form id="addForm" action="../api/Add.php" method="post" autocomplete="off">
 
@@ -937,34 +288,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 </div>
                             </div>
                         </div>
-                            <style>
-                                .notice-code-row {
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 6px;
-                                    margin-bottom: 4px;
-                                }
-                                .add-notice-btn, .remove-notice-btn {
-                                    background: none;
-                                    border: none;
-                                    padding: 0.3em 0.7em;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    cursor: pointer;
-                                    margin-left: 4px;
-                                    transition: background 0.2s;
-                                }
-                                .add-notice-btn img,  {
-                                    width: 22px;
-                                    height: 22px;
-                                }
-                                .remove-notice-btn img {
-                                    width: 20px;
-                                    height: 20px;
-                                }
-                            </style>
-                            <script>
+<script>
                             // Dynamic Notice/Order Code fields in Add Modal
                             document.addEventListener('DOMContentLoaded', function() {
                                 const fieldsContainer = document.getElementById('noticeCodeFields');
@@ -1366,71 +690,7 @@ HREDRD-EMES
             </div>
         </div>
         </div>
-        
-    <style>
-        .logout-btn {
-            display: block;
-            text-decoration: none;
-            font-weight: 600;
-            color: #726868;
-            font-size: 1em;
-            margin-bottom: -160px;
-            transition: color 0.2s, background 0.2s;
-        }
-        .logout-btn:hover {
-            color: black;
-        }
-        .add-btn {
-            background: #22336A;
-            color: #fff;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            font-weight: 700;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-            height: 35px;
-        }
-        .add-btn:hover {
-            background: black;
-            color: #fff;
-        }
-        .export-btn {
-            background: #22336A;
-            color: #fff;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-        }
-        .export-btn:hover {
-            background: black;
-            color: #fff;
-        }
-        .archive-btn {
-            background: #AA4444;
-            color: #fff;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            font-weight: 700;
-            font-size: 0.8rem;
-            cursor: pointer;
-            display: inline-block;
-            text-align: center;
-            text-decoration: none;
-            transition: background 0.2s, color 0.2s;
-        }
-        .archive-btn:hover {
-            background: #d32f2f;
-            color: #fff;
-        }
-    </style>
-        
-        <script>
+<script>
             (function cleanDeleteQueryParam() {
                 var url = new URL(window.location.href);
                 if (url.searchParams.has('deleted')) {
@@ -2022,16 +1282,20 @@ HREDRD-EMES
             const row = findRowByNoticeCode(noticeCode);
             if (!row) return;
 
+            const dateCell = row.querySelector('td[data-col="Date"]');
+            const existingDateText = ((dateCell && dateCell.textContent) ? dateCell.textContent : '').trim();
+            const nextDateText = (data.dateDisplay || formatDisplayDate(data.date || '') || existingDateText).trim();
             const statusCell = row.querySelector('td[data-col="Status"]');
             if (statusCell && typeof data.status !== 'undefined') {
+                const previousStatus = ((statusCell.textContent || '') + '').trim().toUpperCase();
+                const nextStatus = ((data.status || '') + '').trim().toUpperCase();
                 const statusClass = getStatusClass(data.status);
                 statusCell.innerHTML = `<span class="${statusClass}">${data.status || ''}</span>`;
+                maybeNotifyStatusChange((row.dataset.notice || '').trim() || noticeCode, previousStatus, nextStatus, nextDateText);
             }
 
-            const dateCell = row.querySelector('td[data-col="Date"]');
             if (dateCell) {
-                const dateText = (data.dateDisplay || formatDisplayDate(data.date || '') || '').trim();
-                dateCell.textContent = dateText;
+                dateCell.textContent = nextDateText;
             }
 
             const transmittalCell = row.querySelector('td[data-col="Transmittal Remarks/Received By"]');
@@ -2411,10 +1675,109 @@ HREDRD-EMES
             runTrackingUpdate(noticeCode, { silent: false });
         });
 
+        const NOTIFICATION_STORAGE_KEY = 'dhsud_status_notifications_v1';
+        let activeNotifActionId = 0;
+
+        function isNotifiableStatus(statusValue) {
+            const s = ((statusValue || '') + '').trim().toUpperCase();
+            return s === 'DELIVERED' || s === 'RETURNED TO SENDER';
+        }
+
+        function getNotificationStatusType(statusValue) {
+            const s = ((statusValue || '') + '').trim().toUpperCase();
+            return s === 'RETURNED TO SENDER' ? 'returned' : 'delivered';
+        }
+
+        function readNotifications() {
+            try {
+                const raw = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function writeNotifications(items) {
+            try {
+                localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(Array.isArray(items) ? items : []));
+            } catch (e) {
+                // ignore storage failures
+            }
+        }
+
+        function formatNotificationTimestamp(notif) {
+            const eventDate = ((notif && notif.eventDate) ? String(notif.eventDate) : '').trim();
+            const isoText = (notif && notif.timestampIso) ? String(notif.timestampIso) : '';
+            const d = new Date(isoText);
+            if (eventDate && Number.isNaN(d.getTime())) return eventDate;
+            if (Number.isNaN(d.getTime())) return eventDate;
+
+            const datePart = eventDate || d.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const timePart = d.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            return `${datePart} ${timePart}`;
+        }
+
+        function maybeNotifyStatusChange(noticeCode, previousStatus, nextStatus, eventDateText) {
+            const notice = (noticeCode || '').trim();
+            const prev = ((previousStatus || '') + '').trim().toUpperCase();
+            const next = ((nextStatus || '') + '').trim().toUpperCase();
+            const eventDate = ((eventDateText || '') + '').trim();
+            if (!notice) return;
+            if (!isNotifiableStatus(next)) return;
+            if (prev === next) return;
+
+            const notifications = readNotifications();
+            notifications.unshift({
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                trackingId: notice,
+                status: next,
+                statusType: getNotificationStatusType(next),
+                eventDate: eventDate,
+                timestampIso: new Date().toISOString(),
+                read: false
+            });
+
+            if (notifications.length > 100) notifications.length = 100;
+            writeNotifications(notifications);
+            updateNotifBadge(notifications.filter(function(n) { return !n.read; }).length);
+        }
+
+        function positionNotifModal() {
+            const overlay = document.getElementById('notifModalOverlay');
+            const modal = overlay ? overlay.querySelector('.notif-modal') : null;
+            const notifBtn = document.getElementById('tableNotifBtn');
+            if (!overlay || !modal || !notifBtn) return;
+
+            const btnRect = notifBtn.getBoundingClientRect();
+            const modalWidth = Math.min(420, Math.max(260, window.innerWidth - 16));
+            let left = btnRect.right - modalWidth;
+            left = Math.max(8, Math.min(left, window.innerWidth - modalWidth - 8));
+
+            const top = Math.max(8, btnRect.bottom + 10);
+            const maxHeight = Math.max(220, window.innerHeight - top - 10);
+            const arrowLeft = Math.max(18, Math.min(modalWidth - 18, btnRect.right - left - 14));
+
+            overlay.style.setProperty('--notif-left', left + 'px');
+            overlay.style.setProperty('--notif-top', top + 'px');
+            overlay.style.setProperty('--notif-max-height', maxHeight + 'px');
+            overlay.style.setProperty('--notif-arrow-left', arrowLeft + 'px');
+        }
+
         // Notification Modal Functions
         function openNotifModal() {
             const overlay = document.getElementById('notifModalOverlay');
             if (overlay) {
+                positionNotifModal();
                 overlay.classList.add('show');
                 loadNotifications();
             }
@@ -2431,41 +1794,7 @@ HREDRD-EMES
             const content = document.getElementById('notifModalContent');
             if (!content) return;
 
-            // Sample notifications - Replace with actual data from your tracking system
-            const notifications = [
-                {
-                    id: 1,
-                    trackingId: 'RO4A-ORD-2026-0114-953',
-                    status: 'DELIVERED',
-                    statusType: 'delivered',
-                    timestamp: '6 February 2026 at 2:00 PM',
-                    read: false
-                },
-                {
-                    id: 2,
-                    trackingId: 'V-2023-0272',
-                    status: 'DELIVERED',
-                    statusType: 'delivered',
-                    timestamp: '5 February 2026 at 10:30 AM',
-                    read: false
-                },
-                {
-                    id: 3,
-                    trackingId: 'RO4A-ORD-2025-1234-567',
-                    status: 'RETURNED TO SENDER',
-                    statusType: 'returned',
-                    timestamp: '4 February 2026 at 3:45 PM',
-                    read: true
-                },
-                {
-                    id: 4,
-                    trackingId: 'V-2023-0156',
-                    status: 'DELIVERED',
-                    statusType: 'delivered',
-                    timestamp: '3 February 2026 at 1:15 PM',
-                    read: true
-                }
-            ];
+            const notifications = readNotifications();
 
             if (notifications.length === 0) {
                 content.innerHTML = '<div class="notif-empty">No notifications</div>';
@@ -2476,20 +1805,30 @@ HREDRD-EMES
             const unreadCount = notifications.filter(n => !n.read).length;
             updateNotifBadge(unreadCount);
 
-            content.innerHTML = notifications.map(notif => `
-                <div class="notif-item" data-notif-id="${notif.id}" onclick="handleNotifClick(${notif.id})">
+            content.innerHTML = notifications.map(notif => {
+                const notifId = parseInt(notif.id, 10) || 0;
+                const menuOpen = activeNotifActionId === notifId;
+                return `
+                <div class="notif-item" data-notif-id="${notif.id}" data-notice="${escapeHtml(notif.trackingId)}" onclick="handleNotifClick(${notif.id})">
                     <div class="notif-indicator ${notif.read ? 'read' : 'unread'}"></div>
                     <div class="notif-content">
                         <div class="notif-text">
                             <span class="notif-tracking-id">${escapeHtml(notif.trackingId)}</span> is now <span class="notif-status ${notif.statusType}">${escapeHtml(notif.status)}</span>
                         </div>
                         <div class="notif-timestamp">
-                            <span>🕐</span> ${escapeHtml(notif.timestamp)}
+                            <span>&#128339;</span> ${escapeHtml(formatNotificationTimestamp(notif))}
                         </div>
                     </div>
-                    <button class="notif-action" onclick="event.stopPropagation(); handleNotifAction(${notif.id})" aria-label="More options">⋮</button>
+                    <div class="notif-action-wrap" onclick="event.stopPropagation();">
+                        <button class="notif-action" onclick="event.stopPropagation(); handleNotifAction(${notif.id})" aria-label="More options">&#8942;</button>
+                        ${menuOpen ? `
+                        <div class="notif-action-menu">
+                            <button class="notif-action-item" onclick="event.stopPropagation(); deleteNotification(${notif.id});">Delete</button>
+                        </div>` : ''}
+                    </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         function updateNotifBadge(count) {
@@ -2505,22 +1844,81 @@ HREDRD-EMES
         }
 
         function handleNotifClick(notifId) {
-            // Mark as read and handle navigation if needed
-            const notifItem = document.querySelector(`[data-notif-id="${notifId}"]`);
-            if (notifItem) {
-                const indicator = notifItem.querySelector('.notif-indicator');
-                if (indicator && indicator.classList.contains('unread')) {
-                    indicator.classList.remove('unread');
-                    indicator.classList.add('read');
-                    loadNotifications(); // Refresh to update badge
+            const targetId = parseInt(notifId, 10) || 0;
+            if (targetId <= 0) return;
+            const notifications = readNotifications();
+            let noticeCode = '';
+            let changed = false;
+            notifications.forEach(function(n) {
+                if ((parseInt(n.id, 10) || 0) === targetId) {
+                    noticeCode = ((n.trackingId || '') + '').trim();
+                    if (!n.read) {
+                        n.read = true;
+                        changed = true;
+                    }
                 }
+            });
+            if (changed) {
+                writeNotifications(notifications);
+                loadNotifications();
             }
-            // You can add navigation logic here to scroll to the tracking record
+
+            // Ensure filters do not hide the target row before focusing.
+            const searchInput = document.getElementById('tableSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            const yearSelect = document.getElementById('tableSortYear');
+            if (yearSelect) {
+                yearSelect.value = 'all';
+            }
+            if (typeof filterTableRows === 'function') {
+                filterTableRows();
+            }
+
+            closeNotifModal();
+
+            if (noticeCode) {
+                navigateToNoticeRow(noticeCode);
+            }
+        }
+
+        function navigateToNoticeRow(noticeCode) {
+            const safeNotice = (noticeCode || '').trim();
+            if (!safeNotice) return;
+
+            const row = document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                row.classList.add('scanned-row-focus');
+                setTimeout(function() { row.classList.remove('scanned-row-focus'); }, 2600);
+                return;
+            }
+
+            // If row is not currently in DOM, refresh then focus using existing flow.
+            sessionStorage.setItem('dhsud_focus_notice', safeNotice);
+            if (typeof refreshHomeData === 'function') {
+                refreshHomeData({ focusNotice: safeNotice });
+            }
         }
 
         function handleNotifAction(notifId) {
-            // Handle action menu (e.g., mark as read, delete, etc.)
-            console.log('Action for notification:', notifId);
+            const targetId = parseInt(notifId, 10) || 0;
+            if (targetId <= 0) return;
+            activeNotifActionId = (activeNotifActionId === targetId) ? 0 : targetId;
+            loadNotifications();
+        }
+
+        function deleteNotification(notifId) {
+            const targetId = parseInt(notifId, 10) || 0;
+            if (targetId <= 0) return;
+            const notifications = readNotifications();
+            const nextNotifications = notifications.filter(function(n) {
+                return (parseInt(n.id, 10) || 0) !== targetId;
+            });
+            activeNotifActionId = 0;
+            writeNotifications(nextNotifications);
+            loadNotifications();
         }
 
         function escapeHtml(text) {
@@ -2539,11 +1937,26 @@ HREDRD-EMES
                 });
             }
 
+            window.addEventListener('resize', function() {
+                const overlay = document.getElementById('notifModalOverlay');
+                if (overlay && overlay.classList.contains('show')) {
+                    positionNotifModal();
+                }
+            });
+
+            window.addEventListener('scroll', function() {
+                const overlay = document.getElementById('notifModalOverlay');
+                if (overlay && overlay.classList.contains('show')) {
+                    positionNotifModal();
+                }
+            }, true);
+
             // Close modal when clicking outside
             const overlay = document.getElementById('notifModalOverlay');
             if (overlay) {
                 overlay.addEventListener('click', function(e) {
                     if (e.target === overlay) {
+                        activeNotifActionId = 0;
                         closeNotifModal();
                     }
                 });
@@ -2554,8 +1967,16 @@ HREDRD-EMES
                 if (e.key === 'Escape') {
                     const overlay = document.getElementById('notifModalOverlay');
                     if (overlay && overlay.classList.contains('show')) {
+                        activeNotifActionId = 0;
                         closeNotifModal();
                     }
+                }
+            });
+
+            document.addEventListener('click', function() {
+                if (activeNotifActionId !== 0) {
+                    activeNotifActionId = 0;
+                    loadNotifications();
                 }
             });
 
@@ -2567,3 +1988,5 @@ HREDRD-EMES
     </div>
 </body>
 </html>
+
+
