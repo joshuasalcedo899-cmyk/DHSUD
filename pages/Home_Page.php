@@ -210,7 +210,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 <body class="admin-home-bg">
     <div class="admin-home-header">
     <div class="welcome-block">
-        <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:15px;margin-bottom:2px;">Welcome, Admin!</div>
+        <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:5px;margin-bottom:2px;">Welcome, Admin!</div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </div>
         <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
@@ -1199,6 +1199,8 @@ HREDRD-EMES
         }
 
         const SMART_POLLING = {
+            burstIntervalMs: 1000,
+            burstWindowMs: 15000,
             activeIntervalMs: 12000,
             idleIntervalMs: 30000,
             hiddenIntervalMs: 120000,
@@ -1212,7 +1214,8 @@ HREDRD-EMES
             inProgress: false,
             failureCount: 0,
             lastUserActivityAt: Date.now(),
-            lastKnownVersion: ''
+            lastKnownVersion: '',
+            burstUntilAt: 0
         };
 
         function markPollingActivity() {
@@ -1224,7 +1227,9 @@ HREDRD-EMES
             const inactiveForMs = now - smartPollingState.lastUserActivityAt;
             let delay = SMART_POLLING.activeIntervalMs;
 
-            if (document.hidden) {
+            if (!document.hidden && now < smartPollingState.burstUntilAt) {
+                delay = SMART_POLLING.burstIntervalMs;
+            } else if (document.hidden) {
                 delay = SMART_POLLING.hiddenIntervalMs;
             } else if (inactiveForMs > SMART_POLLING.activeWindowMs) {
                 delay = SMART_POLLING.idleIntervalMs;
@@ -1281,6 +1286,10 @@ HREDRD-EMES
 
                 if (!previousVersion) {
                     return { changed: true, version: currentVersion };
+                }
+
+                if (previousVersion !== currentVersion) {
+                    smartPollingState.burstUntilAt = Date.now() + SMART_POLLING.burstWindowMs;
                 }
 
                 return { changed: previousVersion !== currentVersion, version: currentVersion };

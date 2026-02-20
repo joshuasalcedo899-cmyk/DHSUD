@@ -513,7 +513,7 @@
 	margin: 0 auto;
 	background: rgba(255,255,255,0.92);
 	border-radius: 12px;
-	padding: 1rem 2rem 2rem 2rem;
+	padding: 0.5rem 2rem 0.5rem 2rem;
 }
 .admin-home-container {
 	max-width: 1200px;
@@ -984,7 +984,6 @@ img {
 	width: 100%;
 	max-width: 1400px;
 	margin: 0.05rem auto 0.05rem auto;
-	padding: clamp(0.75rem, 2.5vw, 1.5rem) clamp(0.5rem, 2vw, 1.25rem);
 	box-sizing: border-box;
 }
 
@@ -1000,7 +999,7 @@ img {
 .admin-table-container .table-scroll-area {
 	flex: 1 1 auto;
 	overflow: auto;
-	max-height: 70vh;
+	max-height: 74vh;
 	-webkit-overflow-scrolling: touch;
 }
 
@@ -1928,4 +1927,71 @@ img {
             background: #d32f2f;
             color: #fff;
         }
+
+/* Global responsive edge gutter (up to ~0.25in) */
+:root {
+    --page-edge-gutter: clamp(12px, 2.2vw, 0.25in);
+}
+
+body {
+    padding-left: max(var(--page-edge-gutter), env(safe-area-inset-left));
+    padding-right: max(var(--page-edge-gutter), env(safe-area-inset-right));
+    overflow-x: hidden;
+}
+
+/* Fixed shells aligned to gutter */
+.admin-home-header {
+    left: max(var(--page-edge-gutter), env(safe-area-inset-left)) !important;
+    width: calc(
+        100vw - max(var(--page-edge-gutter), env(safe-area-inset-left))
+        - max(var(--page-edge-gutter), env(safe-area-inset-right))
+    ) !important;
+}
+
+.admin-home-header-border {
+    width: 100% !important;
+}
+
+.admin-home-container,
+.admin-table-container,
+.tracking-table-container {
+    max-width: calc(
+        100vw - max(var(--page-edge-gutter), env(safe-area-inset-left))
+        - max(var(--page-edge-gutter), env(safe-area-inset-right))
+    ) !important;
+}
+
+.button-container,
+.bottom-container {
+    left: max(var(--page-edge-gutter), env(safe-area-inset-left)) !important;
+    right: max(var(--page-edge-gutter), env(safe-area-inset-right)) !important;
+}
+
+/* Stretch admin header responsively to available screen width */
+.admin-home-header {
+    position: sticky;
+    top: 0;
+    left: max(var(--page-edge-gutter), env(safe-area-inset-left)) !important;
+    right: max(var(--page-edge-gutter), env(safe-area-inset-right)) !important;
+    width: auto !important;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.welcome-block {
+    width: 100%;
+    margin: 0;
+    padding: 0.35rem 0;
+}
+
+.admin-home-header-img {
+    width: min(100%, 400px);
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    object-fit: contain;
+}
 
