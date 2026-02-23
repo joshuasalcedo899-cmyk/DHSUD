@@ -1,5 +1,4 @@
- 
-<?php
+﻿<?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
@@ -134,6 +133,16 @@ function formatDateCell($value) {
     return date('F-d-Y', $ts);
 }
 
+function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
+    $text = trim((string)$dateReleasedValue);
+    if ($text === '' || $text === '0000-00-00' || $text === '0000-00-00 00:00:00') return '';
+    $ts = strtotime($text);
+    if ($ts === false) return '';
+    $formattedDate = date('ymd', $ts);
+    $formattedParcelNo = sprintf('%03d', (int)$parcelNoValue);
+    return 'EMES-' . $formattedDate . '-' . $formattedParcelNo;
+}
+
 function normalizedCellValueForMerge($row, $colName) {
     if ($colName === '__ACTION__') {
         $trackingValue = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? ''));
@@ -205,6 +214,79 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
     <title>Home Page</title>
     <link rel="icon" type="image/x-icon" href="../assets/DHSUDLogo.ico">
     <link rel="stylesheet" href="../main.css">
+    <style>
+        .batch-toggle-btn {
+            border: none;
+            background: transparent;
+            color: #22336A;
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 2px;
+            margin-left: 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            margin-left: 4px;
+            flex: 0 0 auto;
+        }
+        .batch-toggle-btn .batch-icon {
+            width: 18px;
+            height: 18px;
+            display: block;
+            position: static !important;
+            top: auto !important;
+            right: auto !important;
+        }
+        .batch-toggle-btn:focus-visible {
+            outline: 2px solid #22336A;
+            outline-offset: 1px;
+            border-radius: 2px;
+        }
+        .tracking-table tbody tr.batch-row td.notice-code-cell,
+        .tracking-table tbody tr.batch-row td.parcel-details-cell {
+            border-bottom: 1px solid #000 !important;
+        }
+        .tracking-table tbody tr.batch-row.batch-end-row td.notice-code-cell,
+        .tracking-table tbody tr.batch-row.batch-end-row td.parcel-details-cell {
+            border-bottom: 3px solid #000 !important;
+        }
+        .tracking-table tbody tr.batch-collapsed-head td.notice-code-cell,
+        .tracking-table tbody tr.batch-collapsed-head td.parcel-details-cell {
+            border-bottom: 3px solid #000 !important;
+        }
+        .tracking-table td.notice-code-cell {
+            white-space: normal !important;
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            min-width: 170px;
+        }
+        .tracking-table td.notice-code-cell > div {
+            display: flex;
+            align-items: flex-start;
+            width: 100%;
+            min-width: 0;
+        }
+        .tracking-table td.notice-code-cell > div > span {
+            display: block;
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: normal;
+            word-break: normal;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+        /* Keep other data columns from overflowing on long values. */
+        .tracking-table td[data-col]:not(.notice-code-cell) {
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            max-width: 0;
+        }
+    </style>
 </head>
 
 <body class="admin-home-bg">
@@ -407,12 +489,50 @@ HREDRD-EMES
                 frame.src = 'about:blank';
             }
 
+            function openOngoingDeliveryModal() {
+                const modal = document.getElementById('ongoingDeliveryModal');
+                if (!modal) return;
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+            }
+
+            function closeOngoingDeliveryModal() {
+                const modal = document.getElementById('ongoingDeliveryModal');
+                if (!modal) return;
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden', 'true');
+            }
+
+            function resolveStatusFromLink(linkEl) {
+                const row = linkEl ? linkEl.closest('tr[data-notice]') : null;
+                if (!row) return '';
+
+                function readStatusFromRow(tr) {
+                    const cell = tr ? tr.querySelector('td[data-col="Status"]') : null;
+                    return ((cell && cell.textContent) ? cell.textContent : '').trim().toUpperCase();
+                }
+
+                let status = readStatusFromRow(row);
+                if (status) return status;
+
+                const batchId = ((row.dataset.batchId || '') + '').trim();
+                if (!batchId) return '';
+                let probe = row.previousElementSibling;
+                while (probe) {
+                    if (((probe.dataset && probe.dataset.batchId) || '').trim() !== batchId) break;
+                    status = readStatusFromRow(probe);
+                    if (status) return status;
+                    probe = probe.previousElementSibling;
+                }
+                return '';
+            }
+
             document.addEventListener('click', function(event) {
                 const link = event.target.closest('.pdf-link-in-cell[data-pdf-url]');
                 if (link) {
                     event.preventDefault();
-                    const status = ((link.getAttribute('data-status') || '') + '').trim().toUpperCase();
-                    if (status === 'ONGOING DELIVERY') {
+                    const statusText = resolveStatusFromLink(link);
+                    if (statusText === 'ONGOING DELIVERY') {
                         openOngoingDeliveryModal();
                         return;
                     }
@@ -426,6 +546,7 @@ HREDRD-EMES
                 if (pdfModal && event.target === pdfModal) {
                     closePdfViewerModal();
                 }
+
                 const ongoingModal = document.getElementById('ongoingDeliveryModal');
                 if (ongoingModal && event.target === ongoingModal) {
                     closeOngoingDeliveryModal();
@@ -434,29 +555,10 @@ HREDRD-EMES
 
             document.addEventListener('keydown', function(event) {
                 if (event.key === 'Escape') {
-                    var ongoingEl = document.getElementById('ongoingDeliveryModal');
-                    if (ongoingEl && ongoingEl.classList.contains('show')) {
-                        closeOngoingDeliveryModal();
-                    } else {
-                        closePdfViewerModal();
-                    }
+                    closePdfViewerModal();
+                    closeOngoingDeliveryModal();
                 }
             });
-
-            function openOngoingDeliveryModal() {
-                const modal = document.getElementById('ongoingDeliveryModal');
-                if (modal) {
-                    modal.classList.add('show');
-                    modal.setAttribute('aria-hidden', 'false');
-                }
-            }
-            function closeOngoingDeliveryModal() {
-                const modal = document.getElementById('ongoingDeliveryModal');
-                if (modal) {
-                    modal.classList.remove('show');
-                    modal.setAttribute('aria-hidden', 'true');
-                }
-            }
 
             </script>
         <div class="table-sort-bar">
@@ -545,9 +647,6 @@ HREDRD-EMES
                                             <span>
                                                 <?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>
                                             </span>
-                                            <?php if ($showBatchBadge): ?>
-                                                <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon" title="Consecutive batch row">
-                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 <?php foreach ($columns as $idx => $colName): ?>
@@ -607,14 +706,15 @@ HREDRD-EMES
                                             <?php
                                                 $fileName = trim((string)$cellValue);
                                                 $trackingValue = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? ''));
-                                                $pdfName = $trackingValue !== '' ? ('proof_' . $trackingValue . '.pdf') : '';
-                                                $fileHref = $pdfName !== '' ? '../JRS_PDFs/' . rawurlencode($pdfName) : '';
-                                                $linkLabel = $fileName !== '' ? basename($fileName) : '';
+                                                $defaultPdfName = buildDefaultPdfFileName($row['Date released to AFD'] ?? '', $row['Parcel No.'] ?? 0);
+                                                $resolvedPdfName = $fileName !== '' ? basename($fileName) : $defaultPdfName;
+                                                $proofAssetName = $trackingValue !== '' ? ('proof_' . $trackingValue . '.pdf') : '';
+                                                $fileHref = $proofAssetName !== '' ? '../JRS_PDFs/' . rawurlencode($proofAssetName) : '';
+                                                $linkLabel = $resolvedPdfName;
                                             ?>
                                             <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell<?= $spanToBatchEndClass ?>"<?= $rowspanAttr ?>>
                                                 <?php if ($fileHref && $linkLabel !== ''): ?>
-                                                    <?php $rowStatus = trim($row['Status'] ?? ''); ?>
-                                                    <a href="<?= htmlspecialchars($fileHref) ?>" data-pdf-url="<?= htmlspecialchars($fileHref) ?>" data-pdf-title="<?= htmlspecialchars($linkLabel, ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($rowStatus) ?>" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
+                                                    <a href="<?= htmlspecialchars($fileHref) ?>" data-pdf-url="<?= htmlspecialchars($fileHref) ?>" data-pdf-title="<?= htmlspecialchars($linkLabel, ENT_QUOTES) ?>" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
@@ -640,6 +740,11 @@ HREDRD-EMES
                                         }
                                     ?>
                                     <td class="<?= trim($actionSpanToBatchEndClass) ?>"<?= $actionRowspanAttr ?>>
+                                        <?php if ($showBatchBadge): ?>
+                                            <button type="button" class="batch-toggle-btn" onclick="toggleBatchDropdown(event, '<?= htmlspecialchars($rowBatchId, ENT_QUOTES) ?>')" title="Collapse/Expand batch" aria-label="Collapse/Expand batch" style="margin-bottom:4px;">
+                                                <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon">
+                                            </button>
+                                        <?php endif; ?>
                                         <?php if (!empty($rowTrackingNo) && $rowTrackingNo !== '0'): ?>
                                             <span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span>
                                             <div class="track-result"></div>
@@ -1439,6 +1544,25 @@ HREDRD-EMES
             return `${month}-${day}-${year}`;
         }
 
+        function buildDefaultPdfFileNameFromRow(rowObj) {
+            if (!rowObj) return '';
+            const rawDate = ((rowObj['Date released to AFD'] || '') + '').trim();
+            const parsed = new Date(rawDate);
+            if (Number.isNaN(parsed.getTime())) return '';
+            const yy = String(parsed.getFullYear()).slice(-2);
+            const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+            const dd = String(parsed.getDate()).padStart(2, '0');
+            const parcel = parseInt(((rowObj['Parcel No.'] || '') + '').trim(), 10);
+            const formattedParcel = String(Number.isFinite(parcel) ? parcel : 0).padStart(3, '0');
+            return `EMES-${yy}${mm}${dd}-${formattedParcel}`;
+        }
+
+        function buildProofPdfAssetNameFromTracking(trackingNo) {
+            const tracking = ((trackingNo || '') + '').trim();
+            if (!tracking || tracking === '0') return '';
+            return `proof_${tracking}.pdf`;
+        }
+
         const statusSnapshotByNotice = new Map();
 
         function cloneStatusSnapshot() {
@@ -1467,10 +1591,14 @@ HREDRD-EMES
                 return;
             }
             if (!Array.isArray(window.mailRows)) return;
+            const pendingBatchNotifications = new Map();
 
             window.mailRows.forEach(function(row) {
                 const notice = ((row['Notice/Order Code'] || '') + '').trim();
                 if (!notice) return;
+                const senderDetails = ((row['Sender Details'] || '') + '').trim();
+                const batchMatch = senderDetails.match(/Batch ID:\s*([A-Za-z0-9\-]+)/i);
+                const batchId = batchMatch ? (batchMatch[1] || '').trim() : '';
 
                 const nextStatus = ((row['Status'] || '') + '').trim().toUpperCase();
                 const eventDate = (formatDisplayDate(row['Date'] || '') || ((row['Date'] || '') + '').trim());
@@ -1478,12 +1606,31 @@ HREDRD-EMES
                 const previousStatus = prevEntry ? (((prevEntry.status || '') + '').trim().toUpperCase()) : '';
 
                 if (prevEntry && previousStatus !== nextStatus) {
-                    maybeNotifyStatusChange(notice, previousStatus, nextStatus, eventDate);
+                    if (batchId && isNotifiableStatus(nextStatus)) {
+                        const batchKey = batchId + '|' + nextStatus;
+                        if (!pendingBatchNotifications.has(batchKey)) {
+                            pendingBatchNotifications.set(batchKey, {
+                                batchId: batchId,
+                                nextStatus: nextStatus,
+                                eventDate: eventDate,
+                                notice: notice
+                            });
+                        }
+                    } else {
+                        maybeNotifyStatusChange(notice, previousStatus, nextStatus, eventDate);
+                    }
                 }
 
                 statusSnapshotByNotice.set(notice, {
                     status: nextStatus,
                     eventDate: eventDate
+                });
+            });
+
+            pendingBatchNotifications.forEach(function(info) {
+                maybeNotifyStatusChange(info.notice, '', info.nextStatus, info.eventDate, {
+                    displayTrackingId: 'Batch ' + info.batchId,
+                    dedupeKey: 'batch:' + info.batchId + '|status:' + info.nextStatus
                 });
             });
         }
@@ -1523,18 +1670,19 @@ HREDRD-EMES
                         span.className = getStatusClass(text);
                         span.textContent = text;
                         td.appendChild(span);
-                        } else if (colName === 'File Name (PDF)') {
+                    } else if (colName === 'File Name (PDF)') {
                         const trackingValue = ((rowObj['Tracking No.'] || '') + '').trim();
-                        if (text !== '' && trackingValue !== '') {
+                        const proofAssetName = buildProofPdfAssetNameFromTracking(trackingValue);
+                        const defaultPdfName = buildDefaultPdfFileNameFromRow(rowObj);
+                        const fileName = (text || defaultPdfName).trim();
+                        if (fileName !== '' && proofAssetName !== '') {
                             const link = document.createElement('a');
-                            const pdfName = 'proof_' + trackingValue + '.pdf';
-                            const pdfUrl = '../JRS_PDFs/' + encodeURIComponent(pdfName);
+                            const pdfUrl = '../JRS_PDFs/' + encodeURIComponent(proofAssetName);
                             link.className = 'pdf-link-in-cell';
                             link.href = pdfUrl;
                             link.setAttribute('data-pdf-url', pdfUrl);
-                            link.setAttribute('data-pdf-title', text);
-                            link.setAttribute('data-status', ((rowObj['Status'] || '') + '').trim());
-                            link.textContent = text;
+                            link.setAttribute('data-pdf-title', fileName);
+                            link.textContent = fileName;
                             td.appendChild(link);
                         }
                     } else {
@@ -1554,21 +1702,60 @@ HREDRD-EMES
             return document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
         }
 
-        function updateTrackingRow(noticeCode, data) {
+        function getBatchAwareCell(row, colName) {
+            if (!row) return null;
+            let cell = row.querySelector('td[data-col="' + CSS.escape(colName) + '"]');
+            if (cell) return cell;
+
+            const batchId = (row.dataset.batchId || '').trim();
+            if (!batchId) return null;
+
+            let probe = row.previousElementSibling;
+            while (probe) {
+                if ((probe.dataset.batchId || '').trim() !== batchId) break;
+                cell = probe.querySelector('td[data-col="' + CSS.escape(colName) + '"]');
+                if (cell) return cell;
+                probe = probe.previousElementSibling;
+            }
+            return null;
+        }
+
+        function buildDefaultPdfFileNameFromRowElement(row) {
+            if (!row) return '';
+            const dateCell = getBatchAwareCell(row, 'Date released to AFD');
+            const parcelCell = getBatchAwareCell(row, 'Parcel No.');
+            const dateText = ((dateCell && dateCell.textContent) ? dateCell.textContent : '').trim();
+            const parcelText = ((parcelCell && parcelCell.textContent) ? parcelCell.textContent : '').trim();
+            const parsed = new Date(dateText);
+            if (Number.isNaN(parsed.getTime())) return '';
+            const yy = String(parsed.getFullYear()).slice(-2);
+            const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+            const dd = String(parsed.getDate()).padStart(2, '0');
+            const parcel = parseInt(parcelText, 10);
+            const formattedParcel = String(Number.isFinite(parcel) ? parcel : 0).padStart(3, '0');
+            return `EMES-${yy}${mm}${dd}-${formattedParcel}`;
+        }
+
+        function updateTrackingRow(noticeCode, data, options = {}) {
             const row = findRowByNoticeCode(noticeCode);
-            if (!row) return;
+            if (!row) return null;
+            const suppressNotification = options.suppressNotification === true;
             const resolvedNotice = ((row.dataset.notice || '').trim() || (noticeCode || '').trim());
 
-            const dateCell = row.querySelector('td[data-col="Date"]');
+            const dateCell = getBatchAwareCell(row, 'Date');
             const existingDateText = ((dateCell && dateCell.textContent) ? dateCell.textContent : '').trim();
             const nextDateText = (data.dateDisplay || formatDisplayDate(data.date || '') || existingDateText).trim();
-            const statusCell = row.querySelector('td[data-col="Status"]');
+            const statusCell = getBatchAwareCell(row, 'Status');
+            let previousStatus = '';
+            let nextStatus = '';
             if (statusCell && typeof data.status !== 'undefined') {
-                const previousStatus = ((statusCell.textContent || '') + '').trim().toUpperCase();
-                const nextStatus = ((data.status || '') + '').trim().toUpperCase();
+                previousStatus = ((statusCell.textContent || '') + '').trim().toUpperCase();
+                nextStatus = ((data.status || '') + '').trim().toUpperCase();
                 const statusClass = getStatusClass(data.status);
                 statusCell.innerHTML = `<span class="${statusClass}">${data.status || ''}</span>`;
-                maybeNotifyStatusChange(resolvedNotice, previousStatus, nextStatus, nextDateText);
+                if (!suppressNotification) {
+                    maybeNotifyStatusChange(resolvedNotice, previousStatus, nextStatus, nextDateText);
+                }
                 statusSnapshotByNotice.set(resolvedNotice, {
                     status: nextStatus,
                     eventDate: nextDateText
@@ -1579,22 +1766,72 @@ HREDRD-EMES
                 dateCell.textContent = nextDateText;
             }
 
-            const transmittalCell = row.querySelector('td[data-col="Transmittal Remarks/Received By"]');
+            const transmittalCell = getBatchAwareCell(row, 'Transmittal Remarks/Received By');
             if (transmittalCell && typeof data.transmittalRemarks !== 'undefined') {
                 transmittalCell.textContent = data.transmittalRemarks || '';
             }
+
+            const fileCell = getBatchAwareCell(row, 'File Name (PDF)');
+            if (fileCell && typeof data.fileNamePdf !== 'undefined') {
+                const trackingNo = ((data.trackingNo || row.dataset.trackingNo || '') + '').trim();
+                const proofAssetName = buildProofPdfAssetNameFromTracking(trackingNo);
+                const defaultPdfName = buildDefaultPdfFileNameFromRowElement(row);
+                const fileName = (((data.fileNamePdf || '') + '').trim() || defaultPdfName);
+                fileCell.innerHTML = '';
+                if (fileName !== '' && proofAssetName !== '') {
+                    const pdfUrl = '../JRS_PDFs/' + encodeURIComponent(proofAssetName);
+                    const link = document.createElement('a');
+                    link.href = pdfUrl;
+                    link.className = 'pdf-link-in-cell';
+                    link.setAttribute('data-pdf-url', pdfUrl);
+                    link.setAttribute('data-pdf-title', fileName);
+                    link.textContent = fileName;
+                    fileCell.appendChild(link);
+                }
+            }
+
+            return {
+                previousStatus: previousStatus,
+                nextStatus: nextStatus,
+                nextDateText: nextDateText
+            };
         }
 
         function updateTrackingRowsByBatch(batchId, data) {
             const rows = document.querySelectorAll('tr[data-batch-id]');
+            let notifyNotice = '';
+            let notifyDateText = '';
+            let shouldNotifyBatch = false;
+            const nextBatchStatus = ((data && data.status) ? data.status : '').trim().toUpperCase();
+
             rows.forEach(row => {
                 if ((row.dataset.batchId || '').trim() === (batchId || '').trim()) {
                     const notice = (row.dataset.notice || '').trim();
                     if (notice) {
-                        updateTrackingRow(notice, data);
+                        const result = updateTrackingRow(notice, data, { suppressNotification: true });
+                        if (!notifyNotice) {
+                            notifyNotice = notice;
+                        }
+                        if (!notifyDateText && result && result.nextDateText) {
+                            notifyDateText = result.nextDateText;
+                        }
+                        if (
+                            result &&
+                            isNotifiableStatus(result.nextStatus) &&
+                            result.previousStatus !== result.nextStatus
+                        ) {
+                            shouldNotifyBatch = true;
+                        }
                     }
                 }
             });
+
+            if (shouldNotifyBatch && notifyNotice) {
+                maybeNotifyStatusChange(notifyNotice, '', nextBatchStatus, notifyDateText, {
+                    displayTrackingId: 'Batch ' + batchId,
+                    dedupeKey: 'batch:' + batchId + '|status:' + nextBatchStatus
+                });
+            }
         }
 
 
@@ -1723,6 +1960,14 @@ HREDRD-EMES
                 refreshHomeData({
                     focusNotice: scannerNotice,
                     immediateTrackNotices: (scannerNotice !== '' ? [scannerNotice] : [])
+                }).then(function() {
+                    if (scannerNotice !== '') {
+                        runTrackingUpdate(scannerNotice, {
+                            silent: true,
+                            force: true,
+                            bypassCooldown: true
+                        });
+                    }
                 });
             }
         });
@@ -1844,7 +2089,8 @@ HREDRD-EMES
 
         const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
         const autoTrackLastRunByKey = new Map();
-        const immediateTrackOnceKeys = new Set();
+        const IMMEDIATE_TRACK_DEDUP_WINDOW_MS = 3000;
+        const immediateTrackLastRunAtByKey = new Map();
         let autoTrackInProgress = false;
 
         function getTrackResultElementForNotice(noticeCode) {
@@ -1857,6 +2103,8 @@ HREDRD-EMES
         function runTrackingUpdate(noticeCode, options = {}) {
             const safeNotice = (noticeCode || "").trim();
             const silent = options.silent === true;
+            const force = options.force === true;
+            const bypassCooldown = options.bypassCooldown === true;
             const result = getTrackResultElementForNotice(safeNotice);
             const targetRow = findRowByNoticeCode(safeNotice);
             const rowId = targetRow ? (parseInt(targetRow.dataset.id || '0', 10) || 0) : 0;
@@ -1866,11 +2114,17 @@ HREDRD-EMES
             }
 
             if (result) result.innerHTML = "";
+            const params = new URLSearchParams();
+            params.set("row_id", String(rowId));
+            params.set("notice_code", safeNotice);
+            if (force) params.set("force", "1");
+            if (bypassCooldown) params.set("bypass_cooldown", "1");
 
             return fetch("../api/remarks.php", {
                 method: "POST",
+                cache: "no-store",
                 headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                body: "row_id=" + encodeURIComponent(String(rowId)) + "&notice_code=" + encodeURIComponent(safeNotice)
+                body: params.toString()
             })
             .then(res => res.json())
             .then(data => {
@@ -1916,8 +2170,10 @@ HREDRD-EMES
 
             const batchId = (row.dataset.batchId || '').trim();
             const key = (batchId ? ('batch:' + batchId) : ('notice:' + safeNotice)) + '|tracking:' + trackingNo;
-            if (immediateTrackOnceKeys.has(key)) return;
-            immediateTrackOnceKeys.add(key);
+            const now = Date.now();
+            const lastRunAt = immediateTrackLastRunAtByKey.get(key) || 0;
+            if ((now - lastRunAt) < IMMEDIATE_TRACK_DEDUP_WINDOW_MS) return;
+            immediateTrackLastRunAtByKey.set(key, now);
 
             const throttleKey = batchId ? ('batch:' + batchId) : ('notice:' + safeNotice);
             autoTrackLastRunByKey.set(throttleKey, Date.now());
@@ -2306,5 +2562,3 @@ HREDRD-EMES
     </div>
 </body>
 </html>
-
-

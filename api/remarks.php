@@ -50,6 +50,14 @@ function parseDateToTimestamp($value) {
     return ($ts === false) ? null : $ts;
 }
 
+function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
+    $ts = parseDateToTimestamp($dateReleasedValue);
+    if (!$ts) return '';
+    $formattedDate = date('ymd', $ts);
+    $formattedParcelNo = sprintf('%03d', (int)$parcelNoValue);
+    return 'EMES-' . $formattedDate . '-' . $formattedParcelNo;
+}
+
 function computeAdaptiveIntervalSeconds($shipmentStartTs, $nowTs) {
     if (!$shipmentStartTs || $shipmentStartTs > $nowTs) {
         return 2 * 60 * 60;
@@ -150,10 +158,10 @@ if ($rowId <= 0 && $noticeCode === '') {
 }
 
 if ($rowId > 0) {
-    $stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details`, `Status`, `Date released to AFD` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
+    $stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details`, `Status`, `Date released to AFD`, `Parcel No.` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
     $stmt->execute([':row_id' => $rowId]);
 } else {
-    $stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details`, `Status`, `Date released to AFD` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1");
+    $stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details`, `Status`, `Date released to AFD`, `Parcel No.` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1");
     $stmt->execute([':notice' => $noticeCode]);
 }
 
@@ -360,7 +368,7 @@ if ($statusText === 'DELIVERED' && $receiver !== '') {
 
 // Keep File Name (PDF) in sync for final statuses so UI can show it immediately.
 if (($statusText === 'DELIVERED' || $statusText === 'RETURNED TO SENDER') && $trackingNo !== '' && $trackingNo !== '0') {
-    $proofFileName = 'proof_' . $trackingNo . '.pdf';
+    $proofFileName = buildDefaultPdfFileName($selectedRow['Date released to AFD'] ?? '', $selectedRow['Parcel No.'] ?? 0);
     if ($isBatch) {
         $fileStmt = $pdo->prepare("UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `Sender Details` LIKE :batchLike");
         $fileStmt->execute([
