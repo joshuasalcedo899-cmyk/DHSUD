@@ -1,4 +1,4 @@
- 
+﻿ 
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
@@ -218,14 +218,19 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             margin-left: 2px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            min-width: 86px;
-            justify-content: flex-start;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            margin-left: 4px;
+            flex: 0 0 auto;
         }
         .batch-toggle-btn .batch-icon {
             width: 18px;
             height: 18px;
             display: block;
+            position: static !important;
+            top: auto !important;
+            right: auto !important;
         }
         .batch-toggle-btn:focus-visible {
             outline: 2px solid #22336A;
@@ -245,17 +250,32 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             border-bottom: 3px solid #000 !important;
         }
         .tracking-table td.notice-code-cell {
-            white-space: nowrap !important;
+            white-space: normal !important;
             word-break: normal !important;
-            overflow-wrap: normal !important;
+            overflow-wrap: break-word !important;
+            min-width: 170px;
         }
         .tracking-table td.notice-code-cell > div {
+            display: flex;
+            align-items: flex-start;
+            width: 100%;
             min-width: 0;
         }
         .tracking-table td.notice-code-cell > div > span {
             display: block;
+            flex: 1 1 auto;
             min-width: 0;
             white-space: normal;
+            word-break: normal;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+        /* Keep other data columns from overflowing on long values. */
+        .tracking-table td[data-col]:not(.notice-code-cell) {
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            max-width: 0;
         }
     </style>
 </head>
@@ -465,11 +485,6 @@ HREDRD-EMES
                 const link = event.target.closest('.pdf-link-in-cell[data-pdf-url]');
                 if (link) {
                     event.preventDefault();
-                    const status = ((link.getAttribute('data-status') || '') + '').trim().toUpperCase();
-                    if (status === 'ONGOING DELIVERY') {
-                        openOngoingDeliveryModal();
-                        return;
-                    }
                     const pdfUrl = link.getAttribute('data-pdf-url') || link.getAttribute('href') || '';
                     const pdfTitle = link.getAttribute('data-pdf-title') || (link.textContent || '').trim();
                     if (pdfUrl) openPdfViewerModal(pdfUrl, pdfTitle);
@@ -480,37 +495,13 @@ HREDRD-EMES
                 if (pdfModal && event.target === pdfModal) {
                     closePdfViewerModal();
                 }
-                const ongoingModal = document.getElementById('ongoingDeliveryModal');
-                if (ongoingModal && event.target === ongoingModal) {
-                    closeOngoingDeliveryModal();
-                }
             });
 
             document.addEventListener('keydown', function(event) {
                 if (event.key === 'Escape') {
-                    var ongoingEl = document.getElementById('ongoingDeliveryModal');
-                    if (ongoingEl && ongoingEl.classList.contains('show')) {
-                        closeOngoingDeliveryModal();
-                    } else {
-                        closePdfViewerModal();
-                    }
+                    closePdfViewerModal();
                 }
             });
-
-            function openOngoingDeliveryModal() {
-                const modal = document.getElementById('ongoingDeliveryModal');
-                if (modal) {
-                    modal.classList.add('show');
-                    modal.setAttribute('aria-hidden', 'false');
-                }
-            }
-            function closeOngoingDeliveryModal() {
-                const modal = document.getElementById('ongoingDeliveryModal');
-                if (modal) {
-                    modal.classList.remove('show');
-                    modal.setAttribute('aria-hidden', 'true');
-                }
-            }
 
             </script>
         <div class="table-sort-bar">
@@ -599,11 +590,6 @@ HREDRD-EMES
                                             <span>
                                                 <?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>
                                             </span>
-                                            <?php if ($showBatchBadge): ?>
-                                                <button type="button" class="batch-toggle-btn" onclick="toggleBatchDropdown(event, '<?= htmlspecialchars($rowBatchId, ENT_QUOTES) ?>')" title="Collapse/Expand batch" aria-label="Collapse/Expand batch">
-                                                    <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon">
-                                                </button>
-                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 <?php foreach ($columns as $idx => $colName): ?>
@@ -669,8 +655,7 @@ HREDRD-EMES
                                             ?>
                                             <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell<?= $spanToBatchEndClass ?>"<?= $rowspanAttr ?>>
                                                 <?php if ($fileHref && $linkLabel !== ''): ?>
-                                                    <?php $rowStatus = trim($row['Status'] ?? ''); ?>
-                                                    <a href="<?= htmlspecialchars($fileHref) ?>" data-pdf-url="<?= htmlspecialchars($fileHref) ?>" data-pdf-title="<?= htmlspecialchars($linkLabel, ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($rowStatus) ?>" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
+                                                    <a href="<?= htmlspecialchars($fileHref) ?>" data-pdf-url="<?= htmlspecialchars($fileHref) ?>" data-pdf-title="<?= htmlspecialchars($linkLabel, ENT_QUOTES) ?>" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
@@ -702,6 +687,11 @@ HREDRD-EMES
                                         }
                                     ?>
                                     <td class="<?= trim($actionSpanToBatchEndClass) ?>"<?= $actionRowspanAttr ?>>
+                                        <?php if ($showBatchBadge): ?>
+                                            <button type="button" class="batch-toggle-btn" onclick="toggleBatchDropdown(event, '<?= htmlspecialchars($rowBatchId, ENT_QUOTES) ?>')" title="Collapse/Expand batch" aria-label="Collapse/Expand batch" style="margin-bottom:4px;">
+                                                <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon">
+                                            </button>
+                                        <?php endif; ?>
                                         <?php if (!empty($rowTrackingNo) && $rowTrackingNo !== '0'): ?>
                                             <span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span>
                                             <div class="track-result"></div>
@@ -755,20 +745,6 @@ HREDRD-EMES
                     <button type="button" class="pdf-viewer-close" onclick="closePdfViewerModal()"><img class="exit-modal" src="../assets/icon.svg" alt="Close"></button>
                 </div>
                 <iframe id="pdfViewerFrame" name="pdfViewerFrame" class="pdf-viewer-frame" src="about:blank" title="PDF Viewer"></iframe>
-            </div>
-        </div>
-
-        <div id="ongoingDeliveryModal" class="ongoing-delivery-modal" aria-hidden="true">
-            <div class="ongoing-delivery-panel">
-                <div class="ongoing-delivery-title-bar">
-                    <span class="ongoing-delivery-title-text">DHSUD</span>
-                    <button type="button" class="ongoing-delivery-close" onclick="closeOngoingDeliveryModal()" aria-label="Close">×</button>
-                </div>
-                <div class="ongoing-delivery-body">
-                    <span class="ongoing-delivery-text">Ongoing Delivery...</span>
-                    <img src="../assets/Tracking_Icon.svg" alt="" class="ongoing-delivery-icon">
-                </div>
-                <div class="ongoing-delivery-footer"></div>
             </div>
         </div>
 
@@ -1675,13 +1651,8 @@ HREDRD-EMES
                                 batchId: batchId,
                                 nextStatus: nextStatus,
                                 eventDate: eventDate,
-                                notice: notice,
-                                notices: []
+                                notice: notice
                             });
-                        }
-                        const info = pendingBatchNotifications.get(batchKey);
-                        if (info && info.notices.indexOf(notice) === -1) {
-                            info.notices.push(notice);
                         }
                     } else {
                         maybeNotifyStatusChange(notice, previousStatus, nextStatus, eventDate);
@@ -1695,11 +1666,8 @@ HREDRD-EMES
             });
 
             pendingBatchNotifications.forEach(function(info) {
-                const displayNoticeCodes = (info.notices && info.notices.length)
-                    ? info.notices.join(', ')
-                    : info.notice;
                 maybeNotifyStatusChange(info.notice, '', info.nextStatus, info.eventDate, {
-                    displayTrackingId: displayNoticeCodes,
+                    displayTrackingId: 'Batch ' + info.batchId,
                     dedupeKey: 'batch:' + info.batchId + '|status:' + info.nextStatus
                 });
             });
@@ -1740,7 +1708,7 @@ HREDRD-EMES
                         span.className = getStatusClass(text);
                         span.textContent = text;
                         td.appendChild(span);
-                        } else if (colName === 'File Name (PDF)') {
+                    } else if (colName === 'File Name (PDF)') {
                         const trackingValue = ((rowObj['Tracking No.'] || '') + '').trim();
                         if (text !== '' && trackingValue !== '') {
                             const link = document.createElement('a');
@@ -1750,7 +1718,6 @@ HREDRD-EMES
                             link.href = pdfUrl;
                             link.setAttribute('data-pdf-url', pdfUrl);
                             link.setAttribute('data-pdf-title', text);
-                            link.setAttribute('data-status', ((rowObj['Status'] || '') + '').trim());
                             link.textContent = text;
                             td.appendChild(link);
                         }
@@ -1878,15 +1845,11 @@ HREDRD-EMES
             let notifyDateText = '';
             let shouldNotifyBatch = false;
             const nextBatchStatus = ((data && data.status) ? data.status : '').trim().toUpperCase();
-            const notifyNotices = [];
 
             rows.forEach(row => {
                 if ((row.dataset.batchId || '').trim() === (batchId || '').trim()) {
                     const notice = (row.dataset.notice || '').trim();
                     if (notice) {
-                        if (notifyNotices.indexOf(notice) === -1) {
-                            notifyNotices.push(notice);
-                        }
                         const result = updateTrackingRow(notice, data, { suppressNotification: true });
                         if (!notifyNotice) {
                             notifyNotice = notice;
@@ -1906,9 +1869,8 @@ HREDRD-EMES
             });
 
             if (shouldNotifyBatch && notifyNotice) {
-                const displayNoticeCodes = notifyNotices.length ? notifyNotices.join(', ') : notifyNotice;
                 maybeNotifyStatusChange(notifyNotice, '', nextBatchStatus, notifyDateText, {
-                    displayTrackingId: displayNoticeCodes,
+                    displayTrackingId: 'Batch ' + batchId,
                     dedupeKey: 'batch:' + batchId + '|status:' + nextBatchStatus
                 });
             }
