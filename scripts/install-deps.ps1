@@ -91,15 +91,15 @@ try {
 
     if ($SkipBrowserDownload) {
         Write-Host "Installing npm dependencies without browser download..."
-        $env:PUPPETEER_SKIP_DOWNLOAD = "true"
+        $env:PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
         & $npmCmd install
     } else {
         Write-Host "Installing npm dependencies..."
         & $npmCmd install
     }
 
-    Write-Host "Verifying Puppeteer..."
-    & $nodeExe -e "const p=require('puppeteer'); console.log('Puppeteer OK:', !!p);"
+    Write-Host "Verifying Playwright..."
+    & $nodeExe -e "const p=require('playwright'); console.log('Playwright OK:', !!p);"
 
     Write-Host ""
     Write-Host "Dependencies installed successfully."
