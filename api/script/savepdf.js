@@ -38,15 +38,22 @@ async function main() {
   fs.mkdirSync(outputDir, { recursive: true });
 
   let playwright;
+  let puppeteer;
+  let engine = 'playwright';
   try {
     playwright = require('playwright');
   } catch (error) {
     try {
       playwright = require('playwright-core');
     } catch (innerError) {
-      throw new Error(
-        'Playwright is not installed. Run "npm i playwright" (or "npm i playwright-core") in C:\\xampp\\htdocs\\DHSUD.'
-      );
+      try {
+        puppeteer = require('puppeteer');
+        engine = 'puppeteer';
+      } catch (puppeteerError) {
+        throw new Error(
+          'Neither Playwright nor Puppeteer is installed. Run "npm i playwright" (or "npm i puppeteer") in C:\\xampp\\htdocs\\DHSUD.'
+        );
+      }
     }
   }
 
@@ -65,19 +72,33 @@ async function main() {
     launchOptions.executablePath = executablePath;
   }
 
-  const browser = await playwright.chromium.launch(launchOptions);
+  const browser = engine === 'playwright'
+    ? await playwright.chromium.launch(launchOptions)
+    : await puppeteer.launch(launchOptions);
   try {
-    const context = await browser.newContext({
-      ignoreHTTPSErrors: true,
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      viewport: { width: 1280, height: 720 },
-      extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9' },
-    });
-    const page = await context.newPage();
-
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
-    await page.waitForTimeout(2000);
+    let context = null;
+    let page;
+    if (engine === 'playwright') {
+      context = await browser.newContext({
+        ignoreHTTPSErrors: true,
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        viewport: { width: 1280, height: 720 },
+        extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9' },
+      });
+      page = await context.newPage();
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+      await page.waitForTimeout(2000);
+    } else {
+      page = await browser.newPage();
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      );
+      await page.setViewport({ width: 1280, height: 720 });
+      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
 
     await page.pdf({
       path: outputPath,
@@ -85,7 +106,9 @@ async function main() {
       format: 'A4',
     });
 
-    await context.close();
+    if (context) {
+      await context.close();
+    }
     console.log(`Saved PDF: ${outputPath}`);
   } finally {
     await browser.close();

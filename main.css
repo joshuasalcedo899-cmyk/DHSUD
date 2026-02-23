@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
 .tracking-table-container {
 	background: #d9d9d984;
@@ -26,7 +26,6 @@
 	padding: 0.8rem 0.5rem;
 	letter-spacing: 0.03em;
 	border: 2px solid #8fa0c7;
-
 }
 
 /* Sticky table header for admin table */
@@ -63,7 +62,7 @@
 }
 .tracking-table td {
 	text-align: center;
-	font-size: 0.7rem;
+	font-size: 0.6rem;
 	padding: 0.7rem 0.5rem;
 	background: #fff;
 	color: #222;
@@ -400,9 +399,10 @@
 }
 .admin-table-container td.pdf-link-cell a.pdf-link-in-cell {
 	display: block;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	white-space: normal;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+	text-overflow: clip;
 }
 
 /* Column spacing: checkbox and Action stay narrow, long-text columns get share */

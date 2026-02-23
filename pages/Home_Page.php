@@ -281,7 +281,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         }
         /* Keep other data columns from overflowing on long values. */
         .tracking-table td[data-col]:not(.notice-code-cell) {
-            white-space: normal;
+            white-space: pre-wrap;
             word-break: break-word;
             overflow-wrap: anywhere;
             max-width: 0;
@@ -2130,7 +2130,6 @@ HREDRD-EMES
             const data = event.data || {};
             if (data.type === 'scanner-success') {
                 closeScannerModal();
-                triggerReceiptGenerationFromScanner(data.noticeCode || '', data.trackingNumber || '');
                 if ((data.noticeCode || '').trim() !== '') {
                     sessionStorage.setItem('dhsud_focus_notice', data.noticeCode.trim());
                 }
@@ -2150,37 +2149,26 @@ HREDRD-EMES
             }
         });
 
-        function triggerReceiptGenerationFromScanner(noticeCode, trackingNumber) {
-            const safeNotice = (noticeCode || '').trim();
-            const safeTracking = (trackingNumber || '').trim();
-            if (!safeNotice || !safeTracking) return;
+        const receiptDownloadOnceKeys = new Set();
 
-            fetch('../api/remarks.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: 'notice_code=' + encodeURIComponent(safeNotice)
-            })
-            .then(function(resp) {
-                if (!resp.ok) throw new Error('Status check failed');
-                return resp.json();
-            })
-            .then(function(data) {
-                if (data && data.error) return;
-                const status = (((data && data.status) || '') + '').trim().toUpperCase();
-                if (status !== 'DELIVERED' && status !== 'RETURNED TO SENDER') return;
-                return fetch('../api/download-receipt.php?tracking=' + encodeURIComponent(safeTracking), {
-                    method: 'GET',
-                    cache: 'no-store'
-                }).catch(function() {
-                    return null;
-                });
-            })
-            .catch(function() {
-                // Background task only.
-            });
+        function maybeAutoDownloadReceipt(trackingNumber, statusValue) {
+            const safeTracking = ((trackingNumber || '') + '').trim();
+            const status = ((statusValue || '') + '').trim().toUpperCase();
+            if (!safeTracking) return;
+            if (status !== 'DELIVERED' && status !== 'RETURNED TO SENDER') return;
+
+            const key = safeTracking + '|' + status;
+            if (receiptDownloadOnceKeys.has(key)) return;
+            receiptDownloadOnceKeys.add(key);
+
+            const a = document.createElement('a');
+            a.href = '../api/download-receipt.php?tracking=' + encodeURIComponent(safeTracking);
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                if (a && a.parentNode) a.parentNode.removeChild(a);
+            }, 0);
         }
 
         function focusScannedRow() {
@@ -2320,6 +2308,10 @@ HREDRD-EMES
                 } else {
                     updateTrackingRow(safeNotice, data);
                 }
+
+                const resolvedTrackingNo = ((data.trackingNo || (targetRow ? targetRow.dataset.trackingNo : '') || '') + '').trim();
+                const resolvedStatus = ((data.status || '') + '').trim();
+                maybeAutoDownloadReceipt(resolvedTrackingNo, resolvedStatus);
 
                 if (result && !silent) {
                     result.innerHTML = `<span style="color:green">Tracking updated successfully!</span>`;

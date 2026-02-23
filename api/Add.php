@@ -31,6 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $singleNoticeCode = trim($_POST['Notice/Order Code'] ?? $_POST['notice_Code'] ?? '');
     $singleParcelDetails = trim($_POST['Parcel Details'] ?? $_POST['parcelDetails'] ?? '');
 
+    error_log($singleParcelDetails);
+
     // New multi inputs from Add modal
     $noticeCodes = $_POST['noticeCodes'] ?? [];
     $parcelDetailsList = $_POST['parcelDetailsList'] ?? [];
