@@ -1,4 +1,4 @@
-﻿ 
+ 
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
@@ -411,6 +411,11 @@ HREDRD-EMES
                 const link = event.target.closest('.pdf-link-in-cell[data-pdf-url]');
                 if (link) {
                     event.preventDefault();
+                    const status = ((link.getAttribute('data-status') || '') + '').trim().toUpperCase();
+                    if (status === 'ONGOING DELIVERY') {
+                        openOngoingDeliveryModal();
+                        return;
+                    }
                     const pdfUrl = link.getAttribute('data-pdf-url') || link.getAttribute('href') || '';
                     const pdfTitle = link.getAttribute('data-pdf-title') || (link.textContent || '').trim();
                     if (pdfUrl) openPdfViewerModal(pdfUrl, pdfTitle);
@@ -421,13 +426,37 @@ HREDRD-EMES
                 if (pdfModal && event.target === pdfModal) {
                     closePdfViewerModal();
                 }
+                const ongoingModal = document.getElementById('ongoingDeliveryModal');
+                if (ongoingModal && event.target === ongoingModal) {
+                    closeOngoingDeliveryModal();
+                }
             });
 
             document.addEventListener('keydown', function(event) {
                 if (event.key === 'Escape') {
-                    closePdfViewerModal();
+                    var ongoingEl = document.getElementById('ongoingDeliveryModal');
+                    if (ongoingEl && ongoingEl.classList.contains('show')) {
+                        closeOngoingDeliveryModal();
+                    } else {
+                        closePdfViewerModal();
+                    }
                 }
             });
+
+            function openOngoingDeliveryModal() {
+                const modal = document.getElementById('ongoingDeliveryModal');
+                if (modal) {
+                    modal.classList.add('show');
+                    modal.setAttribute('aria-hidden', 'false');
+                }
+            }
+            function closeOngoingDeliveryModal() {
+                const modal = document.getElementById('ongoingDeliveryModal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    modal.setAttribute('aria-hidden', 'true');
+                }
+            }
 
             </script>
         <div class="table-sort-bar">
@@ -584,7 +613,8 @@ HREDRD-EMES
                                             ?>
                                             <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell<?= $spanToBatchEndClass ?>"<?= $rowspanAttr ?>>
                                                 <?php if ($fileHref && $linkLabel !== ''): ?>
-                                                    <a href="<?= htmlspecialchars($fileHref) ?>" data-pdf-url="<?= htmlspecialchars($fileHref) ?>" data-pdf-title="<?= htmlspecialchars($linkLabel, ENT_QUOTES) ?>" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
+                                                    <?php $rowStatus = trim($row['Status'] ?? ''); ?>
+                                                    <a href="<?= htmlspecialchars($fileHref) ?>" data-pdf-url="<?= htmlspecialchars($fileHref) ?>" data-pdf-title="<?= htmlspecialchars($linkLabel, ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($rowStatus) ?>" class="pdf-link-in-cell"><?= htmlspecialchars($linkLabel) ?></a>
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
@@ -663,6 +693,20 @@ HREDRD-EMES
                     <button type="button" class="pdf-viewer-close" onclick="closePdfViewerModal()"><img class="exit-modal" src="../assets/icon.svg" alt="Close"></button>
                 </div>
                 <iframe id="pdfViewerFrame" name="pdfViewerFrame" class="pdf-viewer-frame" src="about:blank" title="PDF Viewer"></iframe>
+            </div>
+        </div>
+
+        <div id="ongoingDeliveryModal" class="ongoing-delivery-modal" aria-hidden="true">
+            <div class="ongoing-delivery-panel">
+                <div class="ongoing-delivery-title-bar">
+                    <span class="ongoing-delivery-title-text">DHSUD</span>
+                    <button type="button" class="ongoing-delivery-close" onclick="closeOngoingDeliveryModal()" aria-label="Close">×</button>
+                </div>
+                <div class="ongoing-delivery-body">
+                    <span class="ongoing-delivery-text">Ongoing Delivery...</span>
+                    <img src="../assets/Tracking_Icon.svg" alt="" class="ongoing-delivery-icon">
+                </div>
+                <div class="ongoing-delivery-footer"></div>
             </div>
         </div>
 
@@ -1479,7 +1523,7 @@ HREDRD-EMES
                         span.className = getStatusClass(text);
                         span.textContent = text;
                         td.appendChild(span);
-                    } else if (colName === 'File Name (PDF)') {
+                        } else if (colName === 'File Name (PDF)') {
                         const trackingValue = ((rowObj['Tracking No.'] || '') + '').trim();
                         if (text !== '' && trackingValue !== '') {
                             const link = document.createElement('a');
@@ -1489,6 +1533,7 @@ HREDRD-EMES
                             link.href = pdfUrl;
                             link.setAttribute('data-pdf-url', pdfUrl);
                             link.setAttribute('data-pdf-title', text);
+                            link.setAttribute('data-status', ((rowObj['Status'] || '') + '').trim());
                             link.textContent = text;
                             td.appendChild(link);
                         }

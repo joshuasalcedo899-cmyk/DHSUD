@@ -1121,7 +1121,7 @@ img {
 		width: 100%;
 	}
 	.table-search-btn {
-		width: 8%;
+		width: 9%;
 		justify-content: center;
 	}
 	.search-card {
@@ -1243,6 +1243,88 @@ img {
             height: 100%;
             border: none;
             flex: 1;
+        }
+
+        /* Ongoing Delivery modal – shown when File Name (PDF) link is clicked for ONGOING DELIVERY status */
+        .ongoing-delivery-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 12001;
+            background: rgba(0, 0, 0, 0.35);
+            justify-content: center;
+            align-items: center;
+            padding: 14px;
+            box-sizing: border-box;
+        }
+        .ongoing-delivery-modal.show {
+            display: flex;
+        }
+        .ongoing-delivery-panel {
+            position: relative;
+            background: #fff;
+            border: 2px solid #1a1a1a;
+            border-radius: 10px;
+            min-width: 280px;
+            max-width: 360px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+        .ongoing-delivery-title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2px 14px;
+            background: #22336a;
+            border-bottom: 1px solid black;
+        }
+        .ongoing-delivery-title-text {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .ongoing-delivery-close {
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            border: none;
+            background: none;
+            font-size: 1.35rem;
+            line-height: 1;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ongoing-delivery-close:hover {
+            color: #000;
+        }
+        .ongoing-delivery-body {
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 28px 24px;
+        }
+        .ongoing-delivery-text {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: black;
+        }
+        .ongoing-delivery-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+        }
+        .ongoing-delivery-footer {
+            height: 22px;
+            background: #22336a;
+            border-top: 1px solid black;
         }
 
         /* Modal Form UI - Two Column Grid */
@@ -1984,7 +2066,7 @@ body {
 }
 
 .admin-home-header-img {
-    width: min(100%, 400px);
+    width: min(100%, 500px);
     max-width: 100%;
     height: auto;
     display: block;
@@ -2009,7 +2091,7 @@ body {
     flex-direction: column !important;
     align-items: flex-start !important;
     justify-content: flex-start !important;
-    gap: 0.15rem !important;
+    gap: 0.1rem !important;
     text-align: left !important;
 }
 
