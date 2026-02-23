@@ -2134,15 +2134,29 @@ HREDRD-EMES
                     sessionStorage.setItem('dhsud_focus_notice', data.noticeCode.trim());
                 }
                 const scannerNotice = (data.noticeCode || '').trim();
+                // Trigger status fetch immediately for near real-time UI update.
+                const immediateTrack = scannerNotice !== ''
+                    ? runTrackingUpdate(scannerNotice, {
+                        silent: true,
+                        force: true,
+                        bypassCooldown: true
+                    })
+                    : Promise.resolve({ ok: false, reason: 'missing-notice' });
+
                 refreshHomeData({
                     focusNotice: scannerNotice,
                     immediateTrackNotices: (scannerNotice !== '' ? [scannerNotice] : [])
                 }).then(function() {
                     if (scannerNotice !== '') {
-                        runTrackingUpdate(scannerNotice, {
-                            silent: true,
-                            force: true,
-                            bypassCooldown: true
+                        immediateTrack.then(function(result) {
+                            // Second pass after refresh catches late DB writes after scan.
+                            if (!result || result.ok !== true) {
+                                runTrackingUpdate(scannerNotice, {
+                                    silent: true,
+                                    force: true,
+                                    bypassCooldown: true
+                                });
+                            }
                         });
                     }
                 });
@@ -2161,14 +2175,21 @@ HREDRD-EMES
             if (receiptDownloadOnceKeys.has(key)) return;
             receiptDownloadOnceKeys.add(key);
 
-            const a = document.createElement('a');
-            a.href = '../api/download-receipt.php?tracking=' + encodeURIComponent(safeTracking);
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(function() {
-                if (a && a.parentNode) a.parentNode.removeChild(a);
-            }, 0);
+            fetch('../api/download-receipt.php?tracking=' + encodeURIComponent(safeTracking) + '&silent=1', {
+                method: 'GET',
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(resp) {
+                if (!resp.ok) {
+                    throw new Error('Silent receipt generation failed');
+                }
+                return resp.json();
+            })
+            .catch(function(err) {
+                console.error(err);
+                receiptDownloadOnceKeys.delete(key);
+            });
         }
 
         function focusScannedRow() {
