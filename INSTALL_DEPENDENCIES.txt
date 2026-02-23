@@ -17,7 +17,7 @@ What the installer does:
 - Verifies node and npm
 - Sets NODE_PATH for current user
 - Runs npm install
-- Verifies Puppeteer is available
+- Verifies Playwright is available
 
 Manual setup (if needed):
 1) Install Node.js LTS from:
@@ -29,11 +29,11 @@ Manual setup (if needed):
 3) Verify:
    node -v
    npm -v
-   npm ls puppeteer --depth=0
+   npm ls playwright --depth=0
 
 PDF save prerequisites:
 - Node must be installed on the same machine running Apache/PHP
-- Puppeteer must be installed in this project
+- Playwright must be installed in this project
 - api/script/savepdf.js must exist
 - Folder JRS_PDFs must be writable
 
