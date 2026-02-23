@@ -1,4 +1,4 @@
-﻿
+
 .tracking-table-container {
 	background: #d9d9d984;
 	box-shadow: 0 2px 8px rgba(34,51,106,0.07);
@@ -1261,27 +1261,25 @@ img {
             display: flex;
         }
         .ongoing-delivery-panel {
-            position: relative;
             background: #fff;
             border: 2px solid #1a1a1a;
-            border-radius: 10px;
-            min-width: 280px;
-            max-width: 360px;
+            border-radius: 8px;
+            min-width: 300px;
+            max-width: 90vw;
             box-sizing: border-box;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
             overflow: hidden;
         }
         .ongoing-delivery-title-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 2px 14px;
+            padding: 1px 14px;
             background: #22336a;
-            border-bottom: 1px solid black;
+            border-bottom: 1px solid #1a1a1a;
         }
         .ongoing-delivery-title-text {
             font-size: 0.95rem;
-            font-weight: 700;
+            font-weight: 600;
             color: white;
             letter-spacing: 0.02em;
             text-transform: uppercase;
@@ -1303,28 +1301,28 @@ img {
         .ongoing-delivery-close:hover {
             color: #000;
         }
-        .ongoing-delivery-body {
-            background: #fff;
+        .ongoing-delivery-content {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
-            padding: 28px 24px;
+            padding: 24px 28px;
+            background: #fff;
         }
         .ongoing-delivery-text {
             font-weight: 700;
             font-size: 1.1rem;
-            color: black;
+            color: #1a1a1a;
         }
         .ongoing-delivery-icon {
             width: 22px;
             height: 22px;
             object-fit: contain;
         }
-        .ongoing-delivery-footer {
+        .ongoing-delivery-bottom-bar {
             height: 22px;
             background: #22336a;
-            border-top: 1px solid black;
+            border-top: 1px solid #1a1a1a;
         }
 
         /* Modal Form UI - Two Column Grid */

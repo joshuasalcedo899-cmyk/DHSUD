@@ -156,7 +156,7 @@ function normalizedCellValueForMerge($row, $colName) {
 $mergeSkip = [];
 $mergeRowspan = [];
 $mergeColumns = array_values(array_filter($columns, function($c) {
-    return $c !== 'Notice/Order Code' && $c !== 'Parcel Details';
+    return $c !== 'Notice/Order Code';
 }));
 $mergeColumns[] = '__ACTION__';
 
@@ -367,7 +367,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             // Dynamic Notice/Order Code fields in Add Modal
                             document.addEventListener('DOMContentLoaded', function() {
                                 const fieldsContainer = document.getElementById('noticeCodeFields');
-                                if (!fieldsContainer) return;
                                 let noticeCodeCount = 1;
                                 function addNoticeCodeField() {
                                     const idx = noticeCodeCount;
@@ -523,7 +522,7 @@ HREDRD-EMES
                 }
                 ?>
             </select>
-                <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search notice or tracking no.">
+                <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
                 <button class="table-search-btn" id="tableSearchBtn">
                     <img src="../assets/Search Icon.svg" alt="Search">
                 </button>
@@ -534,7 +533,7 @@ HREDRD-EMES
         </div>
 </div>
 
-        <div class="table-scroll-area" id="tableScrollArea" style="visibility:hidden;">
+        <div class="table-scroll-area">
             <div class="tracking-table-container">
                 <div class="tracking-table-scroll">
                     <table class="listview-table tracking-table">
@@ -580,7 +579,7 @@ HREDRD-EMES
                                     <td style="width:32px;">
                                         <input type="checkbox" class="row-checkbox" value="<?= (int)($row['id'] ?? 0) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
-                                    <td class="notice-code-cell<?= $isBatchEnd ? ' batch-span-end' : '' ?>">
+                                    <td class="notice-code-cell">
                                         <div style="display: flex; align-items: center; gap: 0.3em;">
                                             <div class="row-menu-container">
                                                 <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, <?= (int)($row['id'] ?? 0) ?>)">
@@ -659,13 +658,7 @@ HREDRD-EMES
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
-                                            <?php
-                                                $extraCellClass = ($colName === 'Parcel Details') ? 'parcel-details-cell' : '';
-                                                if ($colName === 'Parcel Details' && $isBatchEnd) {
-                                                    $extraCellClass = trim($extraCellClass . ' batch-span-end');
-                                                }
-                                            ?>
-                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="<?= trim($extraCellClass . ' ' . $spanToBatchEndClass) ?>"<?= $rowspanAttr ?>><?= htmlspecialchars($cellValue) ?></td>
+                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="<?= trim($spanToBatchEndClass) ?>"<?= $rowspanAttr ?>><?= htmlspecialchars($cellValue) ?></td>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
@@ -748,6 +741,20 @@ HREDRD-EMES
             </div>
         </div>
 
+        <div id="ongoingDeliveryModal" class="ongoing-delivery-modal" aria-hidden="true">
+            <div class="ongoing-delivery-panel">
+                <div class="ongoing-delivery-title-bar">
+                    <span class="ongoing-delivery-title-text">DHSUD</span>
+                    <button type="button" class="ongoing-delivery-close" onclick="closeOngoingDeliveryModal()" aria-label="Close">×</button>
+                </div>
+                <div class="ongoing-delivery-content">
+                    <span class="ongoing-delivery-text">Ongoing Delivery...</span>
+                    <img src="../assets/Tracking_Icon.svg" alt="" class="ongoing-delivery-icon">
+                </div>
+                <div class="ongoing-delivery-bottom-bar"></div>
+            </div>
+        </div>
+
         <!-- Add New Record Modal (hidden by default) -->
         
         <div style="display: flex; gap: 10px; margin-top: 2 px; align-items: center;">
@@ -782,104 +789,6 @@ HREDRD-EMES
                     window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
                 }
             })();
-
-            const BATCH_COLLAPSE_STORAGE_KEY = 'dhsud_collapsed_batches_v1';
-            const collapsedBatchIds = new Set();
-            const searchExpandedBatchIds = new Set();
-            let activeSearchFilterText = '';
-            let batchCollapseInitialized = false;
-
-            function loadCollapsedBatchIds() {
-                collapsedBatchIds.clear();
-                try {
-                    const raw = sessionStorage.getItem(BATCH_COLLAPSE_STORAGE_KEY);
-                    const parsed = raw ? JSON.parse(raw) : [];
-                    if (Array.isArray(parsed)) {
-                        parsed.forEach(function(id) {
-                            const safeId = ((id || '') + '').trim();
-                            if (safeId) collapsedBatchIds.add(safeId);
-                        });
-                    }
-                } catch (e) {
-                    // no-op
-                }
-            }
-
-            function saveCollapsedBatchIds() {
-                try {
-                    sessionStorage.setItem(BATCH_COLLAPSE_STORAGE_KEY, JSON.stringify(Array.from(collapsedBatchIds)));
-                } catch (e) {
-                    // no-op
-                }
-            }
-
-            function toggleBatchDropdown(event, batchId) {
-                if (event) event.stopPropagation();
-                const safeBatchId = ((batchId || '') + '').trim();
-                if (!safeBatchId) return;
-                if (collapsedBatchIds.has(safeBatchId)) {
-                    collapsedBatchIds.delete(safeBatchId);
-                } else {
-                    collapsedBatchIds.add(safeBatchId);
-                }
-                saveCollapsedBatchIds();
-                applyBatchDropdownState();
-            }
-
-            function applyBatchDropdownState() {
-                const rows = document.querySelectorAll('tr[data-notice]');
-                const firstRowByBatchId = new Set();
-                if (!batchCollapseInitialized) batchCollapseInitialized = true;
-
-                rows.forEach(function(tr) {
-                    const batchId = ((tr.dataset.batchId || '') + '').trim();
-                    const isFilterVisible = ((tr.dataset.filterVisible || '1') === '1');
-                    if (!batchId) {
-                        tr.style.display = isFilterVisible ? '' : 'none';
-                        return;
-                    }
-
-                    const isHead = !firstRowByBatchId.has(batchId);
-                    if (isHead) {
-                        firstRowByBatchId.add(batchId);
-                        tr.dataset.batchHead = '1';
-                        const isCollapsed = collapsedBatchIds.has(batchId);
-
-                        const toggle = tr.querySelector('.batch-toggle-btn');
-                        if (toggle) {
-                            toggle.setAttribute('aria-label', isCollapsed ? 'Expand batch' : 'Collapse batch');
-                            toggle.setAttribute('title', isCollapsed ? 'Expand batch' : 'Collapse batch');
-                            toggle.setAttribute('data-collapsed', isCollapsed ? '1' : '0');
-                        }
-
-                        // Prevent table layout break: collapsed head rows must not keep large rowspans.
-                        tr.querySelectorAll('td[rowspan]').forEach(function(td) {
-                            const currentSpan = parseInt(td.getAttribute('rowspan') || '1', 10) || 1;
-                            if (!td.dataset.origRowspan && currentSpan > 1) {
-                                td.dataset.origRowspan = String(currentSpan);
-                            }
-                            if (isCollapsed) {
-                                td.setAttribute('rowspan', '1');
-                            } else if (td.dataset.origRowspan) {
-                                td.setAttribute('rowspan', td.dataset.origRowspan);
-                            }
-                        });
-
-                        tr.classList.toggle('batch-collapsed-head', isCollapsed);
-
-                        tr.style.display = isFilterVisible ? '' : 'none';
-                        return;
-                    }
-
-                    tr.dataset.batchHead = '0';
-                    tr.classList.remove('batch-collapsed-head');
-                    const cb = tr.querySelector('.row-checkbox');
-                    const isChecked = !!(cb && cb.checked);
-                    const isSearchExpanded = activeSearchFilterText !== '' && searchExpandedBatchIds.has(batchId);
-                    const shouldHide = collapsedBatchIds.has(batchId) && !isChecked && !isSearchExpanded;
-                    tr.style.display = (isFilterVisible && !shouldHide) ? '' : 'none';
-                });
-            }
 
             var currentRowMenuId = 0;
             function hideRowMenuDropdown() {
@@ -952,7 +861,6 @@ HREDRD-EMES
                 checkboxes.forEach(function(cb) {
                     cb.checked = master.checked;
                 });
-                applyBatchDropdownState();
             }
         function bindRowCheckboxListeners() {
             document.querySelectorAll('.row-checkbox').forEach(function(cb) {
@@ -960,7 +868,6 @@ HREDRD-EMES
                     var allChecked = Array.from(document.querySelectorAll('.row-checkbox')).every(function(c) { return c.checked; });
                     var master = document.getElementById('selectAllCheckbox');
                     if (master) master.checked = allChecked;
-                    applyBatchDropdownState();
                 };
             });
         }
@@ -1241,24 +1148,10 @@ HREDRD-EMES
                                         }
                                         var focusNotice = (document.getElementById('editNoticeCodeDisplay').value || '').trim();
                                         var submittedTrackingNo = (formData.get('Tracking No.') || '').trim();
-                                        var originalRowId = parseInt(formData.get('original_id') || '0', 10) || 0;
-                                        var originalTrackingNo = '';
-                                        if (Array.isArray(window.mailRows)) {
-                                            var originalRowObj = window.mailRows.find(function(r) {
-                                                return (parseInt(r.id, 10) || 0) === originalRowId;
-                                            });
-                                            if (originalRowObj) {
-                                                originalTrackingNo = ((originalRowObj['Tracking No.'] || originalRowObj['Tracking No'] || originalRowObj['tracking_no'] || originalRowObj['TrackingNo'] || '') + '').trim();
-                                            }
-                                        }
-                                        var hadTrackingBefore = originalTrackingNo !== '' && originalTrackingNo !== '0';
-                                        var hasTrackingNow = submittedTrackingNo !== '' && submittedTrackingNo !== '0';
-                                        var newlyAddedTracking = (!hadTrackingBefore && hasTrackingNow);
                                         closeEditModal();
                                         refreshHomeData({
                                             focusNotice: focusNotice,
-                                            immediateTrackNotices: (hasTrackingNow ? [focusNotice] : []),
-                                            immediateTrackForceNotices: (newlyAddedTracking ? [focusNotice] : [])
+                                            immediateTrackNotices: (submittedTrackingNo !== '' ? [focusNotice] : [])
                                         });
                                     } else {
                                         alert(data.message || 'Failed to save changes.');
@@ -1332,7 +1225,6 @@ HREDRD-EMES
             const focusNotice = (options.focusNotice || '').trim();
             const focusRowId = parseInt(options.focusRowId || 0, 10) || 0;
             const immediateTrackNotices = Array.isArray(options.immediateTrackNotices) ? options.immediateTrackNotices : [];
-            const immediateTrackForceNotices = Array.isArray(options.immediateTrackForceNotices) ? options.immediateTrackForceNotices : [];
             const previousStatusSnapshot = cloneStatusSnapshot();
             const url = new URL(window.location.href);
             url.searchParams.set('_ts', Date.now().toString());
@@ -1346,14 +1238,7 @@ HREDRD-EMES
                     const currentArea = document.querySelector('.admin-table-container .table-scroll-area');
                     const nextArea = doc.querySelector('.admin-table-container .table-scroll-area');
                     if (currentArea && nextArea) {
-                        const currentHeight = currentArea.getBoundingClientRect().height;
-                        if (currentHeight > 0) {
-                            currentArea.style.minHeight = Math.round(currentHeight) + 'px';
-                        }
                         currentArea.innerHTML = nextArea.innerHTML;
-                        window.requestAnimationFrame(function() {
-                            currentArea.style.minHeight = '';
-                        });
                     }
 
                     const currentStats = document.querySelector('.statistics-bar');
@@ -1377,12 +1262,8 @@ HREDRD-EMES
                     filterTableRows();
                     notifyStatusDiffsAfterRefresh(previousStatusSnapshot);
                     autoTrackEligibleRows();
-                    immediateTrackOnceKeys.clear();
                     immediateTrackNotices.forEach(function(notice) {
                         triggerImmediateTrackingOnce(notice);
-                    });
-                    immediateTrackForceNotices.forEach(function(notice) {
-                        triggerImmediateTrackingOnce(notice, { force: true, bypassCooldown: true });
                     });
 
                     if (focusRowId > 0) {
@@ -1494,8 +1375,9 @@ HREDRD-EMES
                 const previousVersion = smartPollingState.lastKnownVersion;
                 smartPollingState.lastKnownVersion = currentVersion;
 
-                // On first run, trust server-rendered HTML and avoid immediate DOM replacement.
-                if (!previousVersion) return { changed: false, version: currentVersion };
+                if (!previousVersion) {
+                    return { changed: true, version: currentVersion };
+                }
 
                 if (previousVersion !== currentVersion) {
                     smartPollingState.burstUntilAt = Date.now() + SMART_POLLING.burstWindowMs;
@@ -1630,7 +1512,6 @@ HREDRD-EMES
                 return;
             }
             if (!Array.isArray(window.mailRows)) return;
-            const pendingBatchNotifications = new Map();
 
             window.mailRows.forEach(function(row) {
                 const notice = ((row['Notice/Order Code'] || '') + '').trim();
@@ -1640,8 +1521,6 @@ HREDRD-EMES
                 const eventDate = (formatDisplayDate(row['Date'] || '') || ((row['Date'] || '') + '').trim());
                 const prevEntry = previousSnapshot.get(notice);
                 const previousStatus = prevEntry ? (((prevEntry.status || '') + '').trim().toUpperCase()) : '';
-                const rowEl = document.querySelector('tr[data-notice="' + CSS.escape(notice) + '"]');
-                const batchId = rowEl ? ((rowEl.dataset.batchId || '') + '').trim() : '';
 
                 if (prevEntry && previousStatus !== nextStatus) {
                     if (batchId && isNotifiableStatus(nextStatus)) {
@@ -1732,73 +1611,27 @@ HREDRD-EMES
             });
         }
 
-        function rebuildVisibleActionCellForSearch(tr, rowObj) {
-            if (!tr || !rowObj) return;
-
-            tr.querySelectorAll('td[data-temp-action="1"]').forEach(function(td) { td.remove(); });
-
-            const lastCell = tr.lastElementChild;
-            if (!lastCell) return;
-
-            const hasActionContent =
-                !!lastCell.querySelector('.btn-scan, .btn-track, .track-result') ||
-                /auto\s*tracking/i.test((lastCell.textContent || '').trim());
-
-            if (hasActionContent) {
-                if (lastCell.hasAttribute('rowspan')) {
-                    lastCell.removeAttribute('rowspan');
-                }
-                return;
-            }
-
-            const trackingValue = ((rowObj['Tracking No.'] || '') + '').trim();
-            const noticeCode = ((rowObj['Notice/Order Code'] || '') + '').trim();
-            const tempAction = document.createElement('td');
-            tempAction.setAttribute('data-temp-action', '1');
-
-            if (trackingValue && trackingValue !== '0') {
-                tempAction.innerHTML = '<span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span><div class="track-result"></div>';
-            } else {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'btn-scan';
-                btn.style.display = 'inline-block';
-                btn.style.textDecoration = 'none';
-                btn.textContent = 'Scan';
-                btn.addEventListener('click', function() { openScannerModal(noticeCode); });
-                tempAction.appendChild(btn);
-            }
-
-            tr.appendChild(tempAction);
-        }
-
         function findRowByNoticeCode(noticeCode) {
             const safeNotice = (noticeCode || '').trim();
             if (!safeNotice) return null;
             return document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
         }
 
-        function updateTrackingRow(noticeCode, data, options = {}) {
+        function updateTrackingRow(noticeCode, data) {
             const row = findRowByNoticeCode(noticeCode);
-            if (!row) return null;
+            if (!row) return;
             const resolvedNotice = ((row.dataset.notice || '').trim() || (noticeCode || '').trim());
-            const suppressNotification = options.suppressNotification === true;
-            let previousStatus = '';
-            let nextStatus = '';
-            let nextDateText = '';
 
             const dateCell = row.querySelector('td[data-col="Date"]');
             const existingDateText = ((dateCell && dateCell.textContent) ? dateCell.textContent : '').trim();
-            nextDateText = (data.dateDisplay || formatDisplayDate(data.date || '') || existingDateText).trim();
+            const nextDateText = (data.dateDisplay || formatDisplayDate(data.date || '') || existingDateText).trim();
             const statusCell = row.querySelector('td[data-col="Status"]');
             if (statusCell && typeof data.status !== 'undefined') {
-                previousStatus = ((statusCell.textContent || '') + '').trim().toUpperCase();
-                nextStatus = ((data.status || '') + '').trim().toUpperCase();
+                const previousStatus = ((statusCell.textContent || '') + '').trim().toUpperCase();
+                const nextStatus = ((data.status || '') + '').trim().toUpperCase();
                 const statusClass = getStatusClass(data.status);
                 statusCell.innerHTML = `<span class="${statusClass}">${data.status || ''}</span>`;
-                if (!suppressNotification) {
-                    maybeNotifyStatusChange(resolvedNotice, previousStatus, nextStatus, nextDateText);
-                }
+                maybeNotifyStatusChange(resolvedNotice, previousStatus, nextStatus, nextDateText);
                 statusSnapshotByNotice.set(resolvedNotice, {
                     status: nextStatus,
                     eventDate: nextDateText
@@ -1813,30 +1646,6 @@ HREDRD-EMES
             if (transmittalCell && typeof data.transmittalRemarks !== 'undefined') {
                 transmittalCell.textContent = data.transmittalRemarks || '';
             }
-            const fileCell = row.querySelector('td[data-col="File Name (PDF)"]');
-            if (fileCell && typeof data.fileNamePdf !== 'undefined') {
-                const fileName = ((data.fileNamePdf || '') + '').trim();
-                const trackingValue = ((data.trackingNo || row.dataset.trackingNo || '') + '').trim();
-                fileCell.innerHTML = '';
-                if (fileName !== '' && trackingValue !== '' && trackingValue !== '0') {
-                    const link = document.createElement('a');
-                    const pdfName = 'proof_' + trackingValue + '.pdf';
-                    const pdfUrl = '../JRS_PDFs/' + encodeURIComponent(pdfName);
-                    link.className = 'pdf-link-in-cell';
-                    link.href = pdfUrl;
-                    link.setAttribute('data-pdf-url', pdfUrl);
-                    link.setAttribute('data-pdf-title', fileName);
-                    link.textContent = fileName;
-                    fileCell.appendChild(link);
-                }
-            }
-
-            return {
-                resolvedNotice: resolvedNotice,
-                previousStatus: previousStatus,
-                nextStatus: nextStatus,
-                nextDateText: nextDateText
-            };
         }
 
         function updateTrackingRowsByBatch(batchId, data) {
@@ -1883,8 +1692,6 @@ HREDRD-EMES
         function filterTableRows() {
             const input = document.getElementById('tableSearchInput');
             const filter = input.value.toLowerCase();
-            activeSearchFilterText = filter;
-            searchExpandedBatchIds.clear();
             const yearSelect = document.getElementById('tableSortYear');
             let selectedYear = yearSelect.value;
             if (selectedYear === 'all' || !selectedYear) selectedYear = '';
@@ -1909,26 +1716,16 @@ HREDRD-EMES
                 const isChecked = !!(cb && cb.checked);
 
                 tr.querySelectorAll('td[data-temp-fill="1"]').forEach(function(td) { td.remove(); });
-                tr.querySelectorAll('td[data-temp-action="1"]').forEach(function(td) { td.remove(); });
                 if (isChecked) {
-                    tr.dataset.filterVisible = '1';
                     tr.style.display = '';
                     if (isFiltering && !yearBatchMode) {
                         const rowObjChecked = rowDataById.get(rowId);
-                        rebuildVisibleActionCellForSearch(tr, rowObjChecked);
                         rebuildVisibleRowCellsForSearch(tr, rowObjChecked);
                     }
                     return;
                 }
 
-                const rowObj = rowDataById.get(rowId) || {};
-                const trackingNo = ((tr.dataset.trackingNo || rowObj['Tracking No.'] || rowObj['Tracking No'] || rowObj['tracking_no'] || rowObj['TrackingNo'] || '') + '').trim();
-                const searchablePieces = [notice, trackingNo];
-                tableDataColumns.forEach(function(col) {
-                    searchablePieces.push((rowObj && rowObj[col]) ? String(rowObj[col]) : '');
-                });
-                const fullText = searchablePieces.join(' ').toLowerCase();
-                const textMatch = filter === '' ? true : (fullText.indexOf(filter) > -1);
+                const codeMatch = notice.toLowerCase().indexOf(filter) > -1;
 
                 let yearMatch = true;
                 if (selectedYear) {
@@ -1937,17 +1734,13 @@ HREDRD-EMES
                     yearMatch = dateAfd.indexOf(selectedYear) > -1;
                 }
 
-                const visible = textMatch && yearMatch;
+                const visible = codeMatch && yearMatch;
                 if (visible && yearBatchMode && batchId !== '') {
                     matchedBatchIds.add(batchId);
                 }
-                if (visible && filter !== '' && batchId !== '') {
-                    searchExpandedBatchIds.add(batchId);
-                }
-                tr.dataset.filterVisible = visible ? '1' : '0';
                 tr.style.display = visible ? '' : 'none';
                 if (visible && isFiltering && !yearBatchMode) {
-                    rebuildVisibleActionCellForSearch(tr, rowObj);
+                    const rowObj = rowDataById.get(rowId);
                     rebuildVisibleRowCellsForSearch(tr, rowObj);
                 }
             });
@@ -1960,47 +1753,11 @@ HREDRD-EMES
                     if (isChecked) return;
                     const batchId = (tr.dataset.batchId || '').trim();
                     if (batchId && matchedBatchIds.has(batchId)) {
-                        tr.dataset.filterVisible = '1';
                         tr.style.display = '';
                     }
                 });
             }
-
-            // Search should also reveal full matched batches even when rows are collapsed.
-            if (filter !== '' && searchExpandedBatchIds.size > 0) {
-                Array.from(trs).forEach(function(tr) {
-                    const batchId = (tr.dataset.batchId || '').trim();
-                    if (batchId && searchExpandedBatchIds.has(batchId)) {
-                        tr.dataset.filterVisible = '1';
-                        tr.style.display = '';
-                    }
-                });
-            }
-
-            applyBatchDropdownState();
         }
-
-        let wasSearchFilterActive = false;
-        let searchClearRefreshInFlight = false;
-
-        function handleSearchInputChange() {
-            const input = document.getElementById('tableSearchInput');
-            const currentValue = ((input && input.value) ? input.value : '').trim();
-            const isSearchActiveNow = currentValue !== '';
-
-            filterTableRows();
-
-            if (wasSearchFilterActive && !isSearchActiveNow && !searchClearRefreshInFlight) {
-                searchClearRefreshInFlight = true;
-                refreshHomeData()
-                    .finally(function() {
-                        searchClearRefreshInFlight = false;
-                    });
-            }
-
-            wasSearchFilterActive = isSearchActiveNow;
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
             document.addEventListener('click', function(e) {
                 var dropdown = document.getElementById('rowMenuDropdown');
@@ -2017,9 +1774,7 @@ HREDRD-EMES
             const searchInput = document.getElementById('tableSearchInput');
             const searchBtn = document.getElementById('tableSearchBtn');
             const yearSelect = document.getElementById('tableSortYear');
-            wasSearchFilterActive = ((searchInput && searchInput.value) ? searchInput.value.trim() : '') !== '';
-            loadCollapsedBatchIds();
-            searchInput.addEventListener('input', handleSearchInputChange);
+            searchInput.addEventListener('input', filterTableRows);
             searchBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 filterTableRows();
@@ -2027,12 +1782,7 @@ HREDRD-EMES
             yearSelect.addEventListener('change', filterTableRows);
             bindRowCheckboxListeners();
             rebuildMailRowsFromTable();
-            filterTableRows();
             rebuildStatusSnapshotFromMailRows();
-            const tableScrollArea = document.getElementById('tableScrollArea');
-            if (tableScrollArea) {
-                tableScrollArea.style.visibility = 'visible';
-            }
             focusScannedRow();
             autoTrackEligibleRows();
             initSmartPolling();
@@ -2060,7 +1810,7 @@ HREDRD-EMES
                 const scannerNotice = (data.noticeCode || '').trim();
                 refreshHomeData({
                     focusNotice: scannerNotice,
-                    immediateTrackForceNotices: (scannerNotice !== '' ? [scannerNotice] : [])
+                    immediateTrackNotices: (scannerNotice !== '' ? [scannerNotice] : [])
                 });
             }
         });
@@ -2076,8 +1826,7 @@ HREDRD-EMES
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: 'notice_code=' + encodeURIComponent(safeNotice) + '&force=1'
-                    + '&bypass_cooldown=1'
+                body: 'notice_code=' + encodeURIComponent(safeNotice)
             })
             .then(function(resp) {
                 if (!resp.ok) throw new Error('Status check failed');
@@ -2097,29 +1846,6 @@ HREDRD-EMES
             .catch(function() {
                 // Background task only.
             });
-        }
-
-        function getRowGroupForHighlight(row) {
-            if (!row) return [];
-            const batchId = (row.dataset.batchId || '').trim();
-            if (!batchId) return [row];
-            return Array.from(document.querySelectorAll('tr[data-batch-id="' + CSS.escape(batchId) + '"]'));
-        }
-
-        function applyTemporaryRowHighlight(row, focusClass, durationMs) {
-            const rows = getRowGroupForHighlight(row);
-            if (!rows.length) return;
-
-            rows.forEach(function(r) {
-                r.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
-                r.classList.add(focusClass);
-            });
-
-            setTimeout(function() {
-                rows.forEach(function(r) {
-                    r.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
-                });
-            }, durationMs || 2600);
         }
 
         function focusScannedRow() {
@@ -2146,7 +1872,8 @@ HREDRD-EMES
             }
 
             row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-            applyTemporaryRowHighlight(row, 'scanned-row-focus', 2600);
+            row.classList.add('scanned-row-focus');
+            setTimeout(function() { row.classList.remove('scanned-row-focus'); }, 2600);
 
             sessionStorage.removeItem('dhsud_focus_notice');
             sessionStorage.removeItem('dhsud_focus_id');
@@ -2203,7 +1930,7 @@ HREDRD-EMES
             }, 0);
         }
 
-        const AUTO_TRACK_INTERVAL_MS = 15 * 60 * 1000;
+        const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
         const autoTrackLastRunByKey = new Map();
         const immediateTrackOnceKeys = new Set();
         let autoTrackInProgress = false;
@@ -2218,7 +1945,6 @@ HREDRD-EMES
         function runTrackingUpdate(noticeCode, options = {}) {
             const safeNotice = (noticeCode || "").trim();
             const silent = options.silent === true;
-            const bypassCooldown = options.bypassCooldown === true;
             const result = getTrackResultElementForNotice(safeNotice);
             const targetRow = findRowByNoticeCode(safeNotice);
             const rowId = targetRow ? (parseInt(targetRow.dataset.id || '0', 10) || 0) : 0;
@@ -2229,18 +1955,10 @@ HREDRD-EMES
 
             if (result) result.innerHTML = "";
 
-            const force = options.force === true;
-            const bodyParts = [
-                "row_id=" + encodeURIComponent(String(rowId)),
-                "notice_code=" + encodeURIComponent(safeNotice),
-                "force=" + (force ? "1" : "0"),
-                "bypass_cooldown=" + (bypassCooldown ? "1" : "0")
-            ];
-
             return fetch("../api/remarks.php", {
                 method: "POST",
                 headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                body: bodyParts.join("&")
+                body: "row_id=" + encodeURIComponent(String(rowId)) + "&notice_code=" + encodeURIComponent(safeNotice)
             })
             .then(res => res.json())
             .then(data => {
@@ -2274,10 +1992,8 @@ HREDRD-EMES
             });
         }
 
-        function triggerImmediateTrackingOnce(noticeCode, options = {}) {
+        function triggerImmediateTrackingOnce(noticeCode) {
             const safeNotice = (noticeCode || '').trim();
-            const force = options.force === true;
-            const bypassCooldown = options.bypassCooldown === true;
             if (!safeNotice) return;
 
             const row = findRowByNoticeCode(safeNotice);
@@ -2287,42 +2003,29 @@ HREDRD-EMES
             if (!trackingNo || trackingNo === '0') return;
 
             const batchId = (row.dataset.batchId || '').trim();
-            const key = (batchId ? ('batch:' + batchId) : ('notice:' + safeNotice)) + '|tracking:' + trackingNo + (force ? '|force:1' : '|force:0');
+            const key = (batchId ? ('batch:' + batchId) : ('notice:' + safeNotice)) + '|tracking:' + trackingNo;
             if (immediateTrackOnceKeys.has(key)) return;
             immediateTrackOnceKeys.add(key);
 
             const throttleKey = batchId ? ('batch:' + batchId) : ('notice:' + safeNotice);
             autoTrackLastRunByKey.set(throttleKey, Date.now());
-            runTrackingUpdate(safeNotice, { silent: true, force: force, bypassCooldown: bypassCooldown });
+            runTrackingUpdate(safeNotice, { silent: true });
         }
 
         function collectAutoTrackItems() {
             const rows = document.querySelectorAll('tr[data-notice][data-tracking-no]');
             const items = [];
             const seenBatchIds = new Set();
-            const rowDataById = new Map();
-
-            if (Array.isArray(window.mailRows)) {
-                window.mailRows.forEach(function(r) {
-                    const id = parseInt(r.id, 10) || 0;
-                    if (id > 0) rowDataById.set(id, r);
-                });
-            }
 
             rows.forEach(function(row) {
-                const rowId = parseInt(row.dataset.id || '0', 10) || 0;
-                const rowObj = rowDataById.get(rowId) || {};
                 const noticeCode = (row.dataset.notice || '').trim();
                 const batchId = (row.dataset.batchId || '').trim();
                 const trackingNo = (row.dataset.trackingNo || '').trim();
                 const statusCell = row.querySelector('td[data-col="Status"]');
-                const statusText = ((statusCell && statusCell.textContent)
-                    ? statusCell.textContent
-                    : (rowObj['Status'] || '')
-                ).trim().toUpperCase();
+                const statusText = ((statusCell && statusCell.textContent) ? statusCell.textContent : '').trim().toUpperCase();
 
                 if (!noticeCode || !trackingNo || trackingNo === '0') return;
-                if (statusText === 'DELIVERED' || statusText === 'RETURNED TO SENDER') return;
+                if (statusText !== 'ONGOING DELIVERY') return;
 
                 if (batchId) {
                     if (seenBatchIds.has(batchId)) return;
@@ -2370,7 +2073,7 @@ HREDRD-EMES
             const button = evt.target.closest(".btn-track");
             if (!button) return;
             const noticeCode = (button.dataset.notice || "").trim();
-            runTrackingUpdate(noticeCode, { silent: false, force: true });
+            runTrackingUpdate(noticeCode, { silent: false });
         });
 
         const NOTIFICATION_STORAGE_KEY = 'dhsud_status_notifications_v1';
@@ -2425,33 +2128,23 @@ HREDRD-EMES
             return `${datePart} ${timePart}`;
         }
 
-        function maybeNotifyStatusChange(noticeCode, previousStatus, nextStatus, eventDateText, options = {}) {
+        function maybeNotifyStatusChange(noticeCode, previousStatus, nextStatus, eventDateText) {
             const notice = (noticeCode || '').trim();
             const prev = ((previousStatus || '') + '').trim().toUpperCase();
             const next = ((nextStatus || '') + '').trim().toUpperCase();
             const eventDate = ((eventDateText || '') + '').trim();
-            const displayTrackingId = ((options.displayTrackingId || notice) + '').trim();
-            const dedupeKey = ((options.dedupeKey || '') + '').trim();
             if (!notice) return;
             if (!isNotifiableStatus(next)) return;
             if (prev === next) return;
 
             const notifications = readNotifications();
-            if (dedupeKey) {
-                const duplicate = notifications.some(function(n) {
-                    return ((n.dedupeKey || '') + '').trim() === dedupeKey;
-                });
-                if (duplicate) return;
-            }
             notifications.unshift({
                 id: Date.now() + Math.floor(Math.random() * 1000),
-                trackingId: displayTrackingId || notice,
-                noticeCode: notice,
+                trackingId: notice,
                 status: next,
                 statusType: getNotificationStatusType(next),
                 eventDate: eventDate,
                 timestampIso: new Date().toISOString(),
-                dedupeKey: dedupeKey,
                 read: false
             });
 
@@ -2560,7 +2253,7 @@ HREDRD-EMES
             let changed = false;
             notifications.forEach(function(n) {
                 if ((parseInt(n.id, 10) || 0) === targetId) {
-                    noticeCode = ((n.noticeCode || n.trackingId || '') + '').trim();
+                    noticeCode = ((n.trackingId || '') + '').trim();
                     statusType = (n.statusType === 'returned' ? 'returned' : 'delivered');
                     if (!n.read) {
                         n.read = true;
@@ -2601,7 +2294,10 @@ HREDRD-EMES
             if (row) {
                 row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                 var focusClass = statusType === 'returned' ? 'notif-row-focus-returned' : (statusType === 'delivered' ? 'notif-row-focus-delivered' : 'scanned-row-focus');
-                applyTemporaryRowHighlight(row, focusClass, 2600);
+                row.classList.add(focusClass);
+                setTimeout(function() {
+                    row.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
+                }, 2600);
                 return;
             }
 
@@ -2698,8 +2394,5 @@ HREDRD-EMES
     </div>
 </body>
 </html>
-
-
-
 
 
