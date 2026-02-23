@@ -376,6 +376,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             // Dynamic Notice/Order Code fields in Add Modal
                             document.addEventListener('DOMContentLoaded', function() {
                                 const fieldsContainer = document.getElementById('noticeCodeFields');
+                                if (!fieldsContainer) return;
                                 let noticeCodeCount = 1;
                                 function addNoticeCodeField() {
                                     const idx = noticeCodeCount;
@@ -399,7 +400,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                     noticeCodeCount++;
                                 }
                                 // Attach add handler to first Add button
-                                fieldsContainer.querySelector('.add-notice-btn').addEventListener('click', function() {
+                                const addBtn = fieldsContainer.querySelector('.add-notice-btn');
+                                if (!addBtn) return;
+                                addBtn.addEventListener('click', function() {
                                     addNoticeCodeField();
                                 });
                             });
@@ -741,7 +744,7 @@ HREDRD-EMES
                                     ?>
                                     <td class="<?= trim($actionSpanToBatchEndClass) ?>"<?= $actionRowspanAttr ?>>
                                         <?php if ($showBatchBadge): ?>
-                                            <button type="button" class="batch-toggle-btn" onclick="toggleBatchDropdown(event, '<?= htmlspecialchars($rowBatchId, ENT_QUOTES) ?>')" title="Collapse/Expand batch" aria-label="Collapse/Expand batch" style="margin-bottom:4px;">
+                                            <button type="button" class="batch-toggle-btn" title="Batch row" aria-label="Batch row" style="margin-bottom:4px;">
                                                 <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon">
                                             </button>
                                         <?php endif; ?>
@@ -1281,7 +1284,7 @@ HREDRD-EMES
             window.mailRows = rows;
         }
 
-        function refreshHomeData(options = {}) {
+        function refreshHomeDataFull(options = {}) {
             const focusNotice = (options.focusNotice || '').trim();
             const focusRowId = parseInt(options.focusRowId || 0, 10) || 0;
             const immediateTrackNotices = Array.isArray(options.immediateTrackNotices) ? options.immediateTrackNotices : [];
@@ -1346,6 +1349,163 @@ HREDRD-EMES
                 .catch(function(err) {
                     console.error('refreshHomeData failed:', err);
                     return false;
+                });
+        }
+
+        function updateStatsBarFromDelta(stats) {
+            if (!stats || typeof stats !== 'object') return;
+            const rtsEl = document.querySelector('.statistics-bar .stat-box.stat-rtos .stat-count');
+            const ogdEl = document.querySelector('.statistics-bar .stat-box.stat-ongoing .stat-count');
+            const delEl = document.querySelector('.statistics-bar .stat-box.stat-delivered .stat-count');
+            const totalEl = document.querySelector('.statistics-bar .stat-box.stat-total .stat-count');
+            const ndrEl = document.querySelector('.statistics-bar .stat-box.stat-ndr .stat-count');
+            if (rtsEl) rtsEl.textContent = String(parseInt(stats.returnedToSender, 10) || 0);
+            if (ogdEl) ogdEl.textContent = String(parseInt(stats.ongoingDelivery, 10) || 0);
+            if (delEl) delEl.textContent = String(parseInt(stats.delivered, 10) || 0);
+            if (totalEl) totalEl.textContent = String(parseInt(stats.total, 10) || 0);
+            if (ndrEl) {
+                const ndr = Number(stats.ndrPercent);
+                ndrEl.textContent = (Number.isFinite(ndr) ? ndr.toFixed(1) : '0.0') + '%';
+            }
+        }
+
+        function updateYearSelectFromDelta(years) {
+            const yearSelect = document.getElementById('tableSortYear');
+            if (!yearSelect || !Array.isArray(years)) return;
+            const previousValue = yearSelect.value;
+            const opts = ['<option value="" disabled hidden>Year</option>', '<option value="all">All</option>'];
+            years.forEach(function(y) {
+                const yy = ((y || '') + '').trim();
+                if (yy) {
+                    opts.push('<option value="' + yy.replace(/"/g, '&quot;') + '">' + yy.replace(/</g, '&lt;') + '</option>');
+                }
+            });
+            yearSelect.innerHTML = opts.join('');
+            if (previousValue && Array.from(yearSelect.options).some(function(o) { return o.value === previousValue; })) {
+                yearSelect.value = previousValue;
+            } else {
+                yearSelect.value = 'all';
+            }
+        }
+
+        function areRowsSameOrder(currentRows, nextRows) {
+            if (!Array.isArray(currentRows) || !Array.isArray(nextRows)) return false;
+            if (currentRows.length !== nextRows.length) return false;
+            for (let i = 0; i < nextRows.length; i++) {
+                const currentId = parseInt(currentRows[i] && currentRows[i].id, 10) || 0;
+                const nextId = parseInt(nextRows[i] && nextRows[i].id, 10) || 0;
+                if (currentId <= 0 || nextId <= 0 || currentId !== nextId) return false;
+            }
+            return true;
+        }
+
+        function applyDeltaRefreshPayload(payload, previousStatusSnapshot) {
+            if (!payload || payload.success !== true || !Array.isArray(payload.rows)) return false;
+            const currentRows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const nextRows = payload.rows;
+            if (!areRowsSameOrder(currentRows, nextRows)) return false;
+
+            const safeDeltaCols = new Set(['Status', 'Date', 'Transmittal Remarks/Received By', 'File Name (PDF)']);
+            for (let i = 0; i < nextRows.length; i++) {
+                const before = currentRows[i] || {};
+                const after = nextRows[i] || {};
+                const changedCols = [];
+
+                if ((((before['Notice/Order Code'] || '') + '').trim()) !== (((after['Notice/Order Code'] || '') + '').trim())) {
+                    return false;
+                }
+
+                tableDataColumns.forEach(function(col) {
+                    const a = ((before[col] || '') + '').trim();
+                    const b = ((after[col] || '') + '').trim();
+                    if (a !== b) changedCols.push(col);
+                });
+
+                if (changedCols.length === 0) continue;
+                if (changedCols.some(function(col) { return !safeDeltaCols.has(col); })) {
+                    return false;
+                }
+
+                const notice = ((after['Notice/Order Code'] || '') + '').trim();
+                if (!notice) return false;
+                updateTrackingRow(notice, {
+                    status: ((after['Status'] || '') + '').trim(),
+                    date: ((after['Date'] || '') + '').trim(),
+                    dateDisplay: formatDisplayDate(after['Date'] || ''),
+                    transmittalRemarks: ((after['Transmittal Remarks/Received By'] || '') + '').trim(),
+                    fileNamePdf: ((after['File Name (PDF)'] || '') + '').trim(),
+                    trackingNo: ((after['Tracking No.'] || '') + '').trim()
+                }, { suppressNotification: true });
+            }
+
+            window.mailRows = nextRows;
+            notifyStatusDiffsAfterRefresh(previousStatusSnapshot);
+            updateStatsBarFromDelta(payload.stats || {});
+            updateYearSelectFromDelta(payload.years || []);
+            filterTableRows();
+            return true;
+        }
+
+        function fetchHomeDeltaPayload() {
+            return fetch('../api/home-delta.php?_ts=' + Date.now(), {
+                method: 'GET',
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('Delta endpoint failed');
+                return resp.json();
+            })
+            .then(function(data) {
+                if (!data || data.success !== true) {
+                    throw new Error((data && data.message) ? data.message : 'Invalid delta payload');
+                }
+                return data;
+            });
+        }
+
+        function refreshHomeData(options = {}) {
+            const focusNotice = (options.focusNotice || '').trim();
+            const focusRowId = parseInt(options.focusRowId || 0, 10) || 0;
+            const immediateTrackNotices = Array.isArray(options.immediateTrackNotices) ? options.immediateTrackNotices : [];
+            const previousStatusSnapshot = cloneStatusSnapshot();
+
+            return fetchHomeDeltaPayload()
+                .then(function(deltaPayload) {
+                    const deltaApplied = applyDeltaRefreshPayload(deltaPayload, previousStatusSnapshot);
+                    if (!deltaApplied) {
+                        return refreshHomeDataFull(options);
+                    }
+
+                    bindRowCheckboxListeners();
+                    autoTrackEligibleRows();
+                    immediateTrackNotices.forEach(function(notice) {
+                        triggerImmediateTrackingOnce(notice);
+                    });
+
+                    if (focusRowId > 0) {
+                        sessionStorage.setItem('dhsud_focus_id', String(focusRowId));
+                    }
+                    if (focusNotice) {
+                        sessionStorage.setItem('dhsud_focus_notice', focusNotice);
+                    }
+                    if (focusRowId > 0 || focusNotice) {
+                        focusScannedRow();
+                    }
+
+                    const knownVersion = ((options.knownVersion || '') + '').trim();
+                    if (knownVersion) {
+                        smartPollingState.lastKnownVersion = knownVersion;
+                    } else if (deltaPayload.version) {
+                        smartPollingState.lastKnownVersion = String(deltaPayload.version);
+                    } else {
+                        syncHomeDataVersionSilently();
+                    }
+                    return true;
+                })
+                .catch(function(err) {
+                    console.warn('delta refresh failed; falling back to full refresh', err);
+                    return refreshHomeDataFull(options);
                 });
         }
 
@@ -1629,7 +1789,8 @@ HREDRD-EMES
 
             pendingBatchNotifications.forEach(function(info) {
                 maybeNotifyStatusChange(info.notice, '', info.nextStatus, info.eventDate, {
-                    displayTrackingId: 'Batch ' + info.batchId,
+                    displayTrackingId: getBatchNoticeCodesLabel(info.batchId) || ('Batch ' + info.batchId),
+                    noticeCode: info.notice,
                     dedupeKey: 'batch:' + info.batchId + '|status:' + info.nextStatus
                 });
             });
@@ -1828,10 +1989,27 @@ HREDRD-EMES
 
             if (shouldNotifyBatch && notifyNotice) {
                 maybeNotifyStatusChange(notifyNotice, '', nextBatchStatus, notifyDateText, {
-                    displayTrackingId: 'Batch ' + batchId,
+                    displayTrackingId: getBatchNoticeCodesLabel(batchId) || ('Batch ' + batchId),
+                    noticeCode: notifyNotice,
                     dedupeKey: 'batch:' + batchId + '|status:' + nextBatchStatus
                 });
             }
+        }
+
+        function getBatchNoticeCodesLabel(batchId) {
+            const safeBatchId = ((batchId || '') + '').trim();
+            if (!safeBatchId) return '';
+            const rows = document.querySelectorAll('tr[data-batch-id]');
+            const seen = new Set();
+            const notices = [];
+            rows.forEach(function(row) {
+                if (((row.dataset.batchId || '') + '').trim() !== safeBatchId) return;
+                const notice = ((row.dataset.notice || '') + '').trim();
+                if (!notice || seen.has(notice)) return;
+                seen.add(notice);
+                notices.push(notice);
+            });
+            return notices.join(', ');
         }
 
 
@@ -2028,6 +2206,7 @@ HREDRD-EMES
                 return;
             }
 
+            ensureRowVisibleForFocus(row);
             row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
             row.classList.add('scanned-row-focus');
             setTimeout(function() { row.classList.remove('scanned-row-focus'); }, 2600);
@@ -2177,7 +2356,11 @@ HREDRD-EMES
 
             const throttleKey = batchId ? ('batch:' + batchId) : ('notice:' + safeNotice);
             autoTrackLastRunByKey.set(throttleKey, Date.now());
-            runTrackingUpdate(safeNotice, { silent: true });
+            runTrackingUpdate(safeNotice, {
+                silent: true,
+                force: true,
+                bypassCooldown: true
+            });
         }
 
         function collectAutoTrackItems() {
@@ -2296,8 +2479,11 @@ HREDRD-EMES
             return `${datePart} ${timePart}`;
         }
 
-        function maybeNotifyStatusChange(noticeCode, previousStatus, nextStatus, eventDateText) {
+        function maybeNotifyStatusChange(noticeCode, previousStatus, nextStatus, eventDateText, options = {}) {
             const notice = (noticeCode || '').trim();
+            const displayTrackingId = ((options.displayTrackingId || '') + '').trim() || notice;
+            const navigateNoticeCode = ((options.noticeCode || '') + '').trim() || notice;
+            const dedupeKey = ((options.dedupeKey || '') + '').trim();
             const prev = ((previousStatus || '') + '').trim().toUpperCase();
             const next = ((nextStatus || '') + '').trim().toUpperCase();
             const eventDate = ((eventDateText || '') + '').trim();
@@ -2306,15 +2492,28 @@ HREDRD-EMES
             if (prev === next) return;
 
             const notifications = readNotifications();
-            notifications.unshift({
+            const notificationItem = {
                 id: Date.now() + Math.floor(Math.random() * 1000),
-                trackingId: notice,
+                trackingId: displayTrackingId,
+                noticeCode: navigateNoticeCode,
                 status: next,
                 statusType: getNotificationStatusType(next),
                 eventDate: eventDate,
                 timestampIso: new Date().toISOString(),
                 read: false
-            });
+            };
+
+            if (dedupeKey) {
+                notificationItem.dedupeKey = dedupeKey;
+                const existingIndex = notifications.findIndex(function(n) {
+                    return (((n && n.dedupeKey) ? String(n.dedupeKey) : '').trim()) === dedupeKey;
+                });
+                if (existingIndex >= 0) {
+                    notifications.splice(existingIndex, 1);
+                }
+            }
+
+            notifications.unshift(notificationItem);
 
             if (notifications.length > 100) notifications.length = 100;
             writeNotifications(notifications);
@@ -2421,7 +2620,7 @@ HREDRD-EMES
             let changed = false;
             notifications.forEach(function(n) {
                 if ((parseInt(n.id, 10) || 0) === targetId) {
-                    noticeCode = ((n.trackingId || '') + '').trim();
+                    noticeCode = ((n.noticeCode || n.trackingId || '') + '').trim();
                     statusType = (n.statusType === 'returned' ? 'returned' : 'delivered');
                     if (!n.read) {
                         n.read = true;
@@ -2460,11 +2659,29 @@ HREDRD-EMES
 
             const row = document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
             if (row) {
+                const batchId = ((row.dataset.batchId || '') + '').trim();
+                ensureRowVisibleForFocus(row);
+
                 row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                 var focusClass = statusType === 'returned' ? 'notif-row-focus-returned' : (statusType === 'delivered' ? 'notif-row-focus-delivered' : 'scanned-row-focus');
-                row.classList.add(focusClass);
+                const targetRows = [];
+                if (batchId) {
+                    document.querySelectorAll('tr[data-batch-id]').forEach(function(tr) {
+                        if (((tr.dataset.batchId || '') + '').trim() === batchId) {
+                            targetRows.push(tr);
+                        }
+                    });
+                } else {
+                    targetRows.push(row);
+                }
+
+                targetRows.forEach(function(tr) {
+                    tr.classList.add(focusClass);
+                });
                 setTimeout(function() {
-                    row.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
+                    targetRows.forEach(function(tr) {
+                        tr.classList.remove('notif-row-focus-delivered', 'notif-row-focus-returned', 'scanned-row-focus');
+                    });
                 }, 2600);
                 return;
             }
@@ -2473,6 +2690,29 @@ HREDRD-EMES
             sessionStorage.setItem('dhsud_focus_notice', safeNotice);
             if (typeof refreshHomeData === 'function') {
                 refreshHomeData({ focusNotice: safeNotice });
+            }
+        }
+
+        function ensureRowVisibleForFocus(row) {
+            if (!row) return;
+            let needsRefilter = false;
+
+            const isHidden = row.style && row.style.display === 'none';
+            if (isHidden) {
+                const searchInput = document.getElementById('tableSearchInput');
+                if (searchInput && searchInput.value !== '') {
+                    searchInput.value = '';
+                    needsRefilter = true;
+                }
+                const yearSelect = document.getElementById('tableSortYear');
+                if (yearSelect && yearSelect.value !== 'all') {
+                    yearSelect.value = 'all';
+                    needsRefilter = true;
+                }
+            }
+
+            if (needsRefilter && typeof filterTableRows === 'function') {
+                filterTableRows();
             }
         }
 
