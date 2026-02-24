@@ -137,7 +137,7 @@ function formatDateCell($value) {
 </head>
 <body>
     <div class="admin-home-header">
-        <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
+        <img src="../assets/DHSUD_Header.svg" alt="Admin Home Header" class="admin-home-header-img">
         <div class="admin-home-header-border"></div>
     </div>
     <div class="archive-title">ARCHIVE</div>
