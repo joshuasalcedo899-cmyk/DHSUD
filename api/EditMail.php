@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit;
 }
+requireCsrfToken();
 
 // DIAGNOSTIC: Log all POST data exactly as received
 error_log('=== EDIT MAIL DIAGNOSTIC ===');

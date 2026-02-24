@@ -10,6 +10,7 @@ $message = '';
 $updatedNotice = '';
 $updatedStatus = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST['row_id']) || !empty($_POST['notice_code'])) && isset($_POST['status'])) {
+    requireCsrfToken();
     $rowId = (int)($_POST['row_id'] ?? 0);
     $notice = trim($_POST['notice_code'] ?? '');
     $status = trim($_POST['status']);
@@ -779,7 +780,7 @@ HREDRD-EMES
                     <h2 style="margin:0;color:#22336A;font-size:1.1rem;">Scan QR Code</h2>
                     <button type="button" onclick="closeScannerModal()" style="border:none;background:#f3f4f6;color:#22336A;font-weight:700;border-radius:6px;padding:6px 10px;cursor:pointer;">Close</button>
                 </div>
-                <iframe id="scannerFrame" src="about:blank" title="QR Scanner" style="width:100%;border:1px solid #d1d5db;border-radius:8px;"></iframe>
+                <iframe id="scannerFrame" src="about:blank" title="QR Scanner" allow="camera" style="width:100%;border:1px solid #d1d5db;border-radius:8px;"></iframe>
             </div>
         </div>
         <div id="notifModalOverlay" class="notif-modal-overlay">
@@ -845,6 +846,7 @@ HREDRD-EMES
         </div>
         </div>
 <script>
+            const CSRF_TOKEN = <?php echo json_encode(getCsrfToken(), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
             (function cleanDeleteQueryParam() {
                 var url = new URL(window.location.href);
                 if (url.searchParams.has('deleted')) {
@@ -903,8 +905,11 @@ HREDRD-EMES
                    if (safeRowId <= 0) return;
                         fetch('../api/Delete.php', {
                             method: 'POST',
-                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                            body: 'id=' + encodeURIComponent(String(safeRowId))
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRF-Token': CSRF_TOKEN
+                            },
+                            body: 'id=' + encodeURIComponent(String(safeRowId)) + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
                         })
                         .then(function (resp) {
                             if (!resp.ok) {
@@ -1023,6 +1028,7 @@ HREDRD-EMES
                 addForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     var formData = new FormData(addForm);
+                    formData.set('csrf_token', CSRF_TOKEN);
 
                     var noticeCodes = formData.getAll('noticeCodes[]').map(function(v){ return (v || '').trim(); });
                     var parcelDetails = formData.getAll('parcelDetailsList[]').map(function(v){ return (v || '').trim(); });
@@ -1051,7 +1057,8 @@ HREDRD-EMES
                         method: 'POST',
                         body: formData,
                         headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-Token': CSRF_TOKEN
                         }
                     })
                     .then(resp => resp.json())
@@ -1191,6 +1198,7 @@ HREDRD-EMES
                                 e.preventDefault();
                                 var form = e.target;
                                 var formData = new FormData(form);
+                                formData.set('csrf_token', CSRF_TOKEN);
                                 
                                 // Debug: Log what's being sent
                                 console.log('Submitting form with:');
@@ -1200,6 +1208,9 @@ HREDRD-EMES
                                 
                                 fetch('../api/EditMail.php', {
                                     method: 'POST',
+                                    headers: {
+                                        'X-CSRF-Token': CSRF_TOKEN
+                                    },
                                     body: formData
                                 })
                                 .then(resp => resp.json())
@@ -2305,13 +2316,17 @@ HREDRD-EMES
             const params = new URLSearchParams();
             params.set("row_id", String(rowId));
             params.set("notice_code", safeNotice);
+            params.set("csrf_token", CSRF_TOKEN);
             if (force) params.set("force", "1");
             if (bypassCooldown) params.set("bypass_cooldown", "1");
 
             return fetch("../api/remarks.php", {
                 method: "POST",
                 cache: "no-store",
-                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRF-Token": CSRF_TOKEN
+                },
                 body: params.toString()
             })
             .then(res => res.json())

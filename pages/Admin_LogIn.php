@@ -12,6 +12,7 @@ $success_message = '';
 
 // Handle login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrfToken();
     $username = isset($_POST['username']) ? trim($_POST['username']) : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
     
@@ -123,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="admin-login-bg">
     <div class="bottom-container" style="position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:flex-end;min-height:0;padding-bottom:2rem;z-index:10;">
         <form class="login-form" method="post" action="Admin_LogIn.php" style="margin-bottom:50px;">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
             <div class="login-form-header">
                 <a href="../index.php" class="return-button" title="Return to home">
                     <img src="../assets/Return_Icon.svg" alt="Return">

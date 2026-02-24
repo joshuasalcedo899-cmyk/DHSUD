@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
+requireCsrfToken();
 
 if (!isset($_POST['id']) && !isset($_POST['noticeCode'])) {
     die("Invalid request");

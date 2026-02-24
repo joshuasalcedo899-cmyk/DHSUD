@@ -7,6 +7,9 @@ if(!isLoggedIn()) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized: Please log in']);
     exit;
 }
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrfToken();
+}
 
 // Handle AJAX requests (return JSON)
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest';

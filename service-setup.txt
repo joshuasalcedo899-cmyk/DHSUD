@@ -1,0 +1,58 @@
+DHSUD Transfer Setup (New Device)
+
+Goal:
+Set up this app on another Windows PC with one script.
+
+Prerequisites:
+1. XAMPP installed in C:\xampp
+2. Project copied to C:\xampp\htdocs\DHSUD
+3. PowerShell opened as Administrator
+
+Recommended run:
+1. Open PowerShell as Administrator
+2. Run:
+   cd C:\xampp\htdocs\DHSUD
+   .\scripts\setup-new-device.ps1
+
+Client trust setup (other PCs):
+1. Copy root CA from server:
+   C:\Users\joshu\AppData\Local\mkcert\rootCA.pem
+2. On each client (PowerShell as Administrator), run:
+   cd C:\xampp\htdocs\DHSUD
+   .\scripts\install-client-ca.ps1 -RootCAPath C:\path\to\rootCA.pem -ServerIp 192.168.1.7 -Domain dhsud.local
+
+What the setup script does:
+1. Adds local domain mapping for dhsud.local in hosts file
+2. Updates Apache config (rewrite/ssl/vhosts/listen 443)
+3. Writes idempotent vhost blocks for localhost and dhsud.local
+4. Generates HTTPS cert with mkcert (if available), including detected LAN IP
+5. Validates and restarts Apache service
+6. Installs Node/Playwright dependencies
+
+Open after setup:
+- https://dhsud.local/pages/Admin_LogIn.php
+- http://localhost/DHSUD/pages/Admin_LogIn.php
+
+Useful options:
+- Set LAN IP explicitly:
+  .\scripts\setup-new-device.ps1 -LanIp 192.168.1.7
+- Skip dependencies:
+  .\scripts\setup-new-device.ps1 -SkipDependencies
+- Skip certificate step:
+  .\scripts\setup-new-device.ps1 -SkipCertificateSetup
+- Dry run (no changes):
+  .\scripts\setup-new-device.ps1 -DryRun
+- Custom domain:
+  .\scripts\setup-new-device.ps1 -Domain your-domain.local
+
+Client script options:
+- Skip hosts update (CA only):
+  .\scripts\install-client-ca.ps1 -RootCAPath C:\path\to\rootCA.pem -SkipHosts
+
+Notes:
+- If mkcert is not installed, install it and rerun for trusted HTTPS.
+- If Apache2.4 service is unavailable, restart Apache in XAMPP Control Panel manually.
+- If your project folder name is different, keep it under C:\xampp\htdocs and run from that folder.
+- Other devices still need:
+  - hosts entry pointing to the server LAN IP (e.g., 192.168.1.7 dhsud.local)
+  - mkcert root CA trusted on that device

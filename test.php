@@ -244,11 +244,9 @@ async function startScanner(deviceId) {
     const constraints = {
         video: {
             deviceId: deviceId ? { exact: deviceId } : undefined,
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30, max: 30 },
-            focusMode: "continuous",
-            advanced: [{ focusMode: "continuous" }]
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 24, max: 30 }
         }
     };
 
@@ -272,7 +270,6 @@ async function startScanner(deviceId) {
     }
 
     localStorage.setItem("preferredCameraId", deviceId || "");
-    setTimeout(() => { tryApplyZoomIfSupported(2.0); }, 1000);
 }
 
 async function initScanner() {
@@ -300,7 +297,10 @@ async function initScanner() {
     });
 
     const savedCamera = localStorage.getItem("preferredCameraId");
-    const defaultDevice = devices.find(d => d.deviceId === savedCamera) || devices[0];
+    const savedDevice = devices.find(d => d.deviceId === savedCamera) || null;
+    const rearDevice = devices.find((d) => /rear|back|environment/i.test((d.label || '').toLowerCase())) || null;
+    const savedLooksRear = !!(savedDevice && /rear|back|environment/i.test((savedDevice.label || '').toLowerCase()));
+    const defaultDevice = (savedLooksRear ? savedDevice : null) || rearDevice || savedDevice || devices[0];
     cameraSelect.value = defaultDevice.deviceId;
 
     cameraSelect.addEventListener("change", async function() {

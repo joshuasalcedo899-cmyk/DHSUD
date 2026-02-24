@@ -187,6 +187,7 @@ function formatDateCell($value) {
         </table>
     </div>
     <script>
+        const CSRF_TOKEN = <?php echo json_encode(getCsrfToken(), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
         function toggleAllCheckboxes(master) {
             var checkboxes = document.querySelectorAll('.row-checkbox');
             checkboxes.forEach(function(cb) {
@@ -210,6 +211,11 @@ function formatDateCell($value) {
                 input.value = id;
                 form.appendChild(input);
             });
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrf_token';
+            csrf.value = CSRF_TOKEN;
+            form.appendChild(csrf);
 
             document.body.appendChild(form);
             form.submit();
@@ -266,6 +272,11 @@ function formatDateCell($value) {
                 input.value = id;
                 form.appendChild(input);
             });
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrf_token';
+            csrf.value = CSRF_TOKEN;
+            form.appendChild(csrf);
 
             document.body.appendChild(form);
             form.submit();

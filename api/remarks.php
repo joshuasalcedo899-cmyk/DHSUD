@@ -2,6 +2,9 @@
 header('Content-Type: application/json');
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrfToken();
+}
 
 const JRS_MANUAL_MIN_INTERVAL_SECONDS = 300;   // 5 minutes
 const JRS_BACKOFF_MAX_SECONDS = 1800;          // 30 minutes
