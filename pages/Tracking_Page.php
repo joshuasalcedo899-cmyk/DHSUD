@@ -451,8 +451,6 @@ rsort($years);
                     });
                 }
             }
-                });
-            }
 
             if (yearSelect) {
                 yearSelect.addEventListener('change', filterRows);
@@ -479,6 +477,7 @@ rsort($years);
             });
 
             updateStatusFilterButtonsUI();
+            filterRows();
         })();
     </script>
 </body>
