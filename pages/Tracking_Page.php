@@ -75,6 +75,17 @@ function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
     return 'EMES-' . $formattedDate . '-' . $formattedParcelNo;
 }
 
+function extractBatchIdFromSenderDetails($senderDetails) {
+    $text = trim((string)$senderDetails);
+    if ($text === '') {
+        return '';
+    }
+    if (preg_match('/Batch ID:\s*([A-Za-z0-9\-]+)/i', $text, $m)) {
+        return trim((string)$m[1]);
+    }
+    return '';
+}
+
 $years = [];
 foreach ($rows as $row) {
     $dateAfd = trim((string)($row['Date released to AFD'] ?? ''));
@@ -294,8 +305,9 @@ rsort($years);
                                     } elseif ($statusValue === 'PERSONALLY RECEIVED') {
                                         $statusClass = 'status-text status-personal';
                                     }
+                                    $rowBatchId = extractBatchIdFromSenderDetails($row['Sender Details'] ?? '');
                                     ?>
-                                    <tr data-year="<?= htmlspecialchars($rowYear) ?>" data-search="<?= htmlspecialchars($rowTextSearch) ?>">
+                                    <tr data-year="<?= htmlspecialchars($rowYear) ?>" data-search="<?= htmlspecialchars($rowTextSearch) ?>" data-status="<?= htmlspecialchars($statusValue) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>">
                                         <?php foreach ($columns as $idx => $colName): ?>
                                             <?php
                                             $cellValue = $row[$colName] ?? '';
@@ -344,21 +356,26 @@ rsort($years);
         <div class="statistics-section">
             <div class="statistics-title">Statistics</div>
             <div class="statistics-bar">
-                <div class="stat-box stat-rtos">Returned to Sender
+                <button type="button" class="stat-box stat-rtos stat-filter-btn" data-status-filter="RETURNED TO SENDER" title="Show Returned to Sender">
+                    Returned to Sender
                     <div class="stat-count"><?= $rts ?></div>
-                </div>
-                <div class="stat-box stat-ongoing">Ongoing Delivery
+                </button>
+                <button type="button" class="stat-box stat-ongoing stat-filter-btn" data-status-filter="ONGOING DELIVERY" title="Show Ongoing Delivery">
+                    Ongoing Delivery
                     <div class="stat-count"><?= $ogd ?></div>
-                </div>
-                <div class="stat-box stat-delivered">Delivered
+                </button>
+                <button type="button" class="stat-box stat-delivered stat-filter-btn" data-status-filter="DELIVERED" title="Show Delivered">
+                    Delivered
                     <div class="stat-count"><?= $del ?></div>
-                </div>
-                <div class="stat-box stat-total">Total
+                </button>
+                <button type="button" class="stat-box stat-total stat-filter-btn" data-status-filter="ALL" title="Show All Statuses">
+                    Total
                     <div class="stat-count"><?= (int)$totalCount ?></div>
-                </div>
-                <div class="stat-box stat-ndr">Non-delivery Rate
+                </button>
+                <button type="button" class="stat-box stat-ndr stat-filter-btn" data-status-filter="NDR" title="Show Non-delivery statuses">
+                    Non-delivery Rate
                     <div class="stat-count"><?= htmlspecialchars((string)$ndrPercent) ?>%</div>
-                </div>
+                </button>
             </div>
         </div>
     </div>
@@ -368,18 +385,72 @@ rsort($years);
             const yearSelect = document.getElementById('tableSortYear');
             const searchInput = document.getElementById('tableSearchInput');
             const searchBtn = document.getElementById('tableSearchBtn');
+            const statButtons = Array.from(document.querySelectorAll('.stat-filter-btn'));
             const rows = Array.from(document.querySelectorAll('#trackingTableBody tr[data-year]'));
+            let selectedStatusFilter = 'ALL';
+
+            function normalizeStatusFilterValue(rawValue) {
+                const value = ((rawValue || '') + '').trim().toUpperCase();
+                if (!value || value === 'TOTAL') return 'ALL';
+                if (value === 'NDR') return 'NDR';
+                if (value === 'DELIVERED') return 'DELIVERED';
+                if (value === 'RETURNED TO SENDER') return 'RETURNED TO SENDER';
+                if (value === 'ONGOING DELIVERY') return 'ONGOING DELIVERY';
+                return 'ALL';
+            }
+
+            function rowMatchesStatusFilter(rowStatus, normalizedFilter) {
+                const status = ((rowStatus || '') + '').trim().toUpperCase();
+                if (normalizedFilter === 'ALL') return true;
+                if (normalizedFilter === 'NDR') {
+                    return status === 'RETURNED TO SENDER' || status === 'ONGOING DELIVERY';
+                }
+                return status === normalizedFilter;
+            }
+
+            function updateStatusFilterButtonsUI() {
+                const active = normalizeStatusFilterValue(selectedStatusFilter);
+                statButtons.forEach(function (btn) {
+                    const buttonFilter = normalizeStatusFilterValue(btn.getAttribute('data-status-filter'));
+                    const isActive = buttonFilter === active;
+                    btn.classList.toggle('stat-filter-active', isActive);
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+            }
 
             function filterRows() {
                 const year = (yearSelect ? yearSelect.value : 'all').trim().toLowerCase();
                 const search = (searchInput ? searchInput.value : '').trim().toUpperCase();
+                const normalizedStatusFilter = normalizeStatusFilterValue(selectedStatusFilter);
+                const hasYearFilter = (year !== 'all' && year !== '');
+                const hasStatusFilter = normalizedStatusFilter !== 'ALL';
+                const batchPreserveMode = (search === '' && (hasYearFilter || hasStatusFilter));
+                const matchedBatchIds = new Set();
 
                 rows.forEach(function (row) {
                     const rowYear = ((row.getAttribute('data-year') || '') + '').toLowerCase();
                     const rowSearch = ((row.getAttribute('data-search') || '') + '').toUpperCase();
+                    const rowStatus = ((row.getAttribute('data-status') || '') + '').toUpperCase();
+                    const rowBatchId = ((row.getAttribute('data-batch-id') || '') + '').trim();
                     const yearMatch = (year === 'all' || year === '' || rowYear === year);
                     const searchMatch = (search === '' || rowSearch.indexOf(search) !== -1);
-                    row.style.display = (yearMatch && searchMatch) ? '' : 'none';
+                    const statusMatch = rowMatchesStatusFilter(rowStatus, normalizedStatusFilter);
+                    const visible = (yearMatch && searchMatch && statusMatch);
+                    if (visible && batchPreserveMode && rowBatchId !== '') {
+                        matchedBatchIds.add(rowBatchId);
+                    }
+                    row.style.display = visible ? '' : 'none';
+                });
+
+                if (batchPreserveMode && matchedBatchIds.size > 0) {
+                    rows.forEach(function (row) {
+                        const rowBatchId = ((row.getAttribute('data-batch-id') || '') + '').trim();
+                        if (rowBatchId !== '' && matchedBatchIds.has(rowBatchId)) {
+                            row.style.display = '';
+                        }
+                    });
+                }
+            }
                 });
             }
 
@@ -398,6 +469,16 @@ rsort($years);
             if (searchBtn) {
                 searchBtn.addEventListener('click', filterRows);
             }
+
+            statButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    selectedStatusFilter = normalizeStatusFilterValue(btn.getAttribute('data-status-filter'));
+                    updateStatusFilterButtonsUI();
+                    filterRows();
+                });
+            });
+
+            updateStatusFilterButtonsUI();
         })();
     </script>
 </body>

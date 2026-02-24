@@ -2185,7 +2185,9 @@ HREDRD-EMES
             const normalizedStatusFilter = normalizeStatusFilterValue(selectedStatusFilter);
             const hasStatusFilter = normalizedStatusFilter !== 'ALL';
             const isFiltering = (filter !== '' || selectedYear !== '' || hasStatusFilter);
-            const yearBatchMode = (filter === '' && selectedYear !== '' && !hasStatusFilter);
+            // Preserve rowspan-based batch layout when using structured filters only
+            // (year/status) and no free-text search.
+            const batchPreserveMode = (filter === '' && (selectedYear !== '' || hasStatusFilter));
             const table = document.querySelector('.admin-table-container table');
             if (!table) return;
             // Always restore previous search mutations before applying a new filter state.
@@ -2218,7 +2220,7 @@ HREDRD-EMES
 
                 if (isChecked && !hasStatusFilter) {
                     tr.style.display = '';
-                    if (isFiltering && !yearBatchMode) {
+                    if (isFiltering && !batchPreserveMode) {
                         rebuildVisibleRowCellsForSearch(tr, rowObj);
                     }
                     return;
@@ -2233,17 +2235,17 @@ HREDRD-EMES
                 }
 
                 const visible = codeMatch && yearMatch && statusMatch;
-                if (visible && yearBatchMode && batchId !== '') {
+                if (visible && batchPreserveMode && batchId !== '') {
                     matchedBatchIds.add(batchId);
                 }
                 tr.style.display = visible ? '' : 'none';
-                if (visible && isFiltering && !yearBatchMode) {
+                if (visible && isFiltering && !batchPreserveMode) {
                     rebuildVisibleRowCellsForSearch(tr, rowObj);
                 }
             });
 
-            // Year-only filter should keep batch rows together.
-            if (yearBatchMode && matchedBatchIds.size > 0) {
+            // Structured filters (year/status) should keep batch rows together.
+            if (batchPreserveMode && matchedBatchIds.size > 0) {
                 Array.from(trs).forEach(function(tr) {
                     const cb = tr.querySelector('.row-checkbox');
                     const isChecked = !!(cb && cb.checked);
