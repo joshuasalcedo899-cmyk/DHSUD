@@ -297,7 +297,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 <div style="font-size:1.2em;font-weight:600;color:#22336A;margin-top:5px;margin-bottom:2px;">Welcome, Admin!</div>
                 <a href="logout.php" class="logout-btn">Logout</a>
             </div>
-            <img src="../assets/Admin_HomePage_New.svg" alt="Admin Home Header" class="admin-home-header-img">
+            <img src="../assets/DHSUD_Header.svg" alt="Admin Home Header" class="admin-home-header-img">
         </div>
         <div class="admin-home-header-border"></div>
     </div>
