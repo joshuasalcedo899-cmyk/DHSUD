@@ -457,8 +457,16 @@ HREDRD-EMES
                 if (!modal || !frame) return;
                 scannerSelectedNoticeCode = (noticeCode || '').trim();
                 if (!scannerSelectedNoticeCode) return;
+                frame.onload = function() {
+                    try { frame.focus(); } catch (e) {}
+                    try { if (frame.contentWindow) frame.contentWindow.focus(); } catch (e) {}
+                };
                 frame.src = '../test.php?code=' + encodeURIComponent(scannerSelectedNoticeCode) + '&embedded=1';
                 modal.style.display = 'flex';
+                setTimeout(function() {
+                    try { frame.focus(); } catch (e) {}
+                    try { if (frame.contentWindow) frame.contentWindow.focus(); } catch (e) {}
+                }, 120);
             }
 
             function closeScannerModal() {
@@ -743,7 +751,7 @@ HREDRD-EMES
                                             }
                                         }
                                     ?>
-                                    <td class="<?= trim($actionSpanToBatchEndClass) ?>"<?= $actionRowspanAttr ?>>
+                                    <td class="action-cell <?= trim($actionSpanToBatchEndClass) ?>"<?= $actionRowspanAttr ?>>
                                         <?php if ($showBatchBadge): ?>
                                             <button type="button" class="batch-toggle-btn" title="Batch row" aria-label="Batch row" style="margin-bottom:4px;">
                                                 <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon">
@@ -827,21 +835,26 @@ HREDRD-EMES
             <div class="statistics-section">
                 <div class="statistics-title">Statistics</div>
                 <div class="statistics-bar">
-                    <div class="stat-box stat-rtos">Returned to Sender
+                    <button type="button" class="stat-box stat-rtos stat-filter-btn" data-status-filter="RETURNED TO SENDER" title="Show Returned to Sender">
+                        Returned to Sender
                         <div class="stat-count"><?= $rts ?></div>
-                    </div>
-                    <div class="stat-box stat-ongoing">Ongoing Delivery
+                    </button>
+                    <button type="button" class="stat-box stat-ongoing stat-filter-btn" data-status-filter="ONGOING DELIVERY" title="Show Ongoing Delivery">
+                        Ongoing Delivery
                         <div class="stat-count"><?= $ogd?></div>
-                    </div>
-                    <div class="stat-box stat-delivered">Delivered
+                    </button>
+                    <button type="button" class="stat-box stat-delivered stat-filter-btn" data-status-filter="DELIVERED" title="Show Delivered">
+                        Delivered
                         <div class="stat-count"><?= $del ?></div>
-                    </div>
-                    <div class="stat-box stat-total">Total
+                    </button>
+                    <button type="button" class="stat-box stat-total stat-filter-btn" data-status-filter="ALL" title="Show All Statuses">
+                        Total
                         <div class="stat-count"><?= (int)$totalCount ?></div>
-                    </div>
-                    <div class="stat-box stat-ndr">Non-delivery Rate
+                    </button>
+                    <button type="button" class="stat-box stat-ndr stat-filter-btn" data-status-filter="NDR" title="Show Non-delivery statuses">
+                        Non-delivery Rate
                         <div class="stat-count"><?= htmlspecialchars($ndrPercent) ?>%</div>
-                    </div>
+                    </button>
             </div>
         </div>
         </div>
@@ -1319,6 +1332,9 @@ HREDRD-EMES
                     const nextStats = doc.querySelector('.statistics-bar');
                     if (currentStats && nextStats) {
                         currentStats.innerHTML = nextStats.innerHTML;
+                        if (typeof updateStatusFilterButtonsUI === 'function') {
+                            updateStatusFilterButtonsUI();
+                        }
                     }
 
                     const currentYear = document.getElementById('tableSortYear');
@@ -1768,8 +1784,19 @@ HREDRD-EMES
                 const notice = ((row['Notice/Order Code'] || '') + '').trim();
                 if (!notice) return;
                 const senderDetails = ((row['Sender Details'] || '') + '').trim();
-                const batchMatch = senderDetails.match(/Batch ID:\s*([A-Za-z0-9\-]+)/i);
-                const batchId = batchMatch ? (batchMatch[1] || '').trim() : '';
+                // Prefer DOM batch metadata because full-refresh row rebuilding may strip
+                // "Batch ID: ..." text from sender details for display purposes.
+                let batchId = '';
+                try {
+                    const rowEl = document.querySelector('tr[data-notice="' + CSS.escape(notice) + '"]');
+                    batchId = rowEl ? (((rowEl.dataset.batchId || '') + '').trim()) : '';
+                } catch (e) {
+                    batchId = '';
+                }
+                if (!batchId) {
+                    const batchMatch = senderDetails.match(/Batch ID:\s*([A-Za-z0-9\-]+)/i);
+                    batchId = batchMatch ? (batchMatch[1] || '').trim() : '';
+                }
 
                 const nextStatus = ((row['Status'] || '') + '').trim().toUpperCase();
                 const eventDate = (formatDisplayDate(row['Date'] || '') || ((row['Date'] || '') + '').trim());
@@ -1819,9 +1846,40 @@ HREDRD-EMES
             return value;
         }
 
+        function clearTempSearchCells(table) {
+            if (!table) return;
+            table.querySelectorAll('td[data-temp-fill="1"]').forEach(function(td) {
+                td.remove();
+            });
+            table.querySelectorAll('td[data-temp-action="1"]').forEach(function(td) {
+                td.remove();
+            });
+        }
+
+        function restoreRowspansFromSearch(table) {
+            if (!table) return;
+            table.querySelectorAll('td[data-original-rowspan]').forEach(function(td) {
+                const raw = td.getAttribute('data-original-rowspan');
+                const span = parseInt(raw || '1', 10);
+                if (span > 1) {
+                    td.setAttribute('rowspan', String(span));
+                } else {
+                    td.removeAttribute('rowspan');
+                }
+                td.removeAttribute('data-original-rowspan');
+            });
+        }
+
+        function resetSearchViewMutations(table) {
+            if (!table) return;
+            clearTempSearchCells(table);
+            restoreRowspansFromSearch(table);
+        }
+
         function rebuildVisibleRowCellsForSearch(tr, rowObj) {
-            if (!tr || !rowObj) return;
-            const actionCell = tr.lastElementChild;
+            if (!tr) return;
+            const safeRowObj = rowObj || {};
+            const actionCell = ensureActionCellForSearch(tr, safeRowObj);
             if (!actionCell) return;
 
             const cellsByCol = new Map();
@@ -1836,16 +1894,16 @@ HREDRD-EMES
                     td = document.createElement('td');
                     td.setAttribute('data-col', colName);
                     td.setAttribute('data-temp-fill', '1');
-                    const text = normalizeCellTextForSearchView(colName, rowObj[colName]);
+                    const text = normalizeCellTextForSearchView(colName, safeRowObj[colName]);
                     if (colName === 'Status') {
                         const span = document.createElement('span');
                         span.className = getStatusClass(text);
                         span.textContent = text;
                         td.appendChild(span);
                     } else if (colName === 'File Name (PDF)') {
-                        const trackingValue = ((rowObj['Tracking No.'] || '') + '').trim();
+                        const trackingValue = ((safeRowObj['Tracking No.'] || '') + '').trim();
                         const proofAssetName = buildProofPdfAssetNameFromTracking(trackingValue);
-                        const defaultPdfName = buildDefaultPdfFileNameFromRow(rowObj);
+                        const defaultPdfName = buildDefaultPdfFileNameFromRow(safeRowObj);
                         const fileName = (text || defaultPdfName).trim();
                         if (fileName !== '' && proofAssetName !== '') {
                             const link = document.createElement('a');
@@ -1862,10 +1920,64 @@ HREDRD-EMES
                     }
                 }
                 if (td.hasAttribute('rowspan')) {
+                    if (!td.hasAttribute('data-original-rowspan')) {
+                        td.setAttribute('data-original-rowspan', td.getAttribute('rowspan') || '1');
+                    }
                     td.removeAttribute('rowspan');
                 }
                 tr.insertBefore(td, actionCell);
             });
+        }
+
+        function ensureActionCellForSearch(tr, rowObj) {
+            if (!tr) return null;
+            const safeRowObj = rowObj || {};
+            let actionCell = tr.querySelector('td.action-cell');
+            if (!actionCell) {
+                actionCell = document.createElement('td');
+                actionCell.className = 'action-cell';
+                actionCell.setAttribute('data-temp-action', '1');
+                tr.appendChild(actionCell);
+            }
+
+            if (actionCell.hasAttribute('rowspan')) {
+                if (!actionCell.hasAttribute('data-original-rowspan')) {
+                    actionCell.setAttribute('data-original-rowspan', actionCell.getAttribute('rowspan') || '1');
+                }
+                actionCell.removeAttribute('rowspan');
+            }
+
+            if (actionCell.getAttribute('data-temp-action') === '1') {
+                const rowTracking = ((safeRowObj['Tracking No.'] || safeRowObj['Tracking No'] || tr.dataset.trackingNo || '') + '').trim();
+                const rowNotice = ((safeRowObj['Notice/Order Code'] || tr.dataset.notice || '') + '').trim();
+                actionCell.innerHTML = '';
+
+                if (rowTracking !== '' && rowTracking !== '0') {
+                    const label = document.createElement('span');
+                    label.style.fontSize = '0.72rem';
+                    label.style.color = '#22336A';
+                    label.style.fontWeight = '700';
+                    label.textContent = 'Auto Tracking';
+                    actionCell.appendChild(label);
+
+                    const result = document.createElement('div');
+                    result.className = 'track-result';
+                    actionCell.appendChild(result);
+                } else {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn-scan';
+                    button.style.display = 'inline-block';
+                    button.style.textDecoration = 'none';
+                    button.textContent = 'Scan';
+                    button.addEventListener('click', function() {
+                        openScannerModal(rowNotice);
+                    });
+                    actionCell.appendChild(button);
+                }
+            }
+
+            return actionCell;
         }
 
         function findRowByNoticeCode(noticeCode) {
@@ -2026,23 +2138,71 @@ HREDRD-EMES
 
 
         // Table search and sort functionality (filter by Notice/Order Code and year)
-        // Keep checked rows visible regardless of filter.
+        // Keep checked rows visible regardless of filter, except when a status button filter is active.
+        let selectedStatusFilter = 'ALL';
+
+        function normalizeStatusFilterValue(rawValue) {
+            const value = ((rawValue || '') + '').trim().toUpperCase();
+            if (!value || value === 'TOTAL') return 'ALL';
+            if (value === 'NDR') return 'NDR';
+            if (value === 'DELIVERED') return 'DELIVERED';
+            if (value === 'RETURNED TO SENDER') return 'RETURNED TO SENDER';
+            if (value === 'ONGOING DELIVERY') return 'ONGOING DELIVERY';
+            return 'ALL';
+        }
+
+        function updateStatusFilterButtonsUI() {
+            const active = normalizeStatusFilterValue(selectedStatusFilter);
+            document.querySelectorAll('.stat-filter-btn').forEach(function(btn) {
+                const buttonFilter = normalizeStatusFilterValue(btn.getAttribute('data-status-filter'));
+                const isActive = buttonFilter === active;
+                btn.classList.toggle('stat-filter-active', isActive);
+                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        }
+
+        function applyStatusFilterSelection(nextFilter) {
+            selectedStatusFilter = normalizeStatusFilterValue(nextFilter);
+            updateStatusFilterButtonsUI();
+            filterTableRows();
+        }
+
+        function rowMatchesStatusFilter(statusText, normalizedFilter) {
+            const status = ((statusText || '') + '').trim().toUpperCase();
+            if (normalizedFilter === 'ALL') return true;
+            if (normalizedFilter === 'NDR') {
+                return status === 'RETURNED TO SENDER' || status === 'ONGOING DELIVERY';
+            }
+            return status === normalizedFilter;
+        }
+
         function filterTableRows() {
             const input = document.getElementById('tableSearchInput');
             const filter = input.value.toLowerCase();
             const yearSelect = document.getElementById('tableSortYear');
             let selectedYear = yearSelect.value;
             if (selectedYear === 'all' || !selectedYear) selectedYear = '';
-            const isFiltering = (filter !== '' || selectedYear !== '');
-            const yearBatchMode = (filter === '' && selectedYear !== '');
+            const normalizedStatusFilter = normalizeStatusFilterValue(selectedStatusFilter);
+            const hasStatusFilter = normalizedStatusFilter !== 'ALL';
+            const isFiltering = (filter !== '' || selectedYear !== '' || hasStatusFilter);
+            const yearBatchMode = (filter === '' && selectedYear !== '' && !hasStatusFilter);
             const table = document.querySelector('.admin-table-container table');
+            if (!table) return;
+            // Always restore previous search mutations before applying a new filter state.
+            // This keeps rowspan-based batch layout stable across search/delete cycles.
+            resetSearchViewMutations(table);
             const trs = table.querySelectorAll('tbody tr[data-notice]');
             const rowDataById = new Map();
+            const rowDataByNotice = new Map();
             const matchedBatchIds = new Set();
             if (Array.isArray(window.mailRows)) {
                 window.mailRows.forEach(function(r) {
                     const id = parseInt(r.id, 10) || 0;
                     if (id > 0) rowDataById.set(id, r);
+                    const noticeCode = ((r['Notice/Order Code'] || '') + '').trim();
+                    if (noticeCode !== '' && !rowDataByNotice.has(noticeCode)) {
+                        rowDataByNotice.set(noticeCode, r);
+                    }
                 });
             }
 
@@ -2052,13 +2212,14 @@ HREDRD-EMES
                 const batchId = (tr.dataset.batchId || '').trim();
                 const cb = tr.querySelector('.row-checkbox');
                 const isChecked = !!(cb && cb.checked);
+                const rowObj = rowDataById.get(rowId) || rowDataByNotice.get(notice) || null;
+                const rowStatus = ((rowObj && rowObj['Status']) ? String(rowObj['Status']) : '').trim();
+                const statusMatch = rowMatchesStatusFilter(rowStatus, normalizedStatusFilter);
 
-                tr.querySelectorAll('td[data-temp-fill="1"]').forEach(function(td) { td.remove(); });
-                if (isChecked) {
+                if (isChecked && !hasStatusFilter) {
                     tr.style.display = '';
                     if (isFiltering && !yearBatchMode) {
-                        const rowObjChecked = rowDataById.get(rowId);
-                        rebuildVisibleRowCellsForSearch(tr, rowObjChecked);
+                        rebuildVisibleRowCellsForSearch(tr, rowObj);
                     }
                     return;
                 }
@@ -2067,18 +2228,16 @@ HREDRD-EMES
 
                 let yearMatch = true;
                 if (selectedYear) {
-                    const rowObj = rowDataById.get(rowId);
                     const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
                     yearMatch = dateAfd.indexOf(selectedYear) > -1;
                 }
 
-                const visible = codeMatch && yearMatch;
+                const visible = codeMatch && yearMatch && statusMatch;
                 if (visible && yearBatchMode && batchId !== '') {
                     matchedBatchIds.add(batchId);
                 }
                 tr.style.display = visible ? '' : 'none';
                 if (visible && isFiltering && !yearBatchMode) {
-                    const rowObj = rowDataById.get(rowId);
                     rebuildVisibleRowCellsForSearch(tr, rowObj);
                 }
             });
@@ -2112,12 +2271,19 @@ HREDRD-EMES
             const searchInput = document.getElementById('tableSearchInput');
             const searchBtn = document.getElementById('tableSearchBtn');
             const yearSelect = document.getElementById('tableSortYear');
+            updateStatusFilterButtonsUI();
             searchInput.addEventListener('input', filterTableRows);
             searchBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 filterTableRows();
             });
             yearSelect.addEventListener('change', filterTableRows);
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest ? e.target.closest('.stat-filter-btn') : null;
+                if (!btn) return;
+                e.preventDefault();
+                applyStatusFilterSelection(btn.getAttribute('data-status-filter') || 'ALL');
+            });
             bindRowCheckboxListeners();
             rebuildMailRowsFromTable();
             rebuildStatusSnapshotFromMailRows();
@@ -2511,13 +2677,21 @@ HREDRD-EMES
             const notice = (noticeCode || '').trim();
             const displayTrackingId = ((options.displayTrackingId || '') + '').trim() || notice;
             const navigateNoticeCode = ((options.noticeCode || '') + '').trim() || notice;
-            const dedupeKey = ((options.dedupeKey || '') + '').trim();
+            let dedupeKey = ((options.dedupeKey || '') + '').trim();
             const prev = ((previousStatus || '') + '').trim().toUpperCase();
             const next = ((nextStatus || '') + '').trim().toUpperCase();
             const eventDate = ((eventDateText || '') + '').trim();
             if (!notice) return;
             if (!isNotifiableStatus(next)) return;
             if (prev === next) return;
+
+            // Fallback dedupe for non-batch notifications:
+            // Avoid duplicate entries when the same status change is detected by both
+            // immediate tracking update and subsequent delta/full refresh.
+            if (!dedupeKey) {
+                const dedupeNotice = navigateNoticeCode || notice;
+                dedupeKey = 'notice:' + dedupeNotice + '|status:' + next + '|date:' + eventDate;
+            }
 
             const notifications = readNotifications();
             const notificationItem = {
@@ -2531,14 +2705,12 @@ HREDRD-EMES
                 read: false
             };
 
-            if (dedupeKey) {
-                notificationItem.dedupeKey = dedupeKey;
-                const existingIndex = notifications.findIndex(function(n) {
-                    return (((n && n.dedupeKey) ? String(n.dedupeKey) : '').trim()) === dedupeKey;
-                });
-                if (existingIndex >= 0) {
-                    notifications.splice(existingIndex, 1);
-                }
+            notificationItem.dedupeKey = dedupeKey;
+            const existingIndex = notifications.findIndex(function(n) {
+                return (((n && n.dedupeKey) ? String(n.dedupeKey) : '').trim()) === dedupeKey;
+            });
+            if (existingIndex >= 0) {
+                notifications.splice(existingIndex, 1);
             }
 
             notifications.unshift(notificationItem);

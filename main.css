@@ -561,6 +561,19 @@
 	background: #eee;
 	border: 1.5px solid #bbb;
 }
+.stat-filter-btn {
+	cursor: pointer;
+	appearance: none;
+	font-family: inherit;
+	line-height: 1.2;
+}
+.stat-filter-btn:focus-visible {
+	outline: 2px solid #22336a;
+	outline-offset: 2px;
+}
+.stat-filter-active {
+	box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(34, 51, 106, 0.95);
+}
 .stat-box .color {
 	display: inline-block;
 	width: 1.5em;
@@ -1523,7 +1536,7 @@ img {
             box-sizing: border-box;
         }
         #scannerModal .modal-panel {
-            width: min(980px, calc(100vw - 24px));
+            width: min(560px, calc(100vw - 24px));
             max-height: calc(100vh - 24px);
             overflow: auto;
             border-radius: 10px;
@@ -1532,7 +1545,7 @@ img {
             overflow: hidden;
         }
         #scannerModal #scannerFrame {
-            height: min(75vh, 760px);
+            height: min(56vh, 460px);
         }
         @media (max-width: 768px) {
             .add-pair-row {
@@ -1557,7 +1570,7 @@ img {
                 max-height: calc(100vh - 16px);
             }
             #scannerModal #scannerFrame {
-                height: 68vh;
+                height: 52vh;
             }
         }
         .top-bar {
@@ -2163,4 +2176,4 @@ body {
     width: min(100%, 500px) !important;
     justify-self: center !important;
 }
-
+            
