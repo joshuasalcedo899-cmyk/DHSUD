@@ -42,6 +42,7 @@ try {
         }
         $hasOriginalMailId = in_array('original_mail_id', $archiveCols, true);
         $hasDeletedAt = in_array('deleted_at', $archiveCols, true);
+        $hasTransmittalId = in_array('Transmittal ID', $archiveCols, true);
 
         $insertCols = [
             'Notice/Order Code',
@@ -53,10 +54,16 @@ try {
             'File Name (PDF)',
             'Tracking No.',
             'Status',
+            'Transmittal ID',
             'Transmittal Remarks/Received By',
             'Date',
             'Evaluator',
         ];
+        if (!$hasTransmittalId) {
+            $insertCols = array_values(array_filter($insertCols, function ($c) {
+                return $c !== 'Transmittal ID';
+            }));
+        }
         if (!$hasOriginalMailId && in_array('id', $archiveCols, true)) {
             $insertCols = array_merge(['id'], $insertCols);
         }

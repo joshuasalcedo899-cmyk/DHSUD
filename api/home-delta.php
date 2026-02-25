@@ -65,6 +65,7 @@ try {
                     `File Name (PDF)`,
                     `Tracking No.`,
                     `Status`,
+                    `Transmittal ID`,
                     `Transmittal Remarks/Received By`,
                     `Date`,
                     `Evaluator`

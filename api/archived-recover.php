@@ -23,6 +23,7 @@ try {
         $archiveCols[] = $c['Field'];
     }
     $hasOriginalMailId = in_array('original_mail_id', $archiveCols, true);
+    $hasTransmittalId = in_array('Transmittal ID', $archiveCols, true);
 
     $focusId = 0;
     foreach ($ids as $archiveId) {
@@ -48,10 +49,16 @@ try {
             'File Name (PDF)',
             'Tracking No.',
             'Status',
+            'Transmittal ID',
             'Transmittal Remarks/Received By',
             'Date',
             'Evaluator',
         ];
+        if (!$hasTransmittalId) {
+            $insertCols = array_values(array_filter($insertCols, function ($c) {
+                return $c !== 'Transmittal ID';
+            }));
+        }
 
         // Restore original ID when archive tracks it.
         if ($hasOriginalMailId && isset($row['original_mail_id']) && (int)$row['original_mail_id'] > 0) {

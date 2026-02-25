@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $parcelNo = trim($_POST['Parcel No.'] ?? $_POST['parcelNo'] ?? '');
     $recipientDetails = trim($_POST['Recipient Details'] ?? $_POST['recipientDetails'] ?? '');
     $trackingNo = trim($_POST['Tracking No.'] ?? $_POST['trackingNo'] ?? '');
+    $transmittalId = trim($_POST['transmittal_id'] ?? $_POST['Transmittal ID'] ?? '');
 
     // Backward-compatible single inputs
     $singleNoticeCode = trim($_POST['Notice/Order Code'] ?? $_POST['notice_Code'] ?? '');
@@ -112,9 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $sql = 'INSERT INTO mailtracking 
                     (`Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, 
-                     `Parcel Details`, `Sender Details`, `File Name (PDF)`, `Tracking No.`) 
+                     `Parcel Details`, `Sender Details`, `File Name (PDF)`, `Tracking No.`, `Transmittal ID`) 
                     VALUES (:notice_code, :date_released, :parcel_no, :recipient_details, 
-                            :parcel_details, :sender_details, :file_name, :tracking_no)';
+                            :parcel_details, :sender_details, :file_name, :tracking_no, :transmittal_id)';
             $stmt = $pdo->prepare($sql);
 
             $pdo->beginTransaction();
@@ -133,7 +134,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':parcel_details' => $pair['parcel_details'],
                     ':sender_details' => $senderDetails,
                     ':file_name' => $baseFileName,
-                    ':tracking_no' => $trackingNo
+                    ':tracking_no' => $trackingNo,
+                    ':transmittal_id' => ($transmittalId !== '' ? $transmittalId : '')
                 ]);
                 $inserted++;
             }

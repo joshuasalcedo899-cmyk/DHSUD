@@ -356,6 +356,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
                 <h2>ADD RECORD</h2>
                 <form id="addForm" action="../api/Add.php" method="post" autocomplete="off">
+                    <input type="hidden" name="transmittal_id" id="addTransmittalId">
 
                     <div style="display:contents">
                         <div style="grid-column:1/span 2;">
@@ -445,11 +446,16 @@ HREDRD-EMES
     <div class="admin-table-container">
     <div class="top-bar">
         <div class="top-bar-left">
-            <button class="export-btn" onclick="exportSelectedToPDF()">Export Selected to PDF</button>
+            <img onclick="exportSelectedToPDF()" style="width: 20px; height: 20px;" class="export-icon" src="../assets/export.svg" alt="Export">
+            <button class="transmittal-btn" aria-pressed="false">Transmittals</button>
+            <button type="button" class="transmittal-back-btn" id="transmittalBackToListBtn" style="display:none;">Back to Transmittals</button>
+            <button type="button" class="transmittal-add-btn" id="addTransmittalBtn" style="display:none;">Add Transmittal</button>
         </div>
         <div class="top-bar-title">MAIL TRACKING RECORDS</div>
             <script>
             let scannerSelectedNoticeCode = '';
+            let activeTransmittalId = '';
+            const pendingTransmittals = new Set();
 
             function openScannerModal(noticeCode) {
                 const modal = document.getElementById('scannerModal');
@@ -478,11 +484,30 @@ HREDRD-EMES
                 scannerSelectedNoticeCode = '';
             }
 
+            let lastPdfViewerFocus = null;
+            let lastOngoingDeliveryFocus = null;
+
+            function restoreFocus(target) {
+                if (target && typeof target.focus === 'function' && document.contains(target)) {
+                    try { target.focus(); return true; } catch (e) {}
+                }
+                return false;
+            }
+
+            function blurIfInside(modal) {
+                if (!modal) return;
+                const active = document.activeElement;
+                if (active && modal.contains(active)) {
+                    try { active.blur(); } catch (e) {}
+                }
+            }
+
             function openPdfViewerModal(pdfUrl, pdfTitle) {
                 const modal = document.getElementById('pdfViewerModal');
                 const frame = document.getElementById('pdfViewerFrame');
                 const title = document.getElementById('pdfViewerTitle');
                 if (!modal || !frame || !title || !pdfUrl) return;
+                lastPdfViewerFocus = document.activeElement;
                 const cleanUrl = String(pdfUrl).split('#')[0];
                 const fitUrl = cleanUrl + '#zoom=95';
                 frame.src = 'about:blank';
@@ -490,29 +515,54 @@ HREDRD-EMES
                 title.textContent = (pdfTitle || 'PDF Preview');
                 modal.style.display = 'flex';
                 modal.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('inert');
+                const closeBtn = modal.querySelector('.pdf-viewer-close');
+                if (closeBtn) {
+                    try { closeBtn.focus(); } catch (e) {}
+                }
             }
 
             function closePdfViewerModal() {
                 const modal = document.getElementById('pdfViewerModal');
                 const frame = document.getElementById('pdfViewerFrame');
                 if (!modal || !frame) return;
+                if (modal.contains(document.activeElement)) {
+                    if (!restoreFocus(lastPdfViewerFocus)) {
+                        blurIfInside(modal);
+                    }
+                }
                 modal.style.display = 'none';
                 modal.setAttribute('aria-hidden', 'true');
+                modal.setAttribute('inert', '');
                 frame.src = 'about:blank';
+                lastPdfViewerFocus = null;
             }
 
             function openOngoingDeliveryModal() {
                 const modal = document.getElementById('ongoingDeliveryModal');
                 if (!modal) return;
+                lastOngoingDeliveryFocus = document.activeElement;
                 modal.style.display = 'flex';
                 modal.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('inert');
+                const closeBtn = modal.querySelector('.ongoing-delivery-close');
+                if (closeBtn) {
+                    try { closeBtn.focus(); } catch (e) {}
+                }
             }
 
             function closeOngoingDeliveryModal() {
                 const modal = document.getElementById('ongoingDeliveryModal');
                 if (!modal) return;
+                if (modal.contains(document.activeElement)) {
+                    if (!restoreFocus(lastOngoingDeliveryFocus)) {
+                        blurIfInside(modal);
+                    }
+                }
                 modal.style.display = 'none';
                 modal.setAttribute('aria-hidden', 'true');
+                modal.setAttribute('inert', '');
+                lastOngoingDeliveryFocus = null;
             }
 
             function resolveStatusFromLink(linkEl) {
@@ -601,7 +651,11 @@ HREDRD-EMES
                     <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
                 </button>
         </div>
-</div>
+        </div>
+
+        <div id="transmittalManager" class="transmittal-manager" data-view="grid" style="display:none;">
+            <div class="transmittal-grid" id="transmittalGrid"></div>
+        </div>
 
         <div class="table-scroll-area">
             <div class="tracking-table-container">
@@ -645,7 +699,7 @@ HREDRD-EMES
                                 <?php
                                     $rowTrackingNo = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? $row['tracking_no'] ?? $row['TrackingNo'] ?? ''));
                                 ?>
-                                <tr class="<?= htmlspecialchars(implode(' ', $rowClasses)) ?>" data-id="<?= (int)($row['id'] ?? 0) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking-no="<?= htmlspecialchars($rowTrackingNo) ?>">
+                                <tr class="<?= htmlspecialchars(implode(' ', $rowClasses)) ?>" data-id="<?= (int)($row['id'] ?? 0) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>" data-transmittal-id="<?= htmlspecialchars($row['Transmittal ID'] ?? '') ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>" data-tracking-no="<?= htmlspecialchars($rowTrackingNo) ?>">
                                     <td style="width:32px;">
                                         <input type="checkbox" class="row-checkbox" value="<?= (int)($row['id'] ?? 0) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
@@ -803,7 +857,7 @@ HREDRD-EMES
                 </div>
             </div>
         </div>
-        <div id="pdfViewerModal" class="pdf-viewer-modal" aria-hidden="true">
+        <div id="pdfViewerModal" class="pdf-viewer-modal" aria-hidden="true" inert role="dialog" aria-modal="true">
             <div class="pdf-viewer-panel">
                 <div class="pdf-viewer-head">
                     <h3 id="pdfViewerTitle" class="pdf-viewer-title">PDF Preview</h3>
@@ -813,7 +867,7 @@ HREDRD-EMES
             </div>
         </div>
 
-        <div id="ongoingDeliveryModal" class="ongoing-delivery-modal" aria-hidden="true">
+        <div id="ongoingDeliveryModal" class="ongoing-delivery-modal" aria-hidden="true" inert role="dialog" aria-modal="true">
             <div class="ongoing-delivery-panel">
                 <div class="ongoing-delivery-title-bar">
                     <span class="ongoing-delivery-title-text">DHSUD</span>
@@ -829,7 +883,7 @@ HREDRD-EMES
 
         <!-- Add New Record Modal (hidden by default) -->
         
-        <div style="display: flex; gap: 10px; margin-top: 2 px; align-items: center;">
+        <div class="table-footer-section">
             <button class="add-btn" onclick="openAddModal()">Add</button>
             <a href="Archive_Page.php" class="archive-btn">Archive</a>
             <div class="statistics-section">
@@ -952,8 +1006,13 @@ HREDRD-EMES
                 };
             });
         }
+        function syncAddTransmittalField() {
+            var input = document.getElementById('addTransmittalId');
+            if (input) input.value = (activeTransmittalId || '').trim();
+        }
         // Add Modal logic
         function openAddModal() {
+            syncAddTransmittalField();
             document.getElementById('addModalOverlay').style.display = 'flex';
         }
         function closeAddModal() {
@@ -974,6 +1033,7 @@ HREDRD-EMES
         function clearAddForm() {
             var form = document.getElementById('addForm');
             if (form) form.reset();
+            syncAddTransmittalField();
             var rowsWrap = document.getElementById('addPairRows');
             if (rowsWrap) {
                 rowsWrap.innerHTML = '';
@@ -1040,6 +1100,7 @@ HREDRD-EMES
                 refreshAddPairButtons();
                 addForm.addEventListener('submit', function(e) {
                     e.preventDefault();
+                    syncAddTransmittalField();
                     var formData = new FormData(addForm);
                     formData.set('csrf_token', CSRF_TOKEN);
 
@@ -1131,7 +1192,8 @@ HREDRD-EMES
                             if (!tr) return null;
                             var row = {
                                 'id': safeRowId,
-                                'Notice/Order Code': (tr.dataset.notice || '').trim()
+                                'Notice/Order Code': (tr.dataset.notice || '').trim(),
+                                'Transmittal ID': (tr.dataset.transmittalId || '').trim()
                             };
                             tr.querySelectorAll('td[data-col]').forEach(function(td) {
                                 var key = td.getAttribute('data-col');
@@ -1252,7 +1314,28 @@ HREDRD-EMES
                         });
 
                         // Expose PHP rows as JS array for modal
+                        let mailRowIndexById = new Map();
+                        let mailRowIndexByNotice = new Map();
+
+                        function rebuildMailRowIndexes(rowsOverride) {
+                            const rows = Array.isArray(rowsOverride) ? rowsOverride : (Array.isArray(window.mailRows) ? window.mailRows : []);
+                            mailRowIndexById = new Map();
+                            mailRowIndexByNotice = new Map();
+                            rows.forEach(function(r) {
+                                const id = parseInt(r && r.id, 10) || 0;
+                                if (id > 0) mailRowIndexById.set(id, r);
+                                const noticeCode = ((r && r['Notice/Order Code']) ? String(r['Notice/Order Code']) : '').trim();
+                                if (noticeCode !== '' && !mailRowIndexByNotice.has(noticeCode)) {
+                                    mailRowIndexByNotice.set(noticeCode, r);
+                                }
+                            });
+                            if (typeof updateTransmittalGrid === 'function') {
+                                updateTransmittalGrid();
+                            }
+                        }
+
                         window.mailRows = <?php echo json_encode($rows, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT); ?>;
+                        rebuildMailRowIndexes();
 
         function rebuildMailRowsFromTable() {
             const trs = document.querySelectorAll('.admin-table-container table tbody tr[data-id]');
@@ -1262,7 +1345,8 @@ HREDRD-EMES
             trs.forEach(function(tr) {
                 const row = {
                     'id': parseInt(tr.dataset.id || '0', 10) || 0,
-                    'Notice/Order Code': (tr.dataset.notice || '').trim()
+                    'Notice/Order Code': (tr.dataset.notice || '').trim(),
+                    'Transmittal ID': (tr.dataset.transmittalId || '').trim()
                 };
 
                 // Fill values inherited via rowspan from previous rows.
@@ -1306,6 +1390,7 @@ HREDRD-EMES
                 });
             });
             window.mailRows = rows;
+            rebuildMailRowIndexes(rows);
         }
 
         function refreshHomeDataFull(options = {}) {
@@ -1466,6 +1551,7 @@ HREDRD-EMES
             }
 
             window.mailRows = nextRows;
+            rebuildMailRowIndexes(nextRows);
             notifyStatusDiffsAfterRefresh(previousStatusSnapshot);
             updateStatsBarFromDelta(payload.stats || {});
             updateYearSelectFromDelta(payload.years || []);
@@ -2164,7 +2250,7 @@ HREDRD-EMES
         function applyStatusFilterSelection(nextFilter) {
             selectedStatusFilter = normalizeStatusFilterValue(nextFilter);
             updateStatusFilterButtonsUI();
-            filterTableRows();
+            scheduleFilterTableRows(0);
         }
 
         function rowMatchesStatusFilter(statusText, normalizedFilter) {
@@ -2176,6 +2262,22 @@ HREDRD-EMES
             return status === normalizedFilter;
         }
 
+        let filterTableRowsTimer = null;
+        let filterTableRowsRaf = null;
+
+        function scheduleFilterTableRows(delayMs) {
+            const delay = Number.isFinite(delayMs) ? delayMs : 0;
+            if (filterTableRowsTimer) clearTimeout(filterTableRowsTimer);
+            if (filterTableRowsRaf) cancelAnimationFrame(filterTableRowsRaf);
+            filterTableRowsTimer = setTimeout(function() {
+                filterTableRowsTimer = null;
+                filterTableRowsRaf = requestAnimationFrame(function() {
+                    filterTableRowsRaf = null;
+                    filterTableRows();
+                });
+            }, delay);
+        }
+
         function filterTableRows() {
             const input = document.getElementById('tableSearchInput');
             const filter = input.value.toLowerCase();
@@ -2184,29 +2286,21 @@ HREDRD-EMES
             if (selectedYear === 'all' || !selectedYear) selectedYear = '';
             const normalizedStatusFilter = normalizeStatusFilterValue(selectedStatusFilter);
             const hasStatusFilter = normalizedStatusFilter !== 'ALL';
-            const isFiltering = (filter !== '' || selectedYear !== '' || hasStatusFilter);
+            const activeTransmittal = (activeTransmittalId || '').trim();
+            const hasTransmittalFilter = activeTransmittal !== '';
+            const isFiltering = (filter !== '' || selectedYear !== '' || hasStatusFilter || hasTransmittalFilter);
             // Preserve rowspan-based batch layout when using structured filters only
             // (year/status) and no free-text search.
-            const batchPreserveMode = (filter === '' && (selectedYear !== '' || hasStatusFilter));
+            const batchPreserveMode = (filter === '' && (selectedYear !== '' || hasStatusFilter) && !hasTransmittalFilter);
             const table = document.querySelector('.admin-table-container table');
             if (!table) return;
             // Always restore previous search mutations before applying a new filter state.
             // This keeps rowspan-based batch layout stable across search/delete cycles.
             resetSearchViewMutations(table);
             const trs = table.querySelectorAll('tbody tr[data-notice]');
-            const rowDataById = new Map();
-            const rowDataByNotice = new Map();
+            const rowDataById = mailRowIndexById || new Map();
+            const rowDataByNotice = mailRowIndexByNotice || new Map();
             const matchedBatchIds = new Set();
-            if (Array.isArray(window.mailRows)) {
-                window.mailRows.forEach(function(r) {
-                    const id = parseInt(r.id, 10) || 0;
-                    if (id > 0) rowDataById.set(id, r);
-                    const noticeCode = ((r['Notice/Order Code'] || '') + '').trim();
-                    if (noticeCode !== '' && !rowDataByNotice.has(noticeCode)) {
-                        rowDataByNotice.set(noticeCode, r);
-                    }
-                });
-            }
 
             Array.from(trs).forEach(function(tr) {
                 const rowId = parseInt(tr.dataset.id || '0', 10) || 0;
@@ -2218,7 +2312,7 @@ HREDRD-EMES
                 const rowStatus = ((rowObj && rowObj['Status']) ? String(rowObj['Status']) : '').trim();
                 const statusMatch = rowMatchesStatusFilter(rowStatus, normalizedStatusFilter);
 
-                if (isChecked && !hasStatusFilter) {
+                if (isChecked && !hasStatusFilter && !hasTransmittalFilter) {
                     tr.style.display = '';
                     if (isFiltering && !batchPreserveMode) {
                         rebuildVisibleRowCellsForSearch(tr, rowObj);
@@ -2227,6 +2321,8 @@ HREDRD-EMES
                 }
 
                 const codeMatch = notice.toLowerCase().indexOf(filter) > -1;
+                const rowTransmittal = ((rowObj && rowObj['Transmittal ID']) ? String(rowObj['Transmittal ID']) : (tr.dataset.transmittalId || '')).trim();
+                const transmittalMatch = !hasTransmittalFilter || rowTransmittal === activeTransmittal;
 
                 let yearMatch = true;
                 if (selectedYear) {
@@ -2234,7 +2330,7 @@ HREDRD-EMES
                     yearMatch = dateAfd.indexOf(selectedYear) > -1;
                 }
 
-                const visible = codeMatch && yearMatch && statusMatch;
+                const visible = codeMatch && yearMatch && statusMatch && transmittalMatch;
                 if (visible && batchPreserveMode && batchId !== '') {
                     matchedBatchIds.add(batchId);
                 }
@@ -2257,6 +2353,260 @@ HREDRD-EMES
                 });
             }
         }
+
+        function padTransmittalNum(value, size) {
+            const raw = String(value || '');
+            if (raw.length >= size) return raw;
+            return ('000000' + raw).slice(-size);
+        }
+
+        function parseTransmittalIdParts(id) {
+            const raw = (id || '').trim();
+            const match = /^TR-(\d{8})-(\d{3})$/i.exec(raw);
+            if (!match) return null;
+            const ymd = match[1];
+            const seq = parseInt(match[2], 10) || 0;
+            const year = parseInt(ymd.slice(0, 4), 10) || 0;
+            const month = parseInt(ymd.slice(4, 6), 10) || 0;
+            const day = parseInt(ymd.slice(6, 8), 10) || 0;
+            if (!year || !month || !day) return null;
+            return { id: raw, ymd: ymd, seq: seq, year: year, month: month, day: day };
+        }
+
+        function formatTransmittalDisplayName(id) {
+            const parts = parseTransmittalIdParts(id);
+            if (!parts) return id;
+            const dateObj = new Date(parts.year, parts.month - 1, parts.day);
+            if (Number.isNaN(dateObj.getTime())) return id;
+            const base = dateObj.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            return parts.seq > 1 ? (base + ' #' + parts.seq) : base;
+        }
+
+        function collectTransmittalSummary(rows) {
+            const summary = new Map();
+            rows.forEach(function(r) {
+                const tid = ((r && r['Transmittal ID']) ? String(r['Transmittal ID']) : '').trim();
+                if (!tid) return;
+                summary.set(tid, (summary.get(tid) || 0) + 1);
+            });
+            pendingTransmittals.forEach(function(tid) {
+                if (!summary.has(tid)) summary.set(tid, 0);
+            });
+            return summary;
+        }
+
+        function sortTransmittalIds(ids) {
+            return ids.sort(function(a, b) {
+                const pa = parseTransmittalIdParts(a);
+                const pb = parseTransmittalIdParts(b);
+                if (pa && pb) {
+                    if (pa.ymd !== pb.ymd) return pb.ymd.localeCompare(pa.ymd);
+                    return (pb.seq || 0) - (pa.seq || 0);
+                }
+                if (pa) return -1;
+                if (pb) return 1;
+                return a.localeCompare(b);
+            });
+        }
+
+        function updateTransmittalGrid() {
+            const grid = document.getElementById('transmittalGrid');
+            if (!grid) return;
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const summary = collectTransmittalSummary(rows);
+            const ids = sortTransmittalIds(Array.from(summary.keys()));
+
+            // Remove pending entries that now exist in DB.
+            pendingTransmittals.forEach(function(tid) {
+                if (summary.has(tid) && summary.get(tid) > 0) {
+                    pendingTransmittals.delete(tid);
+                }
+            });
+
+            grid.innerHTML = '';
+            if (ids.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'transmittal-empty';
+                empty.textContent = 'No transmittals yet.';
+                grid.appendChild(empty);
+                return;
+            }
+
+            ids.forEach(function(tid) {
+                const tile = document.createElement('button');
+                tile.type = 'button';
+                tile.className = 'transmittal-tile';
+                tile.setAttribute('data-transmittal-id', tid);
+
+                const folder = document.createElement('div');
+                folder.className = 'transmittal-folder';
+
+                const name = document.createElement('div');
+                name.className = 'transmittal-name';
+                name.textContent = formatTransmittalDisplayName(tid);
+
+                const count = document.createElement('div');
+                count.className = 'transmittal-meta';
+                const qty = summary.get(tid) || 0;
+                count.textContent = qty + (qty === 1 ? ' item' : ' items');
+
+                tile.appendChild(folder);
+                tile.appendChild(name);
+                tile.appendChild(count);
+                tile.addEventListener('click', function() {
+                    openTransmittalDetail(tid, tile);
+                });
+                grid.appendChild(tile);
+            });
+        }
+
+        function generateNewTransmittalId() {
+            const now = new Date();
+            const ymd = String(now.getFullYear()) + padTransmittalNum(now.getMonth() + 1, 2) + padTransmittalNum(now.getDate(), 2);
+            let maxSeq = 0;
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            rows.forEach(function(r) {
+                const tid = ((r && r['Transmittal ID']) ? String(r['Transmittal ID']) : '').trim();
+                const parts = parseTransmittalIdParts(tid);
+                if (parts && parts.ymd === ymd) {
+                    if (parts.seq > maxSeq) maxSeq = parts.seq;
+                }
+            });
+            pendingTransmittals.forEach(function(tid) {
+                const parts = parseTransmittalIdParts(tid);
+                if (parts && parts.ymd === ymd) {
+                    if (parts.seq > maxSeq) maxSeq = parts.seq;
+                }
+            });
+            const nextSeq = maxSeq + 1;
+            return 'TR-' + ymd + '-' + padTransmittalNum(nextSeq, 3);
+        }
+
+        let defaultTopBarTitle = '';
+        function setTopBarTitle(nextTitle) {
+            const topTitle = document.querySelector('.top-bar-title');
+            if (!topTitle) return;
+            if (!defaultTopBarTitle) {
+                defaultTopBarTitle = topTitle.textContent || 'MAIL TRACKING RECORDS';
+            }
+            topTitle.textContent = nextTitle || defaultTopBarTitle;
+        }
+
+        function clampPercent(value) {
+            if (!Number.isFinite(value)) return 0;
+            if (value < 0) return 0;
+            if (value > 100) return 100;
+            return value;
+        }
+
+        function setTransmittalAnimOrigin(xPercent, yPercent) {
+            const container = document.querySelector('.admin-table-container');
+            if (!container) return;
+            if (!Number.isFinite(xPercent) || !Number.isFinite(yPercent)) {
+                container.style.removeProperty('--transmittal-origin-x');
+                container.style.removeProperty('--transmittal-origin-y');
+                return;
+            }
+            container.style.setProperty('--transmittal-origin-x', clampPercent(xPercent).toFixed(2) + '%');
+            container.style.setProperty('--transmittal-origin-y', clampPercent(yPercent).toFixed(2) + '%');
+        }
+
+        function setTransmittalAnimOriginFromElement(el) {
+            const container = document.querySelector('.admin-table-container');
+            if (!container || !el || typeof el.getBoundingClientRect !== 'function') {
+                setTransmittalAnimOrigin(NaN, NaN);
+                return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            const elRect = el.getBoundingClientRect();
+            if (containerRect.width <= 0 || containerRect.height <= 0) {
+                setTransmittalAnimOrigin(NaN, NaN);
+                return;
+            }
+            const x = ((elRect.left + elRect.width / 2) - containerRect.left) / containerRect.width * 100;
+            const y = ((elRect.top + elRect.height / 2) - containerRect.top) / containerRect.height * 100;
+            setTransmittalAnimOrigin(x, y);
+        }
+
+        let transmittalAnimTimer = null;
+        function triggerTransmittalDetailAnimation() {
+            const container = document.querySelector('.admin-table-container');
+            if (!container) return;
+            container.setAttribute('data-transmittal-anim', 'detail');
+            if (transmittalAnimTimer) clearTimeout(transmittalAnimTimer);
+            transmittalAnimTimer = setTimeout(function() {
+                container.removeAttribute('data-transmittal-anim');
+            }, 320);
+        }
+
+        function setTransmittalView(view) {
+            const container = document.querySelector('.admin-table-container');
+            const manager = document.getElementById('transmittalManager');
+            const transBtn = document.querySelector('.transmittal-btn');
+            const backBtn = document.getElementById('transmittalBackToListBtn');
+            const addBtn = document.getElementById('addTransmittalBtn');
+            if (container) {
+                if (!view || view === 'none') {
+                    container.removeAttribute('data-transmittal-view');
+                } else {
+                    container.setAttribute('data-transmittal-view', view);
+                }
+            }
+            if (manager) {
+                if (!view || view === 'none') {
+                    manager.style.display = 'none';
+                    manager.removeAttribute('data-view');
+                } else {
+                    manager.style.display = 'flex';
+                    manager.setAttribute('data-view', view);
+                }
+            }
+            if (transBtn) {
+                if (!view || view === 'none') {
+                    transBtn.textContent = 'Transmittals';
+                    transBtn.setAttribute('aria-pressed', 'false');
+                } else {
+                    transBtn.textContent = 'Back to Table';
+                    transBtn.setAttribute('aria-pressed', 'true');
+                }
+            }
+            if (backBtn) {
+                backBtn.style.display = (view === 'detail') ? 'inline-flex' : 'none';
+            }
+            if (addBtn) {
+                addBtn.style.display = (view === 'grid') ? 'inline-flex' : 'none';
+            }
+        }
+
+        function openTransmittalGrid() {
+            activeTransmittalId = '';
+            setTransmittalView('grid');
+            setTopBarTitle('Transmittals');
+            updateTransmittalGrid();
+            scheduleFilterTableRows(0);
+        }
+
+        function openTransmittalDetail(transmittalId, originEl) {
+            const safeId = (transmittalId || '').trim();
+            if (!safeId) return;
+            activeTransmittalId = safeId;
+            setTransmittalAnimOriginFromElement(originEl);
+            setTransmittalView('detail');
+            setTopBarTitle(formatTransmittalDisplayName(safeId) + ' Transmittal');
+            triggerTransmittalDetailAnimation();
+            scheduleFilterTableRows(0);
+        }
+
+        function exitTransmittalMode() {
+            activeTransmittalId = '';
+            setTransmittalView('none');
+            setTopBarTitle('');
+            scheduleFilterTableRows(0);
+        }
         document.addEventListener('DOMContentLoaded', function() {
             document.addEventListener('click', function(e) {
                 var dropdown = document.getElementById('rowMenuDropdown');
@@ -2274,12 +2624,16 @@ HREDRD-EMES
             const searchBtn = document.getElementById('tableSearchBtn');
             const yearSelect = document.getElementById('tableSortYear');
             updateStatusFilterButtonsUI();
-            searchInput.addEventListener('input', filterTableRows);
+            searchInput.addEventListener('input', function() {
+                scheduleFilterTableRows(150);
+            });
             searchBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                filterTableRows();
+                scheduleFilterTableRows(0);
             });
-            yearSelect.addEventListener('change', filterTableRows);
+            yearSelect.addEventListener('change', function() {
+                scheduleFilterTableRows(0);
+            });
             document.addEventListener('click', function(e) {
                 const btn = e.target.closest ? e.target.closest('.stat-filter-btn') : null;
                 if (!btn) return;
@@ -2292,6 +2646,35 @@ HREDRD-EMES
             focusScannedRow();
             autoTrackEligibleRows();
             initSmartPolling();
+
+            const transmittalBtn = document.querySelector('.transmittal-btn');
+            if (transmittalBtn) {
+                transmittalBtn.addEventListener('click', function() {
+                    const container = document.querySelector('.admin-table-container');
+                    const view = container ? container.getAttribute('data-transmittal-view') : '';
+                    if (view) {
+                        exitTransmittalMode();
+                    } else {
+                        openTransmittalGrid();
+                    }
+                });
+            }
+
+            const transmittalBackBtn = document.getElementById('transmittalBackToListBtn');
+            if (transmittalBackBtn) {
+                transmittalBackBtn.addEventListener('click', function() {
+                    openTransmittalGrid();
+                });
+            }
+
+            const addTransmittalBtn = document.getElementById('addTransmittalBtn');
+            if (addTransmittalBtn) {
+                addTransmittalBtn.addEventListener('click', function() {
+                    const newId = generateNewTransmittalId();
+                    pendingTransmittals.add(newId);
+                    openTransmittalDetail(newId);
+                });
+            }
 
             const scannerModal = document.getElementById('scannerModal');
             if (scannerModal) {
@@ -2440,10 +2823,16 @@ HREDRD-EMES
             const frame = document.getElementById('pdfViewerFrame');
             const title = document.getElementById('pdfViewerTitle');
             if (modal && frame && title) {
+                lastPdfViewerFocus = document.activeElement;
                 title.textContent = "Exported PDF";
                 frame.src = 'about:blank';
                 modal.style.display = 'flex';
                 modal.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('inert');
+                const closeBtn = modal.querySelector('.pdf-viewer-close');
+                if (closeBtn) {
+                    try { closeBtn.focus(); } catch (e) {}
+                }
             }
 
             form.appendChild(input);
