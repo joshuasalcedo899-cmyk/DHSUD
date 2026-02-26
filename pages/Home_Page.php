@@ -447,9 +447,13 @@ HREDRD-EMES
     <div class="top-bar">
         <div class="top-bar-left">
             <img onclick="exportSelectedToPDF()" style="width: 20px; height: 20px;" class="export-icon" src="../assets/export.svg" alt="Export">
-            <button class="transmittal-btn" aria-pressed="false">Transmittals</button>
-            <button type="button" class="transmittal-back-btn" id="transmittalBackToListBtn" style="display:none;">Back to Transmittals</button>
-            <button type="button" class="transmittal-add-btn" id="addTransmittalBtn" style="display:none;">Add Transmittal</button>
+            <button class="transmittal-btn" aria-pressed="false" aria-label="Transmittals">
+                <img src="../assets/Folder.svg" alt="" class="transmittal-folder-logo" aria-hidden="true">
+                <img src="../assets/table.svg" alt="" class="transmittal-table-logo" aria-hidden="true">
+            </button>
+            <button type="button" class="transmittal-back-btn" id="transmittalBackToListBtn" style="display:none;" aria-label="Back to Transmittals">
+                <img src="../assets/Folder.svg" alt="" class="transmittal-back-logo" aria-hidden="true">
+            </button>
         </div>
         <div class="top-bar-title">MAIL TRACKING RECORDS</div>
             <script>
@@ -655,6 +659,12 @@ HREDRD-EMES
 
         <div id="transmittalManager" class="transmittal-manager" data-view="grid" style="display:none;">
             <div class="transmittal-grid" id="transmittalGrid"></div>
+            <div class="transmittal-add-wrap">
+                <button type="button" class="transmittal-add-btn" id="addTransmittalBtn" style="display:none;" aria-label="Add Transmittal">
+                    <span class="transmittal-add-icon" aria-hidden="true" style="width:16px;height:16px;"><img src="../assets/plus.svg" alt=""></span>
+                    <span class="transmittal-add-label">New</span>
+                </button>
+            </div>
         </div>
 
         <div class="table-scroll-area">
@@ -2567,10 +2577,12 @@ HREDRD-EMES
             }
             if (transBtn) {
                 if (!view || view === 'none') {
-                    transBtn.textContent = 'Transmittals';
+                    transBtn.classList.remove('is-back-to-table');
+                    transBtn.setAttribute('aria-label', 'Transmittals');
                     transBtn.setAttribute('aria-pressed', 'false');
                 } else {
-                    transBtn.textContent = 'Back to Table';
+                    transBtn.classList.add('is-back-to-table');
+                    transBtn.setAttribute('aria-label', 'Back to Table');
                     transBtn.setAttribute('aria-pressed', 'true');
                 }
             }

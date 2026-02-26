@@ -565,6 +565,11 @@
 	display: flex;
 }
 
+.admin-table-container[data-transmittal-view="grid"] .transmittal-manager {
+	min-height: clamp(320px, 58vh, 680px);
+	padding-bottom: 0;
+}
+
 .transmittal-manager {
 	flex-direction: column;
 	gap: 0.8rem;
@@ -591,7 +596,7 @@
 	align-items: center;
 	justify-content: center;
 	min-height: 34px;
-	min-width: 150px;
+	min-width: 100px;
 	padding: 0.35rem 0.9rem;
 	font-size: 0.85rem;
 	border-radius: 8px;
@@ -602,6 +607,71 @@
 .transmittal-add-btn:hover {
 	transform: translateY(-1px);
 	box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+}
+
+.transmittal-folder-logo,
+.transmittal-table-logo,
+.transmittal-back-logo {
+	width: 20px;
+	height: 20px;
+	margin-right: 0;
+}
+
+.transmittal-table-logo {
+	display: none;
+}
+
+.transmittal-btn,
+.transmittal-back-btn {
+	min-width: 40px;
+	padding: 0.35rem;
+}
+
+.transmittal-btn.is-back-to-table .transmittal-folder-logo {
+	display: none;
+}
+
+.transmittal-btn.is-back-to-table .transmittal-table-logo {
+	display: block;
+}
+
+.transmittal-add-wrap {
+	display: flex;
+	justify-content: flex-start;
+	margin-top: auto;
+	padding: 0 0.4rem 0;
+}
+
+.transmittal-manager[data-view="detail"] .transmittal-add-wrap {
+	display: none;
+}
+
+.transmittal-manager .transmittal-add-btn {
+	border: 1px solid #d7d7d7;
+	background: #f2f2f2;
+	color: #111;
+	border-radius: 20px;
+	min-width: 100;
+	min-height: 50px;
+	padding: 0 1.15rem;
+	gap: 0.7rem;
+	box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.transmittal-manager .transmittal-add-btn:hover {
+	background: #ececec;
+	box-shadow: 0 8px 14px rgba(0,0,0,0.12);
+}
+
+.transmittal-add-icon {
+	font-size: 2.1rem;
+	line-height: 1;
+	font-weight: 400;
+}
+
+.transmittal-add-label {
+	font-size: 1rem;
+	line-height: 1;
+	font-weight: 500;
 }
 
 .transmittal-grid {
