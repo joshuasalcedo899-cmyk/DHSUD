@@ -2730,7 +2730,7 @@ HREDRD-EMES
         function openTransmittalGrid() {
             activeTransmittalId = '';
             setTransmittalView('grid');
-            setTopBarTitle('Transmittals');
+            setTopBarTitle('TRANSMITTALS');
             updateTransmittalGrid();
             scheduleFilterTableRows(0);
         }
