@@ -624,24 +624,27 @@ HREDRD-EMES
 
             </script>
         <div class="table-sort-bar">
-            <select id="tableSortYear" class="table-sort-select" required style="min-width:120px;">
-                <option value="" disabled selected hidden>Year</option>
-                <option value="all">All</option>
-                <?php
-                $years = [];
-                foreach ($rows as $row) {
-                    $dateAfd = $row['Date released to AFD'] ?? '';
-                    if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
-                        $years[] = $m[1];
+            <div class="table-sort-select-wrap" id="tableSortYearWrap">
+                <select id="tableSortYear" class="table-sort-select" required style="min-width:120px;">
+                    <option value="" disabled selected hidden>Year</option>
+                    <option value="all">All</option>
+                    <?php
+                    $years = [];
+                    foreach ($rows as $row) {
+                        $dateAfd = $row['Date released to AFD'] ?? '';
+                        if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
+                            $years[] = $m[1];
+                        }
                     }
-                }
-                $years = array_unique($years);
-                rsort($years);
-                foreach ($years as $year) {
-                    echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
-                }
-                ?>
-            </select>
+                    $years = array_unique($years);
+                    rsort($years);
+                    foreach ($years as $year) {
+                        echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
+                    }
+                    ?>
+                </select>
+                <span class="table-sort-custom-icon" aria-hidden="true"></span>
+            </div>
                 <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
                 <button class="table-search-btn" id="tableSearchBtn">
                     <img src="../assets/Search Icon.svg" alt="Search">

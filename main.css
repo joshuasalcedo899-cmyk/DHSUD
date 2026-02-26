@@ -284,6 +284,30 @@
 	cursor: pointer;
 	transition: border 0.2s;
 }
+
+/* Home page year/month combined sort select custom dropdown icon */
+#tableSortYear.table-sort-select {
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	padding-right: 1.8rem !important;
+}
+
+.table-sort-select-wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.table-sort-select-wrap .table-sort-custom-icon {
+	position: absolute;
+	right: 0.5rem;
+	width: 10px;
+	height: 10px;
+	pointer-events: none;
+	background: url('assets/Dropdown_Icon.svg') no-repeat center center;
+	background-size: contain;
+}
 .table-sort-label {
 	font-size: 1rem;
 	color: #22336a;
