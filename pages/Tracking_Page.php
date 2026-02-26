@@ -149,18 +149,18 @@ rsort($years);
 
         .tracking-view-shell .table-sort-select {
             min-width: 96px;
-            border-radius: 5px;
+            border-radius: 8px;
             border: 1.6px solid #222;
-            height: 32px;
+            height: 40px;
             padding: 0 8px;
             font-weight: 600;
         }
 
         .tracking-view-shell .table-year-trigger {
             min-width: 110px;
-            height: 32px;
+            height: 40px;
             padding: 0 8px;
-            border-radius: 5px;
+            border-radius: 8px;
             border: 1.6px solid #222;
             font-weight: 600;
         }
@@ -168,13 +168,13 @@ rsort($years);
         .tracking-view-shell .table-search-input {
             width: 165px;
             max-width: 165px;
-            border-radius: 5px;
-            height: 32px;
+            border-radius: 8px;
+            height: 40px;
             padding: 0 10px;
         }
 
         .tracking-view-shell .table-search-btn {
-            border-radius: 5px;
+            border-radius: 8px;
             width: 32px;
             height: 32px;
             display: inline-flex;
@@ -185,8 +185,8 @@ rsort($years);
         }
 
         .tracking-view-shell .table-search-btn img {
-            width: 14px;
-            height: 14px;
+            width: 20px;
+            height: 20px;
             margin: 0;
         }
 
