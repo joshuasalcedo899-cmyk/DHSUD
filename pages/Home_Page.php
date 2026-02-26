@@ -2520,6 +2520,7 @@ HREDRD-EMES
         function applyStatusFilterSelection(nextFilter) {
             selectedStatusFilter = normalizeStatusFilterValue(nextFilter);
             updateStatusFilterButtonsUI();
+            requestTableSortAnimation();
             scheduleFilterTableRows(0);
         }
 
@@ -2534,6 +2535,51 @@ HREDRD-EMES
 
         let filterTableRowsTimer = null;
         let filterTableRowsRaf = null;
+        let tableSortSignature = null;
+        let tableSortAnimatePending = false;
+        let tableSortAnimCleanupTimer = null;
+
+        function requestTableSortAnimation() {
+            tableSortAnimatePending = true;
+        }
+
+        function maybeAnimateTableSortRows(table, signature) {
+            const isFirstRun = tableSortSignature === null;
+            const signatureChanged = tableSortSignature !== signature;
+            tableSortSignature = signature;
+
+            if (isFirstRun || !signatureChanged || !tableSortAnimatePending) {
+                tableSortAnimatePending = false;
+                return;
+            }
+
+            tableSortAnimatePending = false;
+
+            const visibleRows = Array.from(table.querySelectorAll('tbody tr[data-notice]')).filter(function(tr) {
+                return tr.style.display !== 'none';
+            });
+            if (visibleRows.length === 0) return;
+
+            visibleRows.forEach(function(tr) {
+                tr.classList.remove('table-sort-row-enter');
+                tr.style.removeProperty('--table-sort-row-delay');
+            });
+
+            void table.offsetWidth;
+
+            visibleRows.forEach(function(tr, idx) {
+                tr.style.setProperty('--table-sort-row-delay', String(Math.min(idx, 18) * 16) + 'ms');
+                tr.classList.add('table-sort-row-enter');
+            });
+
+            if (tableSortAnimCleanupTimer) clearTimeout(tableSortAnimCleanupTimer);
+            tableSortAnimCleanupTimer = setTimeout(function() {
+                visibleRows.forEach(function(tr) {
+                    tr.classList.remove('table-sort-row-enter');
+                    tr.style.removeProperty('--table-sort-row-delay');
+                });
+            }, 560);
+        }
 
         function scheduleFilterTableRows(delayMs) {
             const delay = Number.isFinite(delayMs) ? delayMs : 0;
@@ -2560,6 +2606,12 @@ HREDRD-EMES
             const normalizedStatusFilter = normalizeStatusFilterValue(selectedStatusFilter);
             const hasStatusFilter = normalizedStatusFilter !== 'ALL';
             const activeTransmittal = (activeTransmittalId || '').trim();
+            const sortSignature = [
+                selectedYear || 'all',
+                selectedMonth || 'all',
+                normalizedStatusFilter || 'ALL',
+                activeTransmittal || 'all'
+            ].join('|');
             const hasTransmittalFilter = activeTransmittal !== '';
             const isFiltering = (filter !== '' || selectedYear !== '' || selectedMonth !== '' || hasStatusFilter || hasTransmittalFilter);
             // Preserve rowspan-based batch layout when using structured filters only
@@ -2631,6 +2683,7 @@ HREDRD-EMES
                 });
             }
 
+            maybeAnimateTableSortRows(table, sortSignature);
             refreshStatisticsBar();
         }
 
@@ -3021,6 +3074,7 @@ HREDRD-EMES
                     monthInput.value = '';
                 }
                 syncYearMonthFilterUI();
+                requestTableSortAnimation();
                 scheduleFilterTableRows(0);
             });
             if (yearTrigger) {
@@ -3045,6 +3099,7 @@ HREDRD-EMES
                         monthInput.value = '';
                     }
                     syncYearMonthFilterUI();
+                    requestTableSortAnimation();
                     scheduleFilterTableRows(0);
                 });
             }
@@ -3060,6 +3115,7 @@ HREDRD-EMES
                         monthInput.value = (monthInput.value === monthValue) ? '' : monthValue;
                     }
                     syncYearMonthFilterUI();
+                    requestTableSortAnimation();
                     scheduleFilterTableRows(0);
                     closeYearMonthDropdown();
                 });

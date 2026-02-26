@@ -1749,6 +1749,26 @@ img {
             background: #f5dbde !important;
             transition: background 0.8s ease;
         }
+        tr.table-sort-row-enter td {
+            animation: tableSortRowEnter 260ms ease both;
+            animation-delay: var(--table-sort-row-delay, 0ms);
+        }
+        @keyframes tableSortRowEnter {
+            0% {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            tr.table-sort-row-enter td {
+                animation-duration: 1ms !important;
+                animation-delay: 0ms !important;
+            }
+        }
         .notice-code-cell {
             position: relative;
         }
