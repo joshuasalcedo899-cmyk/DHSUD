@@ -446,7 +446,7 @@ HREDRD-EMES
     <div class="admin-table-container">
     <div class="top-bar">
         <div class="top-bar-left">
-            <img onclick="exportSelectedToPDF()" style="width: 20px; height: 20px;" class="export-icon" src="../assets/export.svg" alt="Export">
+            <img onclick="exportSelectedToPDF()" style="width: 33px; height: 33px; padding: 0.3rem 0.3em;" class="export-icon" src="../assets/export.svg" alt="Export">
             <button class="transmittal-btn" aria-pressed="false">Transmittals</button>
             <button type="button" class="transmittal-back-btn" id="transmittalBackToListBtn" style="display:none;">Back to Transmittals</button>
             <button type="button" class="transmittal-add-btn" id="addTransmittalBtn" style="display:none;">Add Transmittal</button>

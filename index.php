@@ -7,8 +7,9 @@
     <link rel="icon" type="image/x-icon" href="assets/DHSUDLogo.ico">
     <link rel="stylesheet" href="main.css">
 </head>
-<body>
-    <div class="button-container">
+<body class="home-landing">
+    <div class="button-container home-landing-buttons">
+        <img src="assets/DHSUD_Logo.svg" alt="DHSUD Logo" class="home-landing-logo">
         <a href="pages/Admin_LogIn.php"><button>ADMIN</button></a>
         <a href="pages/Tracking_Page.php"><button >HREDRD'S TRACKING ORDER</button></a>
     </div>
