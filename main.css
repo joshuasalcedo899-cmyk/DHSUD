@@ -254,6 +254,72 @@
     background-color: #ededed;
 }
 
+.checkbox-header-tools {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.checkbox-header-tools #selectAllCheckbox {
+	margin: 0;
+}
+
+.transmittal-table-headbar {
+	display: none;
+}
+
+.admin-table-container[data-transmittal-view="detail"] .transmittal-table-headbar {
+	display: grid;
+	grid-template-columns: 40px 1fr 40px;
+	align-items: center;
+	background: #22336A;
+	color: #fff;
+	padding: 4px 0;
+	border-radius: 8px 8px 0 0;
+}
+
+.transmittal-table-headbar-left,
+.transmittal-table-headbar-right {
+	width: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.transmittal-table-headbar-title {
+	text-align: center;
+	font-size: 0.9rem;
+	font-weight: 700;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: 0 8px;
+}
+
+.transmittal-head-export-btn {
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border: 1.5px solid #fff;
+	border-radius: 6px;
+	background: rgba(255,255,255,0.08);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.transmittal-head-export-btn:hover {
+	background: rgba(255,255,255,0.22);
+}
+
+.transmittal-head-export-icon {
+	width: 20px;
+	height: 20px;
+	margin: 0;
+	filter: brightness(0) invert(1);
+}
+
 .table-sort-select:invalid {
 	color: #726868e3;
 	padding: 0.38rem 0.45rem;
@@ -422,8 +488,8 @@
 /* Column spacing: checkbox and Action stay narrow, long-text columns get share */
 .admin-table-container table th:nth-child(1),
 .admin-table-container table td:nth-child(1) {
-	width: 32px;
-	min-width: 32px;
+	width: 40px;
+	min-width: 40px;
 }
 .admin-table-container table th:nth-child(5),
 .admin-table-container table td:nth-child(5),
@@ -443,7 +509,9 @@
 	min-width: 100px;
 }
 .admin-table-container table th:nth-child(3),
-.admin-table-container table td:nth-child(3),
+.admin-table-container table td:nth-child(3) {
+	min-width: 70px;
+}
 .admin-table-container table th:nth-child(4),
 .admin-table-container table td:nth-child(4) {
 	min-width: 70px;
@@ -565,6 +633,24 @@
 	display: flex;
 }
 
+.admin-table-container .top-bar .export-icon,
+.admin-table-container .table-footer-section .add-btn {
+	display: none;
+}
+
+.admin-table-container[data-transmittal-view="detail"] .top-bar .export-icon {
+	display: block;
+}
+
+.admin-table-container[data-transmittal-view="detail"] .table-footer-section .add-btn {
+	display: inline-block;
+}
+
+.admin-table-container:not([data-transmittal-view="detail"]) .tracking-table thead th:first-child,
+.admin-table-container:not([data-transmittal-view="detail"]) .tracking-table tbody tr[data-notice] td:first-child {
+	display: none;
+}
+
 .admin-table-container[data-transmittal-view="grid"] .transmittal-manager {
 	min-height: clamp(320px, 58vh, 680px);
 	padding-bottom: 0;
@@ -609,7 +695,6 @@
 	box-shadow: 0 6px 14px rgba(0,0,0,0.12);
 }
 
-.transmittal-folder-logo,
 .transmittal-table-logo,
 .transmittal-back-logo {
 	width: 20px;
@@ -618,21 +703,25 @@
 }
 
 .transmittal-table-logo {
-	display: none;
-}
-
-.transmittal-btn,
-.transmittal-back-btn {
-	min-width: 40px;
-	padding: 0.35rem;
-}
-
-.transmittal-btn.is-back-to-table .transmittal-folder-logo {
-	display: none;
-}
-
-.transmittal-btn.is-back-to-table .transmittal-table-logo {
 	display: block;
+}
+
+.top-bar-left .transmittal-btn,
+.top-bar-left .transmittal-back-btn {
+	width: auto;
+	height: 40px;
+	min-width: 104px;
+	min-height: 40px;
+	padding: 0 10px;
+	gap: 6px;
+	border-radius: 8px;
+}
+
+.top-bar-left .module-btn-label {
+	font-size: 0.78rem;
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
 }
 
 .transmittal-add-wrap {
@@ -2258,20 +2347,71 @@ img {
             background: black;
             color: #fff;
         }
-        .transmittal-btn {
+        .top-bar .export-icon,
+        .top-bar .table-search-btn,
+        .top-bar .table-notif-btn {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            min-height: 40px;
+            padding: 0;
+            border: 1.5px solid #22336a;
+            border-radius: 8px;
             background: #fff;
-            color: #22336a;
-            padding: 0.35rem 0.9rem;
-            border: 1.5px solid black;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
+            box-sizing: border-box;
             transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
         }
-        .transmittal-btn:hover {
+        .top-bar .export-icon {
+            display: block;
+            margin-left: 0;
+            padding: 8px;
+            cursor: pointer;
+        }
+        .top-bar .transmittal-btn,
+        .top-bar .transmittal-back-btn,
+        .top-bar .table-search-btn,
+        .top-bar .table-notif-btn {
+            color: #22336a;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .top-bar .transmittal-btn,
+        .top-bar .transmittal-back-btn {
+            width: auto;
+            min-width: 104px;
+            padding: 0 10px;
+            gap: 6px;
+        }
+        .top-bar .table-notif-btn {
+            position: relative;
+            overflow: visible;
+        }
+        .top-bar .export-icon:hover,
+        .top-bar .transmittal-btn:hover,
+        .top-bar .transmittal-back-btn:hover,
+        .top-bar .table-search-btn:hover,
+        .top-bar .table-notif-btn:hover {
             transform: translateY(-1px);
+            background: #ededed;
             box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+        }
+        .top-bar .transmittal-btn.module-active,
+        .top-bar .transmittal-back-btn.module-active {
+            background: #dfe8ff;
+            border-color: #22336a;
+            box-shadow: inset 0 0 0 1px #22336a;
+        }
+        .top-bar .table-search-btn img,
+        .top-bar .table-notif-btn img,
+        .top-bar .transmittal-table-logo,
+        .top-bar .transmittal-back-logo {
+            width: 20px;
+            height: 20px;
+            margin: 0;
         }
         .archive-btn {
             background: #AA4444;

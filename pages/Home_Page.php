@@ -444,15 +444,15 @@ HREDRD-EMES
             </div>
         </div>
     <div class="admin-table-container">
-    <div class="top-bar">
+        <div class="top-bar">
         <div class="top-bar-left">
-            <img onclick="exportSelectedToPDF()" style="width: 20px; height: 20px;" class="export-icon" src="../assets/export.svg" alt="Export">
-            <button class="transmittal-btn" aria-pressed="false" aria-label="Transmittals">
-                <img src="../assets/Folder.svg" alt="" class="transmittal-folder-logo" aria-hidden="true">
+            <button class="transmittal-btn" aria-pressed="true" aria-label="Table Module">
                 <img src="../assets/table.svg" alt="" class="transmittal-table-logo" aria-hidden="true">
+                <span class="module-btn-label">Table</span>
             </button>
-            <button type="button" class="transmittal-back-btn" id="transmittalBackToListBtn" style="display:none;" aria-label="Back to Transmittals">
+            <button type="button" class="transmittal-back-btn" id="transmittalBackToListBtn" aria-label="Transmittal Module">
                 <img src="../assets/Folder.svg" alt="" class="transmittal-back-logo" aria-hidden="true">
+                <span class="module-btn-label">Transmittal</span>
             </button>
         </div>
         <div class="top-bar-title">MAIL TRACKING RECORDS</div>
@@ -669,12 +669,23 @@ HREDRD-EMES
 
         <div class="table-scroll-area">
             <div class="tracking-table-container">
+                <div class="transmittal-table-headbar" id="transmittalTableHeadbar">
+                    <div class="transmittal-table-headbar-left">
+                        <button type="button" class="transmittal-head-export-btn" onclick="exportSelectedToPDF()" aria-label="Export selected rows">
+                            <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
+                        </button>
+                    </div>
+                    <div class="transmittal-table-headbar-title" id="transmittalTableBarTitle"></div>
+                    <div class="transmittal-table-headbar-right" aria-hidden="true"></div>
+                </div>
                 <div class="tracking-table-scroll">
                     <table class="listview-table tracking-table">
                 <thead>
                         <tr>
-                            <th style="width:32px;">
-                                <input type="checkbox" id="selectAllCheckbox" onclick="toggleAllCheckboxes(this)">
+                            <th style="width:40px;">
+                                <div class="checkbox-header-tools">
+                                    <input type="checkbox" id="selectAllCheckbox" onclick="toggleAllCheckboxes(this)">
+                                </div>
                             </th>
                             <?php foreach ($columns as $h): ?>
                                 <th><?= htmlspecialchars($h) ?></th>
@@ -1474,7 +1485,7 @@ HREDRD-EMES
                 });
         }
 
-        function updateStatsBarFromDelta(stats) {
+        function renderStatsBarFromValues(stats) {
             if (!stats || typeof stats !== 'object') return;
             const rtsEl = document.querySelector('.statistics-bar .stat-box.stat-rtos .stat-count');
             const ogdEl = document.querySelector('.statistics-bar .stat-box.stat-ongoing .stat-count');
@@ -1489,6 +1500,55 @@ HREDRD-EMES
                 const ndr = Number(stats.ndrPercent);
                 ndrEl.textContent = (Number.isFinite(ndr) ? ndr.toFixed(1) : '0.0') + '%';
             }
+        }
+
+        function computeStatsForRows(rows, scopedTransmittalId) {
+            const list = Array.isArray(rows) ? rows : [];
+            const scopeId = ((scopedTransmittalId || '') + '').trim();
+            let total = 0;
+            let returnedToSender = 0;
+            let ongoingDelivery = 0;
+            let delivered = 0;
+
+            list.forEach(function(row) {
+                if (!row || typeof row !== 'object') return;
+                const rowTransmittalId = ((row['Transmittal ID'] || '') + '').trim();
+                if (scopeId !== '' && rowTransmittalId !== scopeId) return;
+
+                total += 1;
+                const status = ((row['Status'] || '') + '').trim().toUpperCase();
+                if (status === 'RETURNED TO SENDER') {
+                    returnedToSender += 1;
+                } else if (status === 'ONGOING DELIVERY') {
+                    ongoingDelivery += 1;
+                } else if (status === 'DELIVERED') {
+                    delivered += 1;
+                }
+            });
+
+            const ndrBase = returnedToSender + ongoingDelivery;
+            const ndrPercent = total > 0 ? (ndrBase / total) * 100 : 0;
+            return {
+                returnedToSender: returnedToSender,
+                ongoingDelivery: ongoingDelivery,
+                delivered: delivered,
+                total: total,
+                ndrPercent: ndrPercent
+            };
+        }
+
+        function refreshStatisticsBar() {
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const scopedTransmittalId = ((activeTransmittalId || '') + '').trim();
+            renderStatsBarFromValues(computeStatsForRows(rows, scopedTransmittalId));
+        }
+
+        function updateStatsBarFromDelta(stats) {
+            if (Array.isArray(window.mailRows)) {
+                refreshStatisticsBar();
+                return;
+            }
+            renderStatsBarFromValues(stats || {});
         }
 
         function updateYearSelectFromDelta(years) {
@@ -2120,6 +2180,7 @@ HREDRD-EMES
             const row = findRowByNoticeCode(noticeCode);
             if (!row) return null;
             const suppressNotification = options.suppressNotification === true;
+            const suppressStatsRefresh = options.suppressStatsRefresh === true;
             const resolvedNotice = ((row.dataset.notice || '').trim() || (noticeCode || '').trim());
 
             const dateCell = getBatchAwareCell(row, 'Date');
@@ -2170,6 +2231,27 @@ HREDRD-EMES
                 }
             }
 
+            const rowId = parseInt(row.dataset.id || '0', 10) || 0;
+            const cachedRow = mailRowIndexById.get(rowId) || mailRowIndexByNotice.get(resolvedNotice) || null;
+            if (cachedRow) {
+                if (typeof data.status !== 'undefined') {
+                    cachedRow['Status'] = ((data.status || '') + '').trim();
+                }
+                if (typeof data.date !== 'undefined') {
+                    cachedRow['Date'] = ((data.date || '') + '').trim();
+                }
+                if (typeof data.transmittalRemarks !== 'undefined') {
+                    cachedRow['Transmittal Remarks/Received By'] = ((data.transmittalRemarks || '') + '').trim();
+                }
+                if (typeof data.fileNamePdf !== 'undefined') {
+                    cachedRow['File Name (PDF)'] = ((data.fileNamePdf || '') + '').trim();
+                }
+            }
+
+            if (!suppressStatsRefresh) {
+                refreshStatisticsBar();
+            }
+
             return {
                 previousStatus: previousStatus,
                 nextStatus: nextStatus,
@@ -2188,7 +2270,7 @@ HREDRD-EMES
                 if ((row.dataset.batchId || '').trim() === (batchId || '').trim()) {
                     const notice = (row.dataset.notice || '').trim();
                     if (notice) {
-                        const result = updateTrackingRow(notice, data, { suppressNotification: true });
+                        const result = updateTrackingRow(notice, data, { suppressNotification: true, suppressStatsRefresh: true });
                         if (!notifyNotice) {
                             notifyNotice = notice;
                         }
@@ -2205,6 +2287,8 @@ HREDRD-EMES
                     }
                 }
             });
+
+            refreshStatisticsBar();
 
             if (shouldNotifyBatch && notifyNotice) {
                 maybeNotifyStatusChange(notifyNotice, '', nextBatchStatus, notifyDateText, {
@@ -2362,6 +2446,8 @@ HREDRD-EMES
                     }
                 });
             }
+
+            refreshStatisticsBar();
         }
 
         function padTransmittalNum(value, size) {
@@ -2499,11 +2585,16 @@ HREDRD-EMES
         let defaultTopBarTitle = '';
         function setTopBarTitle(nextTitle) {
             const topTitle = document.querySelector('.top-bar-title');
-            if (!topTitle) return;
-            if (!defaultTopBarTitle) {
-                defaultTopBarTitle = topTitle.textContent || 'MAIL TRACKING RECORDS';
+            const headbarTitle = document.getElementById('transmittalTableBarTitle');
+            if (topTitle) {
+                if (!defaultTopBarTitle) {
+                    defaultTopBarTitle = topTitle.textContent || 'MAIL TRACKING RECORDS';
+                }
+                topTitle.textContent = nextTitle || defaultTopBarTitle;
             }
-            topTitle.textContent = nextTitle || defaultTopBarTitle;
+            if (headbarTitle) {
+                headbarTitle.textContent = nextTitle || '';
+            }
         }
 
         function clampPercent(value) {
@@ -2559,6 +2650,7 @@ HREDRD-EMES
             const transBtn = document.querySelector('.transmittal-btn');
             const backBtn = document.getElementById('transmittalBackToListBtn');
             const addBtn = document.getElementById('addTransmittalBtn');
+            const isTransmittalGrid = (view === 'grid');
             if (container) {
                 if (!view || view === 'none') {
                     container.removeAttribute('data-transmittal-view');
@@ -2577,21 +2669,25 @@ HREDRD-EMES
             }
             if (transBtn) {
                 if (!view || view === 'none') {
-                    transBtn.classList.remove('is-back-to-table');
-                    transBtn.setAttribute('aria-label', 'Transmittals');
-                    transBtn.setAttribute('aria-pressed', 'false');
-                } else {
-                    transBtn.classList.add('is-back-to-table');
-                    transBtn.setAttribute('aria-label', 'Back to Table');
+                    transBtn.setAttribute('aria-label', 'Table Module');
                     transBtn.setAttribute('aria-pressed', 'true');
+                    transBtn.classList.add('module-active');
+                } else {
+                    transBtn.setAttribute('aria-label', 'Table Module');
+                    transBtn.setAttribute('aria-pressed', 'false');
+                    transBtn.classList.remove('module-active');
                 }
             }
             if (backBtn) {
-                backBtn.style.display = (view === 'detail') ? 'inline-flex' : 'none';
+                backBtn.style.display = 'inline-flex';
+                backBtn.classList.toggle('module-active', isTransmittalGrid);
+                backBtn.setAttribute('aria-pressed', isTransmittalGrid ? 'true' : 'false');
+                backBtn.setAttribute('aria-label', 'Transmittal Module');
             }
             if (addBtn) {
                 addBtn.style.display = (view === 'grid') ? 'inline-flex' : 'none';
             }
+            refreshStatisticsBar();
         }
 
         function openTransmittalGrid() {
@@ -2636,6 +2732,7 @@ HREDRD-EMES
             const searchBtn = document.getElementById('tableSearchBtn');
             const yearSelect = document.getElementById('tableSortYear');
             updateStatusFilterButtonsUI();
+            setTransmittalView('none');
             searchInput.addEventListener('input', function() {
                 scheduleFilterTableRows(150);
             });
@@ -2655,6 +2752,7 @@ HREDRD-EMES
             bindRowCheckboxListeners();
             rebuildMailRowsFromTable();
             rebuildStatusSnapshotFromMailRows();
+            refreshStatisticsBar();
             focusScannedRow();
             autoTrackEligibleRows();
             initSmartPolling();
@@ -2662,13 +2760,7 @@ HREDRD-EMES
             const transmittalBtn = document.querySelector('.transmittal-btn');
             if (transmittalBtn) {
                 transmittalBtn.addEventListener('click', function() {
-                    const container = document.querySelector('.admin-table-container');
-                    const view = container ? container.getAttribute('data-transmittal-view') : '';
-                    if (view) {
-                        exitTransmittalMode();
-                    } else {
-                        openTransmittalGrid();
-                    }
+                    exitTransmittalMode();
                 });
             }
 
@@ -2804,17 +2896,44 @@ HREDRD-EMES
         }
         
         function exportSelectedToPDF() {
-            let checked = document.querySelectorAll('.row-checkbox:checked');
+            const activeTid = (activeTransmittalId || '').trim();
+            const rows = Array.from(document.querySelectorAll('tr[data-notice]'));
+            const contextRows = rows.filter(function(tr) {
+                if (!activeTid) return true;
+                const rowId = parseInt(tr.dataset.id || '0', 10) || 0;
+                const notice = (tr.dataset.notice || '').trim();
+                const rowObj = (mailRowIndexById.get(rowId) || mailRowIndexByNotice.get(notice) || null);
+                const rowTid = ((rowObj && rowObj['Transmittal ID']) ? String(rowObj['Transmittal ID']) : (tr.dataset.transmittalId || '')).trim();
+                return rowTid === activeTid;
+            });
 
-            if (checked.length === 0) {
+            if (contextRows.length === 0) {
+                alert("No rows available for export.");
+                return;
+            }
+
+            const selectedRows = contextRows.filter(function(tr) {
+                const cb = tr.querySelector('.row-checkbox');
+                return !!(cb && cb.checked);
+            });
+
+            let rowsToExport = selectedRows;
+            if (activeTid && rowsToExport.length === 0) {
+                rowsToExport = contextRows;
+            }
+
+            if (rowsToExport.length === 0) {
                 alert("Select record first!");
                 return;
             }
 
-            let codes = [];
-            checked.forEach(cb => {
-                const code = (cb.dataset.notice || '').trim();
-                if (code) codes.push(code);
+            const codes = [];
+            const seen = new Set();
+            rowsToExport.forEach(function(tr) {
+                const code = (tr.dataset.notice || '').trim();
+                if (!code || seen.has(code)) return;
+                seen.add(code);
+                codes.push(code);
             });
             if (codes.length === 0) {
                 alert("Selected rows have no Notice/Order Code.");
