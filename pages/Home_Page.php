@@ -628,24 +628,27 @@ HREDRD-EMES
 
             </script>
         <div class="table-sort-bar">
-            <select id="tableSortYear" class="table-sort-select" required style="min-width:65px;">
-                <option value="" disabled selected hidden>Year</option>
-                <option value="all">All</option>
-                <?php
-                $years = [];
-                foreach ($rows as $row) {
-                    $dateAfd = $row['Date released to AFD'] ?? '';
-                    if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
-                        $years[] = $m[1];
+            <div class="table-sort-select-wrap" id="tableSortYearWrap">
+                <select id="tableSortYear" class="table-sort-select" required style="min-width:95px;">
+                    <option value="" disabled selected hidden>Year</option>
+                    <option value="all">All</option>
+                    <?php
+                    $years = [];
+                    foreach ($rows as $row) {
+                        $dateAfd = $row['Date released to AFD'] ?? '';
+                        if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
+                            $years[] = $m[1];
+                        }
                     }
-                }
-                $years = array_unique($years);
-                rsort($years);
-                foreach ($years as $year) {
-                    echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
-                }
-                ?>
-            </select>
+                    $years = array_unique($years);
+                    rsort($years);
+                    foreach ($years as $year) {
+                        echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
+                    }
+                    ?>
+                </select>
+                <span class="table-sort-custom-icon" aria-hidden="true"></span>
+            </div>
                 <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
                 <button class="table-search-btn" id="tableSearchBtn">
                     <img src="../assets/Search Icon.svg" alt="Search">
@@ -1443,18 +1446,9 @@ HREDRD-EMES
                         }
                     }
 
-                    const currentYear = document.getElementById('tableSortYear');
-                    const nextYear = doc.getElementById('tableSortYear');
-                    if (currentYear && nextYear) {
-                        const selected = currentYear.value;
-                        currentYear.innerHTML = nextYear.innerHTML;
-                        if (selected && Array.from(currentYear.options).some(function(o){ return o.value === selected; })) {
-                            currentYear.value = selected;
-                        }
-                    }
-
                     bindRowCheckboxListeners();
                     rebuildMailRowsFromTable();
+                    updateYearSelectFromDelta();
                     filterTableRows();
                     notifyStatusDiffsAfterRefresh(previousStatusSnapshot);
                     autoTrackEligibleRows();
@@ -1568,6 +1562,149 @@ HREDRD-EMES
             } else {
                 yearSelect.value = 'all';
             }
+
+            match = text.match(/^([A-Za-z]+)-(\d{1,2})-(\d{4})$/);
+            if (match) {
+                const monthNum = MONTH_NAME_TO_NUM[(match[1] || '').toLowerCase()] || '';
+                if (monthNum) {
+                    return { year: match[3], month: monthNum };
+                }
+            }
+
+            const dateObj = new Date(text);
+            if (Number.isNaN(dateObj.getTime())) return null;
+            return {
+                year: String(dateObj.getFullYear()),
+                month: String(dateObj.getMonth() + 1).padStart(2, '0')
+            };
+        }
+
+        function getAvailableMonthsForYear(selectedYear) {
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const monthsSet = new Set();
+            rows.forEach(function(rowObj) {
+                const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
+                const parts = getDatePartsFromValue(dateAfd);
+                if (!parts) return;
+                if (selectedYear && parts.year !== selectedYear) return;
+                monthsSet.add(parts.month);
+            });
+            return Array.from(monthsSet).sort(function(a, b) {
+                return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0);
+            });
+        }
+
+        function getAvailableYearsFromRows() {
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const yearsSet = new Set();
+            rows.forEach(function(rowObj) {
+                const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
+                const parts = getDatePartsFromValue(dateAfd);
+                if (!parts || !parts.year) return;
+                yearsSet.add(parts.year);
+            });
+            return Array.from(yearsSet).sort(function(a, b) {
+                return (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0);
+            });
+        }
+
+        function refreshYearMonthSelectOptions(preferredValue) {
+            const yearSelect = document.getElementById('tableSortYear');
+            if (!yearSelect) return;
+            const preferred = ((preferredValue || '') + '').trim();
+
+            if (!selectedYearFilter) {
+                const years = getAvailableYearsFromRows();
+                const options = ['<option value="" disabled hidden>Year</option>', '<option value="all">All</option>'];
+                years.forEach(function(yearValue) {
+                    const safe = String(yearValue).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                    options.push('<option value="y:' + safe + '">' + safe + '</option>');
+                });
+                yearSelect.innerHTML = options.join('');
+                yearSelect.value = preferred && Array.from(yearSelect.options).some(function(o) { return o.value === preferred; })
+                    ? preferred
+                    : 'all';
+                return;
+            }
+
+            const months = getAvailableMonthsForYear(selectedYearFilter);
+            const monthOptions = ['<option value="" disabled hidden>Month</option>', '<option value="all-months">All Months (' + selectedYearFilter.replace(/</g, '&lt;') + ')</option>'];
+            months.forEach(function(monthValue) {
+                const monthIndex = (parseInt(monthValue, 10) || 1) - 1;
+                const monthLabel = MONTH_LABELS[monthIndex] || monthValue;
+                monthOptions.push('<option value="m:' + monthValue + '">' + monthLabel + '</option>');
+            });
+            monthOptions.push('<option value="change-year">Change Year...</option>');
+            yearSelect.innerHTML = monthOptions.join('');
+
+            const fallback = selectedMonthFilter ? ('m:' + selectedMonthFilter) : 'all-months';
+            const target = preferred || fallback;
+            yearSelect.value = Array.from(yearSelect.options).some(function(o) { return o.value === target; })
+                ? target
+                : 'all-months';
+        }
+
+        function updateYearSelectFromDelta() {
+            const years = getAvailableYearsFromRows();
+            if (selectedYearFilter && years.indexOf(selectedYearFilter) === -1) {
+                selectedYearFilter = '';
+                selectedMonthFilter = '';
+                refreshYearMonthSelectOptions('all');
+                return;
+            }
+            if (selectedYearFilter && selectedMonthFilter) {
+                const months = getAvailableMonthsForYear(selectedYearFilter);
+                if (months.indexOf(selectedMonthFilter) === -1) {
+                    selectedMonthFilter = '';
+                }
+            }
+            refreshYearMonthSelectOptions();
+        }
+
+        function handleYearMonthSelectChange(rawValue) {
+            const value = ((rawValue || '') + '').trim();
+            if (!value) return;
+
+            if (value === 'all') {
+                selectedYearFilter = '';
+                selectedMonthFilter = '';
+                refreshYearMonthSelectOptions('all');
+                scheduleFilterTableRows(0);
+                return;
+            }
+
+            if (value === 'change-year') {
+                selectedYearFilter = '';
+                selectedMonthFilter = '';
+                refreshYearMonthSelectOptions('all');
+                scheduleFilterTableRows(0);
+                return;
+            }
+
+            if (value.indexOf('y:') === 0) {
+                selectedYearFilter = value.slice(2);
+                selectedMonthFilter = '';
+                refreshYearMonthSelectOptions('all-months');
+                scheduleFilterTableRows(0);
+                return;
+            }
+
+            if (value === 'all-months') {
+                selectedMonthFilter = '';
+                scheduleFilterTableRows(0);
+                return;
+            }
+
+            if (value.indexOf('m:') === 0) {
+                selectedMonthFilter = value.slice(2);
+                scheduleFilterTableRows(0);
+            }
+        }
+
+        function resetYearMonthFilter() {
+            selectedYearFilter = '';
+            selectedMonthFilter = '';
+            refreshYearMonthSelectOptions('all');
         }
 
         function areRowsSameOrder(currentRows, nextRows) {
@@ -1624,7 +1761,7 @@ HREDRD-EMES
             rebuildMailRowIndexes(nextRows);
             notifyStatusDiffsAfterRefresh(previousStatusSnapshot);
             updateStatsBarFromDelta(payload.stats || {});
-            updateYearSelectFromDelta(payload.years || []);
+            updateYearSelectFromDelta();
             filterTableRows();
             return true;
         }
@@ -2375,17 +2512,16 @@ HREDRD-EMES
         function filterTableRows() {
             const input = document.getElementById('tableSearchInput');
             const filter = input.value.toLowerCase();
-            const yearSelect = document.getElementById('tableSortYear');
-            let selectedYear = yearSelect.value;
-            if (selectedYear === 'all' || !selectedYear) selectedYear = '';
+            const selectedYear = selectedYearFilter || '';
+            const selectedMonth = selectedMonthFilter || '';
             const normalizedStatusFilter = normalizeStatusFilterValue(selectedStatusFilter);
             const hasStatusFilter = normalizedStatusFilter !== 'ALL';
             const activeTransmittal = (activeTransmittalId || '').trim();
             const hasTransmittalFilter = activeTransmittal !== '';
-            const isFiltering = (filter !== '' || selectedYear !== '' || hasStatusFilter || hasTransmittalFilter);
+            const isFiltering = (filter !== '' || selectedYear !== '' || selectedMonth !== '' || hasStatusFilter || hasTransmittalFilter);
             // Preserve rowspan-based batch layout when using structured filters only
             // (year/status) and no free-text search.
-            const batchPreserveMode = (filter === '' && (selectedYear !== '' || hasStatusFilter) && !hasTransmittalFilter);
+            const batchPreserveMode = (filter === '' && (selectedYear !== '' || selectedMonth !== '' || hasStatusFilter) && !hasTransmittalFilter);
             const table = document.querySelector('.admin-table-container table');
             if (!table) return;
             // Always restore previous search mutations before applying a new filter state.
@@ -2419,12 +2555,17 @@ HREDRD-EMES
                 const transmittalMatch = !hasTransmittalFilter || rowTransmittal === activeTransmittal;
 
                 let yearMatch = true;
+                let monthMatch = true;
+                const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
+                const dateParts = getDatePartsFromValue(dateAfd);
                 if (selectedYear) {
-                    const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
-                    yearMatch = dateAfd.indexOf(selectedYear) > -1;
+                    yearMatch = !!(dateParts && dateParts.year === selectedYear);
+                }
+                if (selectedMonth) {
+                    monthMatch = !!(dateParts && dateParts.month === selectedMonth);
                 }
 
-                const visible = codeMatch && yearMatch && statusMatch && transmittalMatch;
+                const visible = codeMatch && yearMatch && monthMatch && statusMatch && transmittalMatch;
                 if (visible && batchPreserveMode && batchId !== '') {
                     matchedBatchIds.add(batchId);
                 }
@@ -2693,7 +2834,7 @@ HREDRD-EMES
         function openTransmittalGrid() {
             activeTransmittalId = '';
             setTransmittalView('grid');
-            setTopBarTitle('Transmittals');
+            setTopBarTitle('TRANSMITTALS');
             updateTransmittalGrid();
             scheduleFilterTableRows(0);
         }
@@ -2741,7 +2882,7 @@ HREDRD-EMES
                 scheduleFilterTableRows(0);
             });
             yearSelect.addEventListener('change', function() {
-                scheduleFilterTableRows(0);
+                handleYearMonthSelectChange(yearSelect.value);
             });
             document.addEventListener('click', function(e) {
                 const btn = e.target.closest ? e.target.closest('.stat-filter-btn') : null;
@@ -2751,6 +2892,7 @@ HREDRD-EMES
             });
             bindRowCheckboxListeners();
             rebuildMailRowsFromTable();
+            updateYearSelectFromDelta();
             rebuildStatusSnapshotFromMailRows();
             refreshStatisticsBar();
             focusScannedRow();
@@ -3360,10 +3502,7 @@ HREDRD-EMES
             if (searchInput) {
                 searchInput.value = '';
             }
-            const yearSelect = document.getElementById('tableSortYear');
-            if (yearSelect) {
-                yearSelect.value = 'all';
-            }
+            resetYearMonthFilter();
             if (typeof filterTableRows === 'function') {
                 filterTableRows();
             }
@@ -3426,11 +3565,10 @@ HREDRD-EMES
                     searchInput.value = '';
                     needsRefilter = true;
                 }
-                const yearSelect = document.getElementById('tableSortYear');
-                if (yearSelect && yearSelect.value !== 'all') {
-                    yearSelect.value = 'all';
+                if (selectedYearFilter || selectedMonthFilter) {
                     needsRefilter = true;
                 }
+                resetYearMonthFilter();
             }
 
             if (needsRefilter && typeof filterTableRows === 'function') {
