@@ -625,7 +625,7 @@ HREDRD-EMES
             </script>
         <div class="table-sort-bar">
             <div class="table-sort-select-wrap" id="tableSortYearWrap">
-                <select id="tableSortYear" class="table-sort-select" required style="min-width:120px;">
+                <select id="tableSortYear" class="table-sort-select" required style="min-width:95px;">
                     <option value="" disabled selected hidden>Year</option>
                     <option value="all">All</option>
                     <?php
