@@ -628,32 +628,63 @@ HREDRD-EMES
 
             </script>
         <div class="table-sort-bar">
-            <select id="tableSortYear" class="table-sort-select" required style="min-width:65px;">
-                <option value="" disabled selected hidden>Year</option>
-                <option value="all">All</option>
-                <?php
-                $years = [];
-                foreach ($rows as $row) {
-                    $dateAfd = $row['Date released to AFD'] ?? '';
-                    if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
-                        $years[] = $m[1];
+            <?php
+            $years = [];
+            foreach ($rows as $row) {
+                $dateAfd = $row['Date released to AFD'] ?? '';
+                if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
+                    $years[] = $m[1];
+                }
+            }
+            $years = array_unique($years);
+            rsort($years);
+            ?>
+            <div class="table-year-month-filter" id="tableYearMonthFilter">
+                <button type="button" id="tableSortYearTrigger" class="table-year-trigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="tableSortYearLabel">Year</span>
+                    <span class="table-year-trigger-icon" aria-hidden="true"></span>
+                </button>
+                <div id="tableYearMonthDropdown" class="table-year-month-dropdown" hidden>
+                    <div id="tableYearList" class="table-year-list" role="listbox" aria-label="Year options">
+                        <button type="button" class="table-year-option is-active" data-year="all">All</button>
+                        <?php foreach ($years as $year): ?>
+                            <button type="button" class="table-year-option" data-year="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                    <div id="tableMonthGrid" class="table-month-grid" aria-label="Month options" aria-hidden="true">
+                        <button type="button" class="table-month-option" data-month="01">Jan</button>
+                        <button type="button" class="table-month-option" data-month="02">Feb</button>
+                        <button type="button" class="table-month-option" data-month="03">Mar</button>
+                        <button type="button" class="table-month-option" data-month="04">Apr</button>
+                        <button type="button" class="table-month-option" data-month="05">May</button>
+                        <button type="button" class="table-month-option" data-month="06">Jun</button>
+                        <button type="button" class="table-month-option" data-month="07">Jul</button>
+                        <button type="button" class="table-month-option" data-month="08">Aug</button>
+                        <button type="button" class="table-month-option" data-month="09">Sep</button>
+                        <button type="button" class="table-month-option" data-month="10">Oct</button>
+                        <button type="button" class="table-month-option" data-month="11">Nov</button>
+                        <button type="button" class="table-month-option" data-month="12">Dec</button>
+                    </div>
+                </div>
+                <select id="tableSortYear" class="table-sort-select table-sort-select-native" required style="min-width:65px;">
+                    <option value="" disabled hidden>Year</option>
+                    <option value="all" selected>All</option>
+                    <?php
+                    foreach ($years as $year) {
+                        echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
                     }
-                }
-                $years = array_unique($years);
-                rsort($years);
-                foreach ($years as $year) {
-                    echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
-                }
-                ?>
-            </select>
-                <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
-                <button class="table-search-btn" id="tableSearchBtn">
-                    <img src="../assets/Search Icon.svg" alt="Search">
-                </button>
-                <button class="table-notif-btn" id="tableNotifBtn" title="Tracking Status Notifications">
-                    <img src="../assets/Notif_Icon.svg" alt="Notifications">
-                    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
-                </button>
+                    ?>
+                </select>
+                <input type="hidden" id="tableSortMonth" value="">
+            </div>
+            <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
+            <button class="table-search-btn" id="tableSearchBtn">
+                <img src="../assets/Search Icon.svg" alt="Search">
+            </button>
+            <button class="table-notif-btn" id="tableNotifBtn" title="Tracking Status Notifications">
+                <img src="../assets/Notif_Icon.svg" alt="Notifications">
+                <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+            </button>
         </div>
         </div>
 
@@ -1450,6 +1481,11 @@ HREDRD-EMES
                         currentYear.innerHTML = nextYear.innerHTML;
                         if (selected && Array.from(currentYear.options).some(function(o){ return o.value === selected; })) {
                             currentYear.value = selected;
+                        } else {
+                            currentYear.value = 'all';
+                        }
+                        if (typeof rebuildYearMonthFilterOptionsFromSelect === 'function') {
+                            rebuildYearMonthFilterOptionsFromSelect();
                         }
                     }
 
@@ -1551,10 +1587,140 @@ HREDRD-EMES
             renderStatsBarFromValues(stats || {});
         }
 
+        function getMonthShortLabel(monthValue) {
+            const monthMap = {
+                '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+                '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
+                '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
+            };
+            return monthMap[monthValue] || '';
+        }
+
+        function extractYearMonthFromDateValue(rawDateValue) {
+            const text = ((rawDateValue || '') + '').trim();
+            if (!text) return { year: '', month: '' };
+
+            const isoMatch = /^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/.exec(text);
+            if (isoMatch) {
+                return {
+                    year: isoMatch[1],
+                    month: String(parseInt(isoMatch[2], 10) || 0).padStart(2, '0')
+                };
+            }
+
+            const monthNameToNum = {
+                january: '01', february: '02', march: '03', april: '04',
+                may: '05', june: '06', july: '07', august: '08',
+                september: '09', october: '10', november: '11', december: '12'
+            };
+            const monthNameMatch = /^(January|February|March|April|May|June|July|August|September|October|November|December)[-\s\/](\d{1,2})[-\s\/](\d{4})$/i.exec(text);
+            if (monthNameMatch) {
+                return {
+                    year: monthNameMatch[3],
+                    month: monthNameToNum[monthNameMatch[1].toLowerCase()] || ''
+                };
+            }
+
+            const parsedDate = new Date(text);
+            if (!Number.isNaN(parsedDate.getTime())) {
+                return {
+                    year: String(parsedDate.getFullYear()),
+                    month: String(parsedDate.getMonth() + 1).padStart(2, '0')
+                };
+            }
+
+            const yearOnlyMatch = /(\d{4})/.exec(text);
+            return {
+                year: yearOnlyMatch ? yearOnlyMatch[1] : '',
+                month: ''
+            };
+        }
+
+        function syncYearMonthFilterUI() {
+            const yearSelect = document.getElementById('tableSortYear');
+            const monthInput = document.getElementById('tableSortMonth');
+            const yearLabel = document.getElementById('tableSortYearLabel');
+            const yearTrigger = document.getElementById('tableSortYearTrigger');
+            const monthGrid = document.getElementById('tableMonthGrid');
+            if (!yearSelect || !monthInput) return;
+
+            const selectedYearRaw = ((yearSelect.value || '') + '').trim();
+            const selectedYear = (selectedYearRaw === 'all') ? '' : selectedYearRaw;
+            let selectedMonth = ((monthInput.value || '') + '').trim();
+
+            if (!selectedYear) {
+                selectedMonth = '';
+                monthInput.value = '';
+            }
+
+            if (yearLabel) {
+                const monthLabel = selectedMonth ? (' - ' + getMonthShortLabel(selectedMonth)) : '';
+                yearLabel.textContent = selectedYear ? (selectedYear + monthLabel) : 'Year';
+            }
+            if (yearTrigger) {
+                yearTrigger.classList.toggle('has-selection', !!selectedYear);
+            }
+
+            document.querySelectorAll('.table-year-option').forEach(function(btn) {
+                const y = ((btn.getAttribute('data-year') || '') + '').trim();
+                const isActive = y === (selectedYear || 'all');
+                btn.classList.toggle('is-active', isActive);
+            });
+
+            if (monthGrid) {
+                const monthsEnabled = !!selectedYear;
+                monthGrid.classList.toggle('is-enabled', monthsEnabled);
+                monthGrid.setAttribute('aria-hidden', monthsEnabled ? 'false' : 'true');
+                monthGrid.querySelectorAll('.table-month-option').forEach(function(btn) {
+                    const m = ((btn.getAttribute('data-month') || '') + '').trim();
+                    btn.disabled = !monthsEnabled;
+                    btn.classList.toggle('is-active', monthsEnabled && m === selectedMonth);
+                });
+            }
+        }
+
+        function rebuildYearMonthFilterOptionsFromSelect() {
+            const yearSelect = document.getElementById('tableSortYear');
+            const yearList = document.getElementById('tableYearList');
+            if (!yearSelect || !yearList) {
+                syncYearMonthFilterUI();
+                return;
+            }
+            const activeValue = ((yearSelect.value || '') + '').trim() || 'all';
+            const buttons = [];
+            Array.from(yearSelect.options).forEach(function(opt) {
+                const value = ((opt.value || '') + '').trim();
+                if (!value || value === '') return;
+                const label = (opt.textContent || '').trim() || value;
+                buttons.push(
+                    '<button type="button" class="table-year-option' + (value === activeValue ? ' is-active' : '') + '" data-year="' +
+                    value.replace(/"/g, '&quot;') + '">' + label.replace(/</g, '&lt;') + '</button>'
+                );
+            });
+            yearList.innerHTML = buttons.join('');
+            syncYearMonthFilterUI();
+        }
+
+        function closeYearMonthDropdown() {
+            const dropdown = document.getElementById('tableYearMonthDropdown');
+            const trigger = document.getElementById('tableSortYearTrigger');
+            if (dropdown) dropdown.hidden = true;
+            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        }
+
+        function openYearMonthDropdown() {
+            const dropdown = document.getElementById('tableYearMonthDropdown');
+            const trigger = document.getElementById('tableSortYearTrigger');
+            if (dropdown) dropdown.hidden = false;
+            if (trigger) trigger.setAttribute('aria-expanded', 'true');
+        }
+
         function updateYearSelectFromDelta(years) {
             const yearSelect = document.getElementById('tableSortYear');
+            const monthInput = document.getElementById('tableSortMonth');
             if (!yearSelect || !Array.isArray(years)) return;
-            const previousValue = yearSelect.value;
+            const previousYearValue = yearSelect.value;
+            const previousMonthValue = monthInput ? monthInput.value : '';
             const opts = ['<option value="" disabled hidden>Year</option>', '<option value="all">All</option>'];
             years.forEach(function(y) {
                 const yy = ((y || '') + '').trim();
@@ -1563,11 +1729,14 @@ HREDRD-EMES
                 }
             });
             yearSelect.innerHTML = opts.join('');
-            if (previousValue && Array.from(yearSelect.options).some(function(o) { return o.value === previousValue; })) {
-                yearSelect.value = previousValue;
+            if (previousYearValue && Array.from(yearSelect.options).some(function(o) { return o.value === previousYearValue; })) {
+                yearSelect.value = previousYearValue;
+                if (monthInput) monthInput.value = previousMonthValue;
             } else {
                 yearSelect.value = 'all';
+                if (monthInput) monthInput.value = '';
             }
+            rebuildYearMonthFilterOptionsFromSelect();
         }
 
         function areRowsSameOrder(currentRows, nextRows) {
@@ -2376,16 +2545,19 @@ HREDRD-EMES
             const input = document.getElementById('tableSearchInput');
             const filter = input.value.toLowerCase();
             const yearSelect = document.getElementById('tableSortYear');
+            const monthInput = document.getElementById('tableSortMonth');
             let selectedYear = yearSelect.value;
             if (selectedYear === 'all' || !selectedYear) selectedYear = '';
+            let selectedMonth = monthInput ? ((monthInput.value || '') + '').trim() : '';
+            if (!selectedYear) selectedMonth = '';
             const normalizedStatusFilter = normalizeStatusFilterValue(selectedStatusFilter);
             const hasStatusFilter = normalizedStatusFilter !== 'ALL';
             const activeTransmittal = (activeTransmittalId || '').trim();
             const hasTransmittalFilter = activeTransmittal !== '';
-            const isFiltering = (filter !== '' || selectedYear !== '' || hasStatusFilter || hasTransmittalFilter);
+            const isFiltering = (filter !== '' || selectedYear !== '' || selectedMonth !== '' || hasStatusFilter || hasTransmittalFilter);
             // Preserve rowspan-based batch layout when using structured filters only
-            // (year/status) and no free-text search.
-            const batchPreserveMode = (filter === '' && (selectedYear !== '' || hasStatusFilter) && !hasTransmittalFilter);
+            // (year/month/status) and no free-text search.
+            const batchPreserveMode = (filter === '' && (selectedYear !== '' || selectedMonth !== '' || hasStatusFilter) && !hasTransmittalFilter);
             const table = document.querySelector('.admin-table-container table');
             if (!table) return;
             // Always restore previous search mutations before applying a new filter state.
@@ -2419,12 +2591,17 @@ HREDRD-EMES
                 const transmittalMatch = !hasTransmittalFilter || rowTransmittal === activeTransmittal;
 
                 let yearMatch = true;
+                let monthMatch = true;
                 if (selectedYear) {
                     const dateAfd = rowObj ? String(rowObj['Date released to AFD'] || '') : '';
-                    yearMatch = dateAfd.indexOf(selectedYear) > -1;
+                    const ym = extractYearMonthFromDateValue(dateAfd);
+                    yearMatch = ym.year === selectedYear;
+                    if (selectedMonth) {
+                        monthMatch = ym.month === selectedMonth;
+                    }
                 }
 
-                const visible = codeMatch && yearMatch && statusMatch && transmittalMatch;
+                const visible = codeMatch && yearMatch && monthMatch && statusMatch && transmittalMatch;
                 if (visible && batchPreserveMode && batchId !== '') {
                     matchedBatchIds.add(batchId);
                 }
@@ -2731,8 +2908,14 @@ HREDRD-EMES
             const searchInput = document.getElementById('tableSearchInput');
             const searchBtn = document.getElementById('tableSearchBtn');
             const yearSelect = document.getElementById('tableSortYear');
+            const monthInput = document.getElementById('tableSortMonth');
+            const yearTrigger = document.getElementById('tableSortYearTrigger');
+            const yearMonthFilterWrap = document.getElementById('tableYearMonthFilter');
+            const yearList = document.getElementById('tableYearList');
+            const monthGrid = document.getElementById('tableMonthGrid');
             updateStatusFilterButtonsUI();
             setTransmittalView('none');
+            rebuildYearMonthFilterOptionsFromSelect();
             searchInput.addEventListener('input', function() {
                 scheduleFilterTableRows(150);
             });
@@ -2741,7 +2924,57 @@ HREDRD-EMES
                 scheduleFilterTableRows(0);
             });
             yearSelect.addEventListener('change', function() {
+                if (yearSelect.value === 'all' && monthInput) {
+                    monthInput.value = '';
+                }
+                syncYearMonthFilterUI();
                 scheduleFilterTableRows(0);
+            });
+            if (yearTrigger) {
+                yearTrigger.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const dropdown = document.getElementById('tableYearMonthDropdown');
+                    if (!dropdown || dropdown.hidden) {
+                        openYearMonthDropdown();
+                    } else {
+                        closeYearMonthDropdown();
+                    }
+                });
+            }
+            if (yearList) {
+                yearList.addEventListener('click', function(e) {
+                    const btn = e.target.closest ? e.target.closest('.table-year-option') : null;
+                    if (!btn) return;
+                    e.preventDefault();
+                    const yearValue = ((btn.getAttribute('data-year') || '') + '').trim() || 'all';
+                    yearSelect.value = yearValue;
+                    if (yearValue === 'all' && monthInput) {
+                        monthInput.value = '';
+                    }
+                    syncYearMonthFilterUI();
+                    scheduleFilterTableRows(0);
+                });
+            }
+            if (monthGrid) {
+                monthGrid.addEventListener('click', function(e) {
+                    const btn = e.target.closest ? e.target.closest('.table-month-option') : null;
+                    if (!btn || btn.disabled) return;
+                    e.preventDefault();
+                    const yearValue = ((yearSelect.value || '') + '').trim();
+                    if (!yearValue || yearValue === 'all') return;
+                    const monthValue = ((btn.getAttribute('data-month') || '') + '').trim();
+                    if (monthInput) {
+                        monthInput.value = (monthInput.value === monthValue) ? '' : monthValue;
+                    }
+                    syncYearMonthFilterUI();
+                    scheduleFilterTableRows(0);
+                    closeYearMonthDropdown();
+                });
+            }
+            document.addEventListener('click', function(e) {
+                if (!yearMonthFilterWrap) return;
+                if (yearMonthFilterWrap.contains(e.target)) return;
+                closeYearMonthDropdown();
             });
             document.addEventListener('click', function(e) {
                 const btn = e.target.closest ? e.target.closest('.stat-filter-btn') : null;
@@ -3361,8 +3594,15 @@ HREDRD-EMES
                 searchInput.value = '';
             }
             const yearSelect = document.getElementById('tableSortYear');
+            const monthInput = document.getElementById('tableSortMonth');
             if (yearSelect) {
                 yearSelect.value = 'all';
+            }
+            if (monthInput) {
+                monthInput.value = '';
+            }
+            if (typeof syncYearMonthFilterUI === 'function') {
+                syncYearMonthFilterUI();
             }
             if (typeof filterTableRows === 'function') {
                 filterTableRows();
@@ -3427,13 +3667,22 @@ HREDRD-EMES
                     needsRefilter = true;
                 }
                 const yearSelect = document.getElementById('tableSortYear');
+                const monthInput = document.getElementById('tableSortMonth');
                 if (yearSelect && yearSelect.value !== 'all') {
                     yearSelect.value = 'all';
+                    if (monthInput) monthInput.value = '';
+                    needsRefilter = true;
+                }
+                if (monthInput && monthInput.value !== '') {
+                    monthInput.value = '';
                     needsRefilter = true;
                 }
             }
 
             if (needsRefilter && typeof filterTableRows === 'function') {
+                if (typeof syncYearMonthFilterUI === 'function') {
+                    syncYearMonthFilterUI();
+                }
                 filterTableRows();
             }
         }
