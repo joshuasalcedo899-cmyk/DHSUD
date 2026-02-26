@@ -153,7 +153,7 @@ rsort($years);
             border: 1.6px solid #222;
             height: 32px;
             padding: 0 8px;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .tracking-view-shell .table-search-input {
@@ -252,12 +252,15 @@ rsort($years);
             </div>
             <div class="top-bar-title">MAIL TRACKING RECORDS</div>
             <div class="table-sort-bar">
-                <select id="tableSortYear" class="table-sort-select" aria-label="Filter by year">
-                    <option value="all">Year</option>
-                    <?php foreach ($years as $year): ?>
-                        <option value="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="table-sort-select-wrap" id="tableSortYearWrap">
+                    <select id="tableSortYear" class="table-sort-select" aria-label="Filter by year and month">
+                        <option value="all">All</option>
+                        <?php foreach ($years as $year): ?>
+                            <option value="y:<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span class="table-sort-custom-icon" aria-hidden="true"></span>
+                </div>
                 <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search" aria-label="Search records">
                 <button type="button" class="table-search-btn" id="tableSearchBtn" aria-label="Search">
                     <img src="../assets/Search Icon.svg" alt="Search">
@@ -286,7 +289,15 @@ rsort($years);
                                     <?php
                                     $dateAfdRaw = (string)($row['Date released to AFD'] ?? '');
                                     $rowYear = '';
-                                    if ($dateAfdRaw !== '' && preg_match('/(\d{4})/', $dateAfdRaw, $m)) {
+                                    $rowMonth = '';
+                                    $tsDateAfd = strtotime($dateAfdRaw);
+                                    if ($tsDateAfd !== false) {
+                                        $rowYear = date('Y', $tsDateAfd);
+                                        $rowMonth = date('m', $tsDateAfd);
+                                    } elseif ($dateAfdRaw !== '' && preg_match('/(\d{4})-(\d{1,2})/', $dateAfdRaw, $m)) {
+                                        $rowYear = $m[1];
+                                        $rowMonth = str_pad((string)$m[2], 2, '0', STR_PAD_LEFT);
+                                    } elseif ($dateAfdRaw !== '' && preg_match('/(\d{4})/', $dateAfdRaw, $m)) {
                                         $rowYear = $m[1];
                                     }
                                     $rowTextSearch = strtoupper(implode(' ', array_map(static function ($v) {
@@ -307,7 +318,7 @@ rsort($years);
                                     }
                                     $rowBatchId = extractBatchIdFromSenderDetails($row['Sender Details'] ?? '');
                                     ?>
-                                    <tr data-year="<?= htmlspecialchars($rowYear) ?>" data-search="<?= htmlspecialchars($rowTextSearch) ?>" data-status="<?= htmlspecialchars($statusValue) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>">
+                                    <tr data-year="<?= htmlspecialchars($rowYear) ?>" data-month="<?= htmlspecialchars($rowMonth) ?>" data-search="<?= htmlspecialchars($rowTextSearch) ?>" data-status="<?= htmlspecialchars($statusValue) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>">
                                         <?php foreach ($columns as $idx => $colName): ?>
                                             <?php
                                             $cellValue = $row[$colName] ?? '';
@@ -388,6 +399,12 @@ rsort($years);
             const statButtons = Array.from(document.querySelectorAll('.stat-filter-btn'));
             const rows = Array.from(document.querySelectorAll('#trackingTableBody tr[data-year]'));
             let selectedStatusFilter = 'ALL';
+            let selectedYearFilter = '';
+            let selectedMonthFilter = '';
+            const MONTH_LABELS = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
 
             function normalizeStatusFilterValue(rawValue) {
                 const value = ((rawValue || '') + '').trim().toUpperCase();
@@ -418,24 +435,120 @@ rsort($years);
                 });
             }
 
+            function getAvailableYears() {
+                const yearsSet = new Set();
+                rows.forEach(function (row) {
+                    const y = ((row.getAttribute('data-year') || '') + '').trim();
+                    if (y) yearsSet.add(y);
+                });
+                return Array.from(yearsSet).sort(function (a, b) {
+                    return (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0);
+                });
+            }
+
+            function getAvailableMonthsForYear(year) {
+                const monthsSet = new Set();
+                rows.forEach(function (row) {
+                    const rowYear = ((row.getAttribute('data-year') || '') + '').trim();
+                    const rowMonth = ((row.getAttribute('data-month') || '') + '').trim();
+                    if (!rowMonth) return;
+                    if (year && rowYear !== year) return;
+                    monthsSet.add(rowMonth);
+                });
+                return Array.from(monthsSet).sort(function (a, b) {
+                    return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0);
+                });
+            }
+
+            function refreshYearMonthSelectOptions(preferredValue) {
+                if (!yearSelect) return;
+                const preferred = ((preferredValue || '') + '').trim();
+
+                if (!selectedYearFilter) {
+                    const years = getAvailableYears();
+                    const options = ['<option value="all">All</option>'];
+                    years.forEach(function (yearValue) {
+                        const safe = String(yearValue).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                        options.push('<option value="y:' + safe + '">' + safe + '</option>');
+                    });
+                    yearSelect.innerHTML = options.join('');
+                    yearSelect.value = (preferred && Array.from(yearSelect.options).some(function (o) { return o.value === preferred; }))
+                        ? preferred
+                        : 'all';
+                    return;
+                }
+
+                const months = getAvailableMonthsForYear(selectedYearFilter);
+                const monthOptions = ['<option value="all-months">All Months (' + selectedYearFilter.replace(/</g, '&lt;') + ')</option>'];
+                months.forEach(function (monthValue) {
+                    const monthIndex = (parseInt(monthValue, 10) || 1) - 1;
+                    const monthLabel = MONTH_LABELS[monthIndex] || monthValue;
+                    monthOptions.push('<option value="m:' + monthValue + '">' + monthLabel + '</option>');
+                });
+                monthOptions.push('<option value="change-year">Change Year...</option>');
+                yearSelect.innerHTML = monthOptions.join('');
+
+                const fallback = selectedMonthFilter ? ('m:' + selectedMonthFilter) : 'all-months';
+                const target = preferred || fallback;
+                yearSelect.value = Array.from(yearSelect.options).some(function (o) { return o.value === target; })
+                    ? target
+                    : 'all-months';
+            }
+
+            function handleYearMonthSelectChange(rawValue) {
+                const value = ((rawValue || '') + '').trim();
+                if (!value) return;
+
+                if (value === 'all' || value === 'change-year') {
+                    selectedYearFilter = '';
+                    selectedMonthFilter = '';
+                    refreshYearMonthSelectOptions('all');
+                    filterRows();
+                    return;
+                }
+
+                if (value.indexOf('y:') === 0) {
+                    selectedYearFilter = value.slice(2);
+                    selectedMonthFilter = '';
+                    refreshYearMonthSelectOptions('all-months');
+                    filterRows();
+                    return;
+                }
+
+                if (value === 'all-months') {
+                    selectedMonthFilter = '';
+                    filterRows();
+                    return;
+                }
+
+                if (value.indexOf('m:') === 0) {
+                    selectedMonthFilter = value.slice(2);
+                    filterRows();
+                }
+            }
+
             function filterRows() {
-                const year = (yearSelect ? yearSelect.value : 'all').trim().toLowerCase();
                 const search = (searchInput ? searchInput.value : '').trim().toUpperCase();
                 const normalizedStatusFilter = normalizeStatusFilterValue(selectedStatusFilter);
-                const hasYearFilter = (year !== 'all' && year !== '');
+                const selectedYear = selectedYearFilter || '';
+                const selectedMonth = selectedMonthFilter || '';
+                const hasYearFilter = selectedYear !== '';
+                const hasMonthFilter = selectedMonth !== '';
                 const hasStatusFilter = normalizedStatusFilter !== 'ALL';
-                const batchPreserveMode = (search === '' && (hasYearFilter || hasStatusFilter));
+                const batchPreserveMode = (search === '' && (hasYearFilter || hasMonthFilter || hasStatusFilter));
                 const matchedBatchIds = new Set();
 
                 rows.forEach(function (row) {
-                    const rowYear = ((row.getAttribute('data-year') || '') + '').toLowerCase();
+                    const rowYear = ((row.getAttribute('data-year') || '') + '').trim();
+                    const rowMonth = ((row.getAttribute('data-month') || '') + '').trim();
                     const rowSearch = ((row.getAttribute('data-search') || '') + '').toUpperCase();
                     const rowStatus = ((row.getAttribute('data-status') || '') + '').toUpperCase();
                     const rowBatchId = ((row.getAttribute('data-batch-id') || '') + '').trim();
-                    const yearMatch = (year === 'all' || year === '' || rowYear === year);
+                    const yearMatch = (!selectedYear || rowYear === selectedYear);
+                    const monthMatch = (!selectedMonth || rowMonth === selectedMonth);
                     const searchMatch = (search === '' || rowSearch.indexOf(search) !== -1);
                     const statusMatch = rowMatchesStatusFilter(rowStatus, normalizedStatusFilter);
-                    const visible = (yearMatch && searchMatch && statusMatch);
+                    const visible = (yearMatch && monthMatch && searchMatch && statusMatch);
                     if (visible && batchPreserveMode && rowBatchId !== '') {
                         matchedBatchIds.add(rowBatchId);
                     }
@@ -453,7 +566,9 @@ rsort($years);
             }
 
             if (yearSelect) {
-                yearSelect.addEventListener('change', filterRows);
+                yearSelect.addEventListener('change', function () {
+                    handleYearMonthSelectChange(yearSelect.value);
+                });
             }
             if (searchInput) {
                 searchInput.addEventListener('input', filterRows);
@@ -477,6 +592,7 @@ rsort($years);
             });
 
             updateStatusFilterButtonsUI();
+            refreshYearMonthSelectOptions('all');
             filterRows();
         })();
     </script>
