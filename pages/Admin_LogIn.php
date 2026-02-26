@@ -67,5 +67,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit">Log In</button>
         </form>
     </div>
+    <script>
+        (function () {
+            function shouldAnimateFromIndex() {
+                return document.referrer.indexOf('/index.php') !== -1;
+            }
+
+            function applyLogoFallbackTransition() {
+                if (!shouldAnimateFromIndex() || !document.body) {
+                    return;
+                }
+                document.body.classList.remove('logo-fallback-enter');
+                void document.body.offsetWidth;
+                document.body.classList.add('logo-fallback-enter');
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', applyLogoFallbackTransition, { once: true });
+            } else {
+                applyLogoFallbackTransition();
+            }
+
+            window.addEventListener('pageshow', applyLogoFallbackTransition);
+        })();
+    </script>
 </body>
 </html>

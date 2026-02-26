@@ -13,5 +13,29 @@
         <a href="pages/Admin_LogIn.php"><button>ADMIN</button></a>
         <a href="pages/Tracking_Page.php"><button >HREDRD'S TRACKING ORDER</button></a>
     </div>
+    <script>
+        (function () {
+            function shouldAnimateFromLogin() {
+                return document.referrer.indexOf('/pages/Admin_LogIn.php') !== -1;
+            }
+
+            function applyLogoFallbackTransition() {
+                if (!shouldAnimateFromLogin() || !document.body) {
+                    return;
+                }
+                document.body.classList.remove('logo-fallback-enter');
+                void document.body.offsetWidth;
+                document.body.classList.add('logo-fallback-enter');
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', applyLogoFallbackTransition, { once: true });
+            } else {
+                applyLogoFallbackTransition();
+            }
+
+            window.addEventListener('pageshow', applyLogoFallbackTransition);
+        })();
+    </script>
 </body>
 </html>
