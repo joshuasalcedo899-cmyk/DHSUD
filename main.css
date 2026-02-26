@@ -900,6 +900,16 @@
 	transform-origin: var(--transmittal-origin-x, 20%) var(--transmittal-origin-y, 0%);
 }
 
+.admin-table-container[data-module-anim="grid"] .transmittal-manager[data-view="grid"] {
+	animation: transmittalModeFadeIn 260ms ease;
+}
+
+.admin-table-container[data-module-anim="table"] .table-sort-bar,
+.admin-table-container[data-module-anim="table"] .table-scroll-area,
+.admin-table-container[data-module-anim="table"] .table-footer-section {
+	animation: transmittalModeFadeIn 260ms ease;
+}
+
 @keyframes transmittalZoomIn {
 	0% {
 		transform: scale(0.9) translateY(-12px);
@@ -908,6 +918,27 @@
 	100% {
 		transform: scale(1) translateY(0);
 		opacity: 1;
+	}
+}
+
+@keyframes transmittalModeFadeIn {
+	0% {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.admin-table-container[data-module-anim="grid"] .transmittal-manager[data-view="grid"],
+	.admin-table-container[data-module-anim="table"] .table-sort-bar,
+	.admin-table-container[data-module-anim="table"] .table-scroll-area,
+	.admin-table-container[data-module-anim="table"] .table-footer-section,
+	.admin-table-container[data-transmittal-anim="detail"] .table-scroll-area {
+		animation-duration: 1ms !important;
 	}
 }
 .table-footer-section {

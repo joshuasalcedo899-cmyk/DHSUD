@@ -2697,6 +2697,28 @@ HREDRD-EMES
         }
 
         let transmittalAnimTimer = null;
+        let transmittalModeAnimTimer = null;
+        let currentTransmittalView = 'none';
+
+        function triggerTransmittalModeAnimation(nextView) {
+            const container = document.querySelector('.admin-table-container');
+            if (!container) return;
+
+            let animValue = '';
+            if (nextView === 'grid') {
+                animValue = 'grid';
+            } else if (nextView === 'none') {
+                animValue = 'table';
+            }
+
+            if (!animValue) return;
+            container.setAttribute('data-module-anim', animValue);
+            if (transmittalModeAnimTimer) clearTimeout(transmittalModeAnimTimer);
+            transmittalModeAnimTimer = setTimeout(function() {
+                container.removeAttribute('data-module-anim');
+            }, 280);
+        }
+
         function triggerTransmittalDetailAnimation() {
             const container = document.querySelector('.admin-table-container');
             if (!container) return;
@@ -2707,12 +2729,15 @@ HREDRD-EMES
             }, 320);
         }
 
-        function setTransmittalView(view) {
+        function setTransmittalView(view, options) {
             const container = document.querySelector('.admin-table-container');
             const manager = document.getElementById('transmittalManager');
             const transBtn = document.querySelector('.transmittal-btn');
             const backBtn = document.getElementById('transmittalBackToListBtn');
             const addBtn = document.getElementById('addTransmittalBtn');
+            const nextView = (!view || view === 'none') ? 'none' : view;
+            const previousView = currentTransmittalView;
+            const shouldAnimate = !(options && options.animate === false);
             const isTransmittalGrid = (view === 'grid');
             if (container) {
                 if (!view || view === 'none') {
@@ -2749,6 +2774,10 @@ HREDRD-EMES
             }
             if (addBtn) {
                 addBtn.style.display = (view === 'grid') ? 'inline-flex' : 'none';
+            }
+            currentTransmittalView = nextView;
+            if (shouldAnimate && previousView !== nextView) {
+                triggerTransmittalModeAnimation(nextView);
             }
             updateTransmittalNavButtons();
             refreshStatisticsBar();
@@ -2796,7 +2825,7 @@ HREDRD-EMES
             const searchBtn = document.getElementById('tableSearchBtn');
             const yearSelect = document.getElementById('tableSortYear');
             updateStatusFilterButtonsUI();
-            setTransmittalView('none');
+            setTransmittalView('none', { animate: false });
             searchInput.addEventListener('input', function() {
                 scheduleFilterTableRows(150);
             });
@@ -3429,6 +3458,11 @@ HREDRD-EMES
                 loadNotifications();
             }
 
+            // Always return to the main table when opening from notifications.
+            if (typeof exitTransmittalMode === 'function') {
+                exitTransmittalMode();
+            }
+
             // Ensure filters do not hide the target row before focusing.
             const searchInput = document.getElementById('tableSearchInput');
             if (searchInput) {
@@ -3437,6 +3471,9 @@ HREDRD-EMES
             const yearSelect = document.getElementById('tableSortYear');
             if (yearSelect) {
                 yearSelect.value = 'all';
+            }
+            if (typeof applyStatusFilterSelection === 'function') {
+                applyStatusFilterSelection('ALL');
             }
             if (typeof filterTableRows === 'function') {
                 filterTableRows();
