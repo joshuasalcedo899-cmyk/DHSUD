@@ -241,17 +241,17 @@
 }
 
 .export-icon {
-    margin-left: 8px;
+    margin-left: 4px;
     cursor: pointer;
-    border-radius: 5px;
+    border-radius: 6px;
+    border: 1.5px solid black;
     transition: transform 0.2s ease, background-color 0.2s ease, filter 0.2s ease;
 
 }
 
 .export-icon:hover {
     padding: 2px;
-    background-color: #4e4f55;
-    filter: brightness(0.8);
+    background-color: #ededed;
 }
 
 .table-sort-select:invalid {
@@ -861,7 +861,7 @@
 		margin-bottom: 0.1rem;
 	}
 .admin-login-bg {
-	background: url('assets/ADMIN\ LOG\ IN\ PAGE_BG.svg') no-repeat center center fixed;
+	background: url('assets/DHSUD_Background.svg') no-repeat center center fixed;
 	background-size: cover;
 }
 .bottom-container {
@@ -907,7 +907,7 @@
 }
 
 body {
-	background: url('assets/LANDING PAGE_BG.svg') no-repeat center center fixed;
+	background: url('assets/DHSUD_Background.svg') no-repeat center center fixed;
 	background-size: cover;
     font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
@@ -931,7 +931,7 @@ body {
 .button-container button {
 	width: 350px;
     padding: 0.75rem;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 600;
     border-radius: 30px;
     border: none;
@@ -966,7 +966,7 @@ body {
 	margin-bottom: 1.5rem;
     font-weight: 800;
     font-size: 1.2rem;
-    color: #23409A;
+    color: #22336a;
 }
 
 .login-form label {
@@ -974,7 +974,7 @@ body {
 	margin-bottom: 0.25rem;
     font-size: 1rem;
     font-weight: 800;
-    color: #23409A;
+    color: #22336a;
 }
 
 .login-form input[type="text"],
@@ -990,7 +990,7 @@ body {
 .login-form button[type="submit"] {
 	width: 100%;
 	padding: 0.75rem;
-	background: #23409A;
+	background: #22336a;
 	color: #fff;
 	border: none;
 	border-radius: 8px;
@@ -1827,6 +1827,7 @@ img {
             display: flex;
             align-items: center;
             justify-content: flex-start;
+            gap: 4px;
         }
         .top-bar-title {
             text-align: center;
@@ -1894,7 +1895,7 @@ img {
             overflow: visible;
         }
         .table-notif-btn:hover {
-            background: #f5f5f5;
+            background: #ededed;
         }
         .table-notif-btn img {
             width: 20px;
@@ -2261,8 +2262,8 @@ img {
             background: #fff;
             color: #22336a;
             padding: 0.35rem 0.9rem;
-            border: 1.5px solid #22336a;
-            border-radius: 8px;
+            border: 1.5px solid black;
+            border-radius: 6px;
             font-weight: 600;
             font-size: 0.85rem;
             cursor: pointer;
@@ -2417,5 +2418,195 @@ body {
     align-self: center !important;
     width: min(100%, 500px) !important;
     justify-self: center !important;
+}
+
+/* Landing page logo + centered entry buttons */
+body.home-landing .button-container.home-landing-buttons {
+    position: fixed;
+    inset: 0;
+    left: max(var(--page-edge-gutter), env(safe-area-inset-left));
+    right: max(var(--page-edge-gutter), env(safe-area-inset-right));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0;
+}
+
+body.home-landing .home-landing-logo {
+    width: min(350px, 70vw);
+    height: auto;
+    display: block;
+    margin-bottom: 1.25rem;
+}
+
+body.home-landing .button-container.home-landing-buttons button {
+    width: min(390px, 82vw);
+}
+
+@media (max-width: 700px) {
+    body.home-landing .home-landing-logo {
+        width: min(240px, 72vw);
+        margin-bottom: 1rem;
+    }
+
+    body.home-landing .button-container.home-landing-buttons button {
+        width: min(320px, 86vw);
+        font-size: 1rem;
+    }
+}
+
+/* Admin login branding layout */
+body.admin-login-bg .bottom-container.admin-login-shell {
+    position: fixed;
+    inset: 0;
+    left: max(var(--page-edge-gutter), env(safe-area-inset-left));
+    right: max(var(--page-edge-gutter), env(safe-area-inset-right));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0;
+    z-index: 10;
+}
+
+body.admin-login-bg .admin-login-branding {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+body.admin-login-bg .admin-login-logo {
+    width: min(250px, 52vw);
+    height: auto;
+    display: block;
+}
+
+body.admin-login-bg .admin-login-branding h1 {
+    margin: 0;
+    color: #22336A;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-align: center;
+}
+
+body.admin-login-bg .login-form {
+    min-width: min(500px, 90vw);
+    max-width: min(720px, 90vw);
+    border: 1.5px solid #bfc7da;
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow: none;
+}
+
+@media (max-width: 768px) {
+    body.admin-login-bg .admin-login-logo {
+        width: min(180px, 48vw);
+    }
+
+    body.admin-login-bg .admin-login-branding h1 {
+        font-size: clamp(1.4rem, 5vw, 2rem);
+    }
+
+    body.admin-login-bg .login-form {
+        min-width: 88vw !important;
+        max-width: 88vw !important;
+    }
+}
+
+body.admin-login-page .error-message {
+    color: #d32f2f;
+    background-color: #ffebee;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    border-left: 4px solid #d32f2f;
+}
+
+body.admin-login-page .success-message {
+    color: #388e3c;
+    background-color: #e8f5e9;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    border-left: 4px solid #388e3c;
+}
+
+body.admin-login-page .login-form {
+    position: relative;
+}
+
+body.admin-login-page .login-form-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+body.admin-login-page .login-form .login-form-header h2 {
+    margin: 0;
+}
+
+body.admin-login-page .return-button {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border-radius: 6px;
+    background: transparent;
+    transition: background-color 0.2s ease;
+    text-decoration: none;
+    z-index: 1;
+}
+
+body.admin-login-page .return-button:hover {
+    background-color: rgba(35, 64, 154, 0.1);
+}
+
+body.admin-login-page .return-button img {
+    width: 18px;
+    height: 12px;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    body.admin-login-page .bottom-container {
+        padding-bottom: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    body.admin-login-page .login-form {
+        min-width: 90vw !important;
+        max-width: 90vw !important;
+        padding: 1.5rem !important;
+    }
+
+    body.admin-login-page .login-form h2 {
+        font-size: 1rem;
+    }
+
+    body.admin-login-page .login-form label {
+        font-size: 0.9rem;
+    }
+
+    body.admin-login-page .login-form input,
+    body.admin-login-page .login-form button {
+        font-size: 0.95rem;
+    }
+
+    body.admin-login-page .bottom-container {
+        padding-bottom: 1rem;
+    }
 }
             

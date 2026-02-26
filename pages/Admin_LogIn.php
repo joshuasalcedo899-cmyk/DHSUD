@@ -35,95 +35,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Admin Log-In Page</title>
     <link rel="icon" type="image/x-icon" href="../assets/DHSUDLogo.ico">
     <link rel="stylesheet" href="../main.css">
-    <style>
-        .error-message {
-            color: #d32f2f;
-            background-color: #ffebee;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-            border-left: 4px solid #d32f2f;
-        }
-        .success-message {
-            color: #388e3c;
-            background-color: #e8f5e9;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-            border-left: 4px solid #388e3c;
-        }
-        .login-form {
-            position: relative;
-        }
-        .login-form-header {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-        }
-        .login-form .login-form-header h2 {
-            margin: 0;
-        }
-        .return-button {
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            padding: 6px;
-            border-radius: 6px;
-            background: transparent;
-            transition: background-color 0.2s ease;
-            text-decoration: none;
-            z-index: 1;
-        }
-        .return-button:hover {
-            background-color: rgba(35, 64, 154, 0.1);
-        }
-        .return-button img {
-            width: 18px;
-            height: 12px;
-            display: block;
-        }
-        @media (max-width: 768px) {
-            .login-form {
-                min-width: 85vw !important;
-                max-width: 85vw !important;
-            }
-            .bottom-container {
-                padding-bottom: 2rem;
-            }
-        }
-        @media (max-width: 480px) {
-            .login-form {
-                min-width: 90vw !important;
-                max-width: 90vw !important;
-                padding: 1.5rem !important;
-            }
-            .login-form h2 {
-                font-size: 1rem;
-            }
-            .login-form label {
-                font-size: 0.9rem;
-            }
-            .login-form input,
-            .login-form button {
-                font-size: 0.95rem;
-            }
-            .bottom-container {
-                padding-bottom: 1rem;
-            }
-        }
-    </style>
 </head>
-<body class="admin-login-bg">
-    <div class="bottom-container" style="position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:flex-end;min-height:0;padding-bottom:2rem;z-index:10;">
-        <form class="login-form" method="post" action="Admin_LogIn.php" style="margin-bottom:50px;">
+<body class="admin-login-bg admin-login-page">
+    <div class="bottom-container admin-login-shell">
+        <div class="admin-login-branding">
+            <img src="../assets/DHSUD_Logo.svg" alt="DHSUD Logo" class="admin-login-logo">
+            <h1>MAIL TRACKING SYSTEM</h1>
+        </div>
+        <form class="login-form" method="post" action="Admin_LogIn.php">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
             <div class="login-form-header">
                 <a href="../index.php" class="return-button" title="Return to home">
