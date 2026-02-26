@@ -707,7 +707,14 @@ HREDRD-EMES
                         </button>
                     </div>
                     <div class="transmittal-table-headbar-title" id="transmittalTableBarTitle"></div>
-                    <div class="transmittal-table-headbar-right" aria-hidden="true"></div>
+                    <div class="transmittal-table-headbar-right">
+                        <button type="button" class="transmittal-head-nav-btn" id="transmittalPrevBtn" aria-label="Previous transmittal" title="Previous transmittal">
+                            <span class="transmittal-head-nav-icon" aria-hidden="true">&#8249;</span>
+                        </button>
+                        <button type="button" class="transmittal-head-nav-btn" id="transmittalNextBtn" aria-label="Next transmittal" title="Next transmittal">
+                            <span class="transmittal-head-nav-icon" aria-hidden="true">&#8250;</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="tracking-table-scroll">
                     <table class="listview-table tracking-table">
@@ -2735,6 +2742,62 @@ HREDRD-EMES
                 });
                 grid.appendChild(tile);
             });
+
+            updateTransmittalNavButtons();
+        }
+
+        function getTransmittalIdsForNavigation() {
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const summary = collectTransmittalSummary(rows);
+            const idSet = new Set(Array.from(summary.keys()));
+
+            pendingTransmittals.forEach(function(tid) {
+                const safeTid = ((tid || '') + '').trim();
+                if (safeTid) idSet.add(safeTid);
+            });
+
+            const activeId = ((activeTransmittalId || '') + '').trim();
+            if (activeId) idSet.add(activeId);
+
+            return sortTransmittalIds(Array.from(idSet));
+        }
+
+        function updateTransmittalNavButtons() {
+            const prevBtn = document.getElementById('transmittalPrevBtn');
+            const nextBtn = document.getElementById('transmittalNextBtn');
+            if (!prevBtn || !nextBtn) return;
+
+            const activeId = ((activeTransmittalId || '') + '').trim();
+            if (!activeId) {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
+
+            const ids = getTransmittalIdsForNavigation();
+            const index = ids.indexOf(activeId);
+            if (index === -1) {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
+
+            prevBtn.disabled = (index <= 0);
+            nextBtn.disabled = (index >= ids.length - 1);
+        }
+
+        function openAdjacentTransmittal(step) {
+            const activeId = ((activeTransmittalId || '') + '').trim();
+            if (!activeId) return;
+
+            const ids = getTransmittalIdsForNavigation();
+            const index = ids.indexOf(activeId);
+            if (index === -1) return;
+
+            const nextIndex = index + (step > 0 ? 1 : -1);
+            if (nextIndex < 0 || nextIndex >= ids.length) return;
+
+            openTransmittalDetail(ids[nextIndex]);
         }
 
         function generateNewTransmittalId() {
@@ -2811,6 +2874,28 @@ HREDRD-EMES
         }
 
         let transmittalAnimTimer = null;
+        let transmittalModeAnimTimer = null;
+        let currentTransmittalView = 'none';
+
+        function triggerTransmittalModeAnimation(nextView) {
+            const container = document.querySelector('.admin-table-container');
+            if (!container) return;
+
+            let animValue = '';
+            if (nextView === 'grid') {
+                animValue = 'grid';
+            } else if (nextView === 'none') {
+                animValue = 'table';
+            }
+
+            if (!animValue) return;
+            container.setAttribute('data-module-anim', animValue);
+            if (transmittalModeAnimTimer) clearTimeout(transmittalModeAnimTimer);
+            transmittalModeAnimTimer = setTimeout(function() {
+                container.removeAttribute('data-module-anim');
+            }, 280);
+        }
+
         function triggerTransmittalDetailAnimation() {
             const container = document.querySelector('.admin-table-container');
             if (!container) return;
@@ -2821,12 +2906,15 @@ HREDRD-EMES
             }, 320);
         }
 
-        function setTransmittalView(view) {
+        function setTransmittalView(view, options) {
             const container = document.querySelector('.admin-table-container');
             const manager = document.getElementById('transmittalManager');
             const transBtn = document.querySelector('.transmittal-btn');
             const backBtn = document.getElementById('transmittalBackToListBtn');
             const addBtn = document.getElementById('addTransmittalBtn');
+            const nextView = (!view || view === 'none') ? 'none' : view;
+            const previousView = currentTransmittalView;
+            const shouldAnimate = !(options && options.animate === false);
             const isTransmittalGrid = (view === 'grid');
             if (container) {
                 if (!view || view === 'none') {
@@ -2864,6 +2952,11 @@ HREDRD-EMES
             if (addBtn) {
                 addBtn.style.display = (view === 'grid') ? 'inline-flex' : 'none';
             }
+            currentTransmittalView = nextView;
+            if (shouldAnimate && previousView !== nextView) {
+                triggerTransmittalModeAnimation(nextView);
+            }
+            updateTransmittalNavButtons();
             refreshStatisticsBar();
         }
 
@@ -2914,8 +3007,8 @@ HREDRD-EMES
             const yearList = document.getElementById('tableYearList');
             const monthGrid = document.getElementById('tableMonthGrid');
             updateStatusFilterButtonsUI();
-            setTransmittalView('none');
             rebuildYearMonthFilterOptionsFromSelect();
+            setTransmittalView('none', { animate: false });
             searchInput.addEventListener('input', function() {
                 scheduleFilterTableRows(150);
             });
@@ -3010,6 +3103,20 @@ HREDRD-EMES
                     const newId = generateNewTransmittalId();
                     pendingTransmittals.add(newId);
                     openTransmittalDetail(newId);
+                });
+            }
+
+            const transmittalPrevBtn = document.getElementById('transmittalPrevBtn');
+            if (transmittalPrevBtn) {
+                transmittalPrevBtn.addEventListener('click', function() {
+                    openAdjacentTransmittal(-1);
+                });
+            }
+
+            const transmittalNextBtn = document.getElementById('transmittalNextBtn');
+            if (transmittalNextBtn) {
+                transmittalNextBtn.addEventListener('click', function() {
+                    openAdjacentTransmittal(1);
                 });
             }
 
@@ -3150,15 +3257,11 @@ HREDRD-EMES
                 return !!(cb && cb.checked);
             });
 
-            let rowsToExport = selectedRows;
-            if (activeTid && rowsToExport.length === 0) {
-                rowsToExport = contextRows;
-            }
-
-            if (rowsToExport.length === 0) {
-                alert("Select record first!");
+            if (selectedRows.length === 0) {
+                alert("Please check at least one checkbox before exporting.");
                 return;
             }
+            const rowsToExport = selectedRows;
 
             const codes = [];
             const seen = new Set();
@@ -3586,6 +3689,11 @@ HREDRD-EMES
             if (changed) {
                 writeNotifications(notifications);
                 loadNotifications();
+            }
+
+            // Always return to the main table when opening from notifications.
+            if (typeof exitTransmittalMode === 'function') {
+                exitTransmittalMode();
             }
 
             // Ensure filters do not hide the target row before focusing.

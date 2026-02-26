@@ -270,7 +270,7 @@
 
 .admin-table-container[data-transmittal-view="detail"] .transmittal-table-headbar {
 	display: grid;
-	grid-template-columns: 40px 1fr 40px;
+	grid-template-columns: 76px 1fr 76px;
 	align-items: center;
 	background: #22336A;
 	color: #fff;
@@ -278,12 +278,19 @@
 	border-radius: 8px 8px 0 0;
 }
 
-.transmittal-table-headbar-left,
+.transmittal-table-headbar-left {
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
 .transmittal-table-headbar-right {
-	width: 40px;
+	width: 76px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	gap: 4px;
 }
 
 .transmittal-table-headbar-title {
@@ -318,6 +325,37 @@
 	height: 20px;
 	margin: 0;
 	filter: brightness(0) invert(1);
+}
+
+.transmittal-head-nav-btn {
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border: 1.5px solid #fff;
+	border-radius: 6px;
+	background: rgba(255,255,255,0.08);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: #fff;
+}
+
+.transmittal-head-nav-btn:hover {
+	background: rgba(255,255,255,0.22);
+}
+
+.transmittal-head-nav-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	background: rgba(255,255,255,0.08);
+}
+
+.transmittal-head-nav-icon {
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1;
+	margin-top: -1px;
 }
 
 .table-sort-select:invalid {
@@ -816,8 +854,8 @@
 	display: inline-block;
 }
 
-.admin-table-container:not([data-transmittal-view="detail"]) .tracking-table thead th:first-child,
-.admin-table-container:not([data-transmittal-view="detail"]) .tracking-table tbody tr[data-notice] td:first-child {
+.admin-table-container:not(.tracking-view-shell):not([data-transmittal-view="detail"]) .tracking-table thead th:first-child,
+.admin-table-container:not(.tracking-view-shell):not([data-transmittal-view="detail"]) .tracking-table tbody tr[data-notice] td:first-child {
 	display: none;
 }
 
@@ -1008,6 +1046,16 @@
 	transform-origin: var(--transmittal-origin-x, 20%) var(--transmittal-origin-y, 0%);
 }
 
+.admin-table-container[data-module-anim="grid"] .transmittal-manager[data-view="grid"] {
+	animation: transmittalModeFadeIn 260ms ease;
+}
+
+.admin-table-container[data-module-anim="table"] .table-sort-bar,
+.admin-table-container[data-module-anim="table"] .table-scroll-area,
+.admin-table-container[data-module-anim="table"] .table-footer-section {
+	animation: transmittalModeFadeIn 260ms ease;
+}
+
 @keyframes transmittalZoomIn {
 	0% {
 		transform: scale(0.9) translateY(-12px);
@@ -1016,6 +1064,27 @@
 	100% {
 		transform: scale(1) translateY(0);
 		opacity: 1;
+	}
+}
+
+@keyframes transmittalModeFadeIn {
+	0% {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.admin-table-container[data-module-anim="grid"] .transmittal-manager[data-view="grid"],
+	.admin-table-container[data-module-anim="table"] .table-sort-bar,
+	.admin-table-container[data-module-anim="table"] .table-scroll-area,
+	.admin-table-container[data-module-anim="table"] .table-footer-section,
+	.admin-table-container[data-transmittal-anim="detail"] .table-scroll-area {
+		animation-duration: 1ms !important;
 	}
 }
 .table-footer-section {
@@ -2731,6 +2800,10 @@ body {
 }
 
 /* Landing page logo + centered entry buttons */
+@view-transition {
+    navigation: auto;
+}
+
 body.home-landing .button-container.home-landing-buttons {
     position: fixed;
     inset: 0;
@@ -2749,6 +2822,7 @@ body.home-landing .home-landing-logo {
     height: auto;
     display: block;
     margin-bottom: 1.25rem;
+    view-transition-name: dhsud-shared-logo;
 }
 
 body.home-landing .button-container.home-landing-buttons button {
@@ -2793,6 +2867,40 @@ body.admin-login-bg .admin-login-logo {
     width: min(250px, 52vw);
     height: auto;
     display: block;
+    view-transition-name: dhsud-shared-logo;
+}
+
+::view-transition-old(dhsud-shared-logo),
+::view-transition-new(dhsud-shared-logo) {
+    animation-duration: 420ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(dhsud-shared-logo),
+    ::view-transition-new(dhsud-shared-logo) {
+        animation-duration: 1ms;
+    }
+}
+
+@supports not (view-transition-name: dhsud-shared-logo) {
+    @keyframes dhsudLogoFallbackEnter {
+        from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.9);
+            filter: blur(1px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+    }
+
+    body.home-landing.logo-fallback-enter .home-landing-logo,
+    body.admin-login-bg.logo-fallback-enter .admin-login-logo {
+        animation: dhsudLogoFallbackEnter 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
 }
 
 body.admin-login-bg .admin-login-branding h1 {

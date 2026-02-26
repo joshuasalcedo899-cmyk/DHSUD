@@ -222,17 +222,55 @@ rsort($years);
             white-space: pre-wrap;
             word-break: break-word;
             overflow-wrap: anywhere;
-            max-width: 0;
+        }
+
+        .tracking-view-shell .tracking-table-scroll {
+            overflow-x: auto;
+            width: 100%;
         }
 
         .tracking-view-shell .tracking-table {
             table-layout: fixed;
             width: 100%;
+            min-width: 1760px;
+            border-collapse: collapse;
         }
 
         .tracking-view-shell .tracking-table th,
         .tracking-view-shell .tracking-table td {
-            width: calc(100% / 12);
+            width: auto;
+            min-width: 0;
+        }
+
+        .tracking-view-shell .tracking-table th:nth-child(1),
+        .tracking-view-shell .tracking-table td:nth-child(1) { width: 150px; }
+        .tracking-view-shell .tracking-table th:nth-child(2),
+        .tracking-view-shell .tracking-table td:nth-child(2) { width: 120px; }
+        .tracking-view-shell .tracking-table th:nth-child(3),
+        .tracking-view-shell .tracking-table td:nth-child(3) { width: 90px; }
+        .tracking-view-shell .tracking-table th:nth-child(4),
+        .tracking-view-shell .tracking-table td:nth-child(4) { width: 170px; }
+        .tracking-view-shell .tracking-table th:nth-child(5),
+        .tracking-view-shell .tracking-table td:nth-child(5) { width: 170px; }
+        .tracking-view-shell .tracking-table th:nth-child(6),
+        .tracking-view-shell .tracking-table td:nth-child(6) { width: 170px; }
+        .tracking-view-shell .tracking-table th:nth-child(7),
+        .tracking-view-shell .tracking-table td:nth-child(7) { width: 170px; }
+        .tracking-view-shell .tracking-table th:nth-child(8),
+        .tracking-view-shell .tracking-table td:nth-child(8) { width: 130px; }
+        .tracking-view-shell .tracking-table th:nth-child(9),
+        .tracking-view-shell .tracking-table td:nth-child(9) { width: 130px; }
+        .tracking-view-shell .tracking-table th:nth-child(10),
+        .tracking-view-shell .tracking-table td:nth-child(10) { width: 220px; }
+        .tracking-view-shell .tracking-table th:nth-child(11),
+        .tracking-view-shell .tracking-table td:nth-child(11) { width: 120px; }
+        .tracking-view-shell .tracking-table th:nth-child(12),
+        .tracking-view-shell .tracking-table td:nth-child(12) { width: 120px; }
+
+        @media (max-width: 1200px) {
+            .tracking-view-shell .tracking-table {
+                min-width: 1400px;
+            }
         }
 
         .statistics-section {
