@@ -2746,9 +2746,33 @@ HREDRD-EMES
             });
         }
 
+        var activeTransmittalMenuId = '';
+        function closeTransmittalTileMenus() {
+            activeTransmittalMenuId = '';
+            document.querySelectorAll('.transmittal-tile-wrap.menu-open').forEach(function(wrap) {
+                wrap.classList.remove('menu-open');
+                const menu = wrap.querySelector('.transmittal-tile-menu');
+                if (menu) menu.hidden = true;
+            });
+        }
+
+        function toggleTransmittalTileMenu(transmittalId, wrap) {
+            const safeId = ((transmittalId || '') + '').trim();
+            if (!wrap || !safeId) return;
+            const menu = wrap.querySelector('.transmittal-tile-menu');
+            if (!menu) return;
+            const isOpen = wrap.classList.contains('menu-open') && activeTransmittalMenuId === safeId;
+            closeTransmittalTileMenus();
+            if (isOpen) return;
+            activeTransmittalMenuId = safeId;
+            wrap.classList.add('menu-open');
+            menu.hidden = false;
+        }
+
         function updateTransmittalGrid() {
             const grid = document.getElementById('transmittalGrid');
             if (!grid) return;
+            activeTransmittalMenuId = '';
             const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
             const summary = collectTransmittalSummary(rows);
             const ids = sortTransmittalIds(Array.from(summary.keys()));
@@ -2770,6 +2794,10 @@ HREDRD-EMES
             }
 
             ids.forEach(function(tid) {
+                const tileWrap = document.createElement('div');
+                tileWrap.className = 'transmittal-tile-wrap';
+                tileWrap.setAttribute('data-transmittal-id', tid);
+
                 const tile = document.createElement('button');
                 tile.type = 'button';
                 tile.className = 'transmittal-tile';
@@ -2791,9 +2819,55 @@ HREDRD-EMES
                 tile.appendChild(name);
                 tile.appendChild(count);
                 tile.addEventListener('click', function() {
+                    closeTransmittalTileMenus();
                     openTransmittalDetail(tid, tile);
                 });
-                grid.appendChild(tile);
+
+                const menuBtn = document.createElement('button');
+                menuBtn.type = 'button';
+                menuBtn.className = 'transmittal-tile-menu-btn';
+                menuBtn.setAttribute('aria-label', 'Transmittal options');
+                menuBtn.setAttribute('title', 'Options');
+                menuBtn.innerHTML = '<span aria-hidden="true">&#8942;</span>';
+                menuBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleTransmittalTileMenu(tid, tileWrap);
+                });
+
+                const menu = document.createElement('div');
+                menu.className = 'transmittal-tile-menu';
+                menu.hidden = true;
+
+                const exportBtn = document.createElement('button');
+                exportBtn.type = 'button';
+                exportBtn.className = 'transmittal-tile-menu-item';
+                exportBtn.innerHTML = '<img src="../assets/export.svg" alt="" class="transmittal-tile-menu-icon" aria-hidden="true"><span>Export</span>';
+                exportBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeTransmittalTileMenus();
+                    exportTransmittalById(tid);
+                });
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'transmittal-tile-menu-item transmittal-tile-menu-item-danger';
+                deleteBtn.innerHTML = '<img src="../assets/Delete_Icon.svg" alt="" class="transmittal-tile-menu-icon" aria-hidden="true"><span>Delete</span>';
+                deleteBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeTransmittalTileMenus();
+                    deleteTransmittalById(tid);
+                });
+
+                menu.appendChild(exportBtn);
+                menu.appendChild(deleteBtn);
+
+                tileWrap.appendChild(tile);
+                tileWrap.appendChild(menuBtn);
+                tileWrap.appendChild(menu);
+                grid.appendChild(tileWrap);
             });
 
             updateTransmittalNavButtons();
@@ -2850,7 +2924,9 @@ HREDRD-EMES
             const nextIndex = index + (step > 0 ? 1 : -1);
             if (nextIndex < 0 || nextIndex >= ids.length) return;
 
-            openTransmittalDetail(ids[nextIndex]);
+            openTransmittalDetail(ids[nextIndex], null, {
+                navDirection: step > 0 ? 'next' : 'prev'
+            });
         }
 
         function generateNewTransmittalId() {
@@ -2927,6 +3003,7 @@ HREDRD-EMES
         }
 
         let transmittalAnimTimer = null;
+        let transmittalSlideAnimTimer = null;
         let transmittalModeAnimTimer = null;
         let currentTransmittalView = 'none';
 
@@ -2959,12 +3036,25 @@ HREDRD-EMES
             }, 320);
         }
 
+        function triggerTransmittalSlideAnimation(direction) {
+            const container = document.querySelector('.admin-table-container');
+            if (!container) return;
+            const safeDirection = ((direction || '') + '').trim().toLowerCase();
+            if (safeDirection !== 'next' && safeDirection !== 'prev') return;
+            container.setAttribute('data-transmittal-slide', safeDirection);
+            if (transmittalSlideAnimTimer) clearTimeout(transmittalSlideAnimTimer);
+            transmittalSlideAnimTimer = setTimeout(function() {
+                container.removeAttribute('data-transmittal-slide');
+            }, 560);
+        }
+
         function setTransmittalView(view, options) {
             const container = document.querySelector('.admin-table-container');
             const manager = document.getElementById('transmittalManager');
             const transBtn = document.querySelector('.transmittal-btn');
             const backBtn = document.getElementById('transmittalBackToListBtn');
             const addBtn = document.getElementById('addTransmittalBtn');
+            closeTransmittalTileMenus();
             const nextView = (!view || view === 'none') ? 'none' : view;
             const previousView = currentTransmittalView;
             const shouldAnimate = !(options && options.animate === false);
@@ -3021,14 +3111,19 @@ HREDRD-EMES
             scheduleFilterTableRows(0);
         }
 
-        function openTransmittalDetail(transmittalId, originEl) {
+        function openTransmittalDetail(transmittalId, originEl, options) {
             const safeId = (transmittalId || '').trim();
             if (!safeId) return;
+            const navDirection = ((options && options.navDirection) ? String(options.navDirection) : '').trim().toLowerCase();
             activeTransmittalId = safeId;
             setTransmittalAnimOriginFromElement(originEl);
             setTransmittalView('detail');
             setTopBarTitle(formatTransmittalDisplayName(safeId) + ' Transmittal');
-            triggerTransmittalDetailAnimation();
+            if (navDirection === 'next' || navDirection === 'prev') {
+                triggerTransmittalSlideAnimation(navDirection);
+            } else {
+                triggerTransmittalDetailAnimation();
+            }
             scheduleFilterTableRows(0);
         }
 
@@ -3046,6 +3141,17 @@ HREDRD-EMES
                 var isButtonClick = e.target.closest && e.target.closest('.row-menu-btn');
                 if (!isMenuClick && !isButtonClick) {
                     hideRowMenuDropdown();
+                }
+            });
+            document.addEventListener('click', function(e) {
+                const inTileMenu = e.target.closest && e.target.closest('.transmittal-tile-menu, .transmittal-tile-menu-btn');
+                if (!inTileMenu) {
+                    closeTransmittalTileMenus();
+                }
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeTransmittalTileMenus();
                 }
             });
             window.addEventListener('scroll', hideRowMenuDropdown, true);
@@ -3291,6 +3397,136 @@ HREDRD-EMES
             }
         }
         
+        function submitPdfExportForNoticeCodes(codes, modalTitle) {
+            if (!Array.isArray(codes) || codes.length === 0) {
+                alert("No rows available for export.");
+                return;
+            }
+            let form = document.createElement("form");
+            form.method = "POST";
+            form.action = "../api/jrs_tracking.php";
+            form.target = "pdfViewerFrame";
+
+            let input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "notice_codes";
+            input.value = JSON.stringify(codes);
+
+            const modal = document.getElementById('pdfViewerModal');
+            const frame = document.getElementById('pdfViewerFrame');
+            const title = document.getElementById('pdfViewerTitle');
+            if (modal && frame && title) {
+                lastPdfViewerFocus = document.activeElement;
+                title.textContent = modalTitle || "Exported PDF";
+                frame.src = 'about:blank';
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('inert');
+                const closeBtn = modal.querySelector('.pdf-viewer-close');
+                if (closeBtn) {
+                    try { closeBtn.focus(); } catch (e) {}
+                }
+            }
+
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+            setTimeout(function() {
+                if (form && form.parentNode) form.parentNode.removeChild(form);
+            }, 0);
+        }
+
+        function collectNoticeCodesForTransmittal(transmittalId) {
+            const safeTid = ((transmittalId || '') + '').trim();
+            if (!safeTid) return [];
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const seen = new Set();
+            const codes = [];
+            rows.forEach(function(row) {
+                const rowTid = ((row && row['Transmittal ID']) ? String(row['Transmittal ID']) : '').trim();
+                if (rowTid !== safeTid) return;
+                const notice = ((row && row['Notice/Order Code']) ? String(row['Notice/Order Code']) : '').trim();
+                if (!notice || seen.has(notice)) return;
+                seen.add(notice);
+                codes.push(notice);
+            });
+            return codes;
+        }
+
+        function exportTransmittalById(transmittalId) {
+            const safeTid = ((transmittalId || '') + '').trim();
+            if (!safeTid) return;
+            const codes = collectNoticeCodesForTransmittal(safeTid);
+            if (codes.length === 0) {
+                alert("No rows available for this transmittal.");
+                return;
+            }
+            submitPdfExportForNoticeCodes(codes, formatTransmittalDisplayName(safeTid) + " Transmittal Export");
+        }
+
+        function deleteTransmittalById(transmittalId) {
+            const safeTid = ((transmittalId || '') + '').trim();
+            if (!safeTid) return;
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const recordIds = [];
+            rows.forEach(function(row) {
+                const rowTid = ((row && row['Transmittal ID']) ? String(row['Transmittal ID']) : '').trim();
+                if (rowTid !== safeTid) return;
+                const id = parseInt((row && row.id) || 0, 10) || 0;
+                if (id > 0) recordIds.push(id);
+            });
+
+            if (recordIds.length === 0) {
+                pendingTransmittals.delete(safeTid);
+                if ((activeTransmittalId || '').trim() === safeTid) {
+                    openTransmittalGrid();
+                } else {
+                    updateTransmittalGrid();
+                }
+                return;
+            }
+
+            const label = formatTransmittalDisplayName(safeTid);
+            const msg = 'Delete transmittal "' + label + '" and all ' + recordIds.length + ' record(s)?';
+            if (!confirm(msg)) return;
+
+            const wasActive = ((activeTransmittalId || '').trim() === safeTid);
+            let chain = Promise.resolve();
+            recordIds.forEach(function(id) {
+                chain = chain.then(function() {
+                    return fetch('../api/Delete.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRF-Token': CSRF_TOKEN
+                        },
+                        body: 'id=' + encodeURIComponent(String(id)) + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
+                    }).then(function(resp) {
+                        if (!resp.ok) {
+                            throw new Error('Delete failed for record ID ' + id);
+                        }
+                    });
+                });
+            });
+
+            chain
+                .then(function() {
+                    pendingTransmittals.delete(safeTid);
+                    return refreshHomeData();
+                })
+                .then(function() {
+                    if (wasActive) {
+                        openTransmittalGrid();
+                    } else {
+                        updateTransmittalGrid();
+                    }
+                })
+                .catch(function(err) {
+                    console.error(err);
+                    alert('Failed to delete transmittal: ' + (err && err.message ? err.message : 'Unknown error'));
+                });
+        }
+
         function exportSelectedToPDF() {
             const activeTid = (activeTransmittalId || '').trim();
             const rows = Array.from(document.querySelectorAll('tr[data-notice]'));
@@ -3331,39 +3567,7 @@ HREDRD-EMES
                 alert("Selected rows have no Notice/Order Code.");
                 return;
             }
-
-            let form = document.createElement("form");
-            form.method = "POST";
-            form.action = "../api/jrs_tracking.php";
-            form.target = "pdfViewerFrame";
-
-            let input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "notice_codes";
-            input.value = JSON.stringify(codes);
-
-            const modal = document.getElementById('pdfViewerModal');
-            const frame = document.getElementById('pdfViewerFrame');
-            const title = document.getElementById('pdfViewerTitle');
-            if (modal && frame && title) {
-                lastPdfViewerFocus = document.activeElement;
-                title.textContent = "Exported PDF";
-                frame.src = 'about:blank';
-                modal.style.display = 'flex';
-                modal.setAttribute('aria-hidden', 'false');
-                modal.removeAttribute('inert');
-                const closeBtn = modal.querySelector('.pdf-viewer-close');
-                if (closeBtn) {
-                    try { closeBtn.focus(); } catch (e) {}
-                }
-            }
-
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
-            setTimeout(function() {
-                if (form && form.parentNode) form.parentNode.removeChild(form);
-            }, 0);
+            submitPdfExportForNoticeCodes(codes, "Exported PDF");
         }
 
         const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
