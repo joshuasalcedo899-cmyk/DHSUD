@@ -980,6 +980,20 @@
 	display: flex;
 }
 
+.admin-table-container[data-transmittal-view="grid"],
+.admin-table-container[data-transmittal-view="detail"] {
+	max-height: none;
+	overflow: visible;
+}
+
+.admin-table-container[data-transmittal-view="grid"] .top-bar,
+.admin-table-container[data-transmittal-view="detail"] .top-bar {
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	background: rgba(255,255,255,0.96);
+}
+
 .admin-table-container .top-bar .export-icon,
 .admin-table-container .table-footer-section .add-btn {
 	display: none;
@@ -999,14 +1013,23 @@
 }
 
 .admin-table-container[data-transmittal-view="grid"] .transmittal-manager {
-	min-height: clamp(320px, 58vh, 680px);
+	min-height: calc(100vh - 180px);
+	max-height: calc(100vh - 180px);
 	padding-bottom: 0;
+	overflow: hidden;
 }
 
 .transmittal-manager {
 	flex-direction: column;
 	gap: 0.8rem;
 	padding: 0.1rem 0 0.1rem 0;
+}
+
+.transmittal-manager[data-view="grid"] .transmittal-grid {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 .transmittal-btn,
