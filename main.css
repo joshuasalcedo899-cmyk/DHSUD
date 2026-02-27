@@ -1082,6 +1082,10 @@
 	display: none;
 }
 
+.transmittal-tile-wrap {
+	position: relative;
+}
+
 .transmittal-tile {
 	border: 1px solid #d9d9d9;
 	background: #f8f9fb;
@@ -1095,12 +1099,94 @@
 	cursor: pointer;
 	box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 	transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+	width: 100%;
+	text-align: center;
 }
 
 .transmittal-tile:hover {
 	transform: translateY(-2px);
 	box-shadow: 0 10px 20px rgba(0,0,0,0.14);
 	border-color: #22336a4d;
+}
+
+.transmittal-tile-menu-btn {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 28px;
+	height: 28px;
+	border: 1px solid #d1d5db;
+	border-radius: 8px;
+	background: #fff;
+	color: #22336a;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	cursor: pointer;
+	z-index: 2;
+}
+
+.transmittal-tile-menu-btn:hover {
+	background: #f3f4f6;
+}
+
+.transmittal-tile-menu-btn span {
+	font-size: 16px;
+	line-height: 1;
+}
+
+.transmittal-tile-menu {
+	position: absolute;
+	top: 40px;
+	right: 8px;
+	min-width: 150px;
+	background: #fff;
+	border: 1px solid #d1d5db;
+	border-radius: 10px;
+	box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+	padding: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	z-index: 3;
+}
+
+.transmittal-tile-menu[hidden] {
+	display: none !important;
+}
+
+.transmittal-tile-menu-item {
+	border: none;
+	background: transparent;
+	color: #22336a;
+	font-size: 0.84rem;
+	font-weight: 600;
+	text-align: left;
+	padding: 8px 10px;
+	border-radius: 8px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.transmittal-tile-menu-icon {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+}
+
+.transmittal-tile-menu-item:hover {
+	background: #eef2ff;
+}
+
+.transmittal-tile-menu-item-danger {
+	color: #b42318;
+}
+
+.transmittal-tile-menu-item-danger:hover {
+	background: #fef2f2;
 }
 
 .transmittal-folder {
@@ -1186,6 +1272,14 @@
 	transform-origin: var(--transmittal-origin-x, 20%) var(--transmittal-origin-y, 0%);
 }
 
+.admin-table-container[data-transmittal-slide="next"] .tracking-table-scroll {
+	animation: transmittalSlideNext 520ms ease;
+}
+
+.admin-table-container[data-transmittal-slide="prev"] .tracking-table-scroll {
+	animation: transmittalSlidePrev 520ms ease;
+}
+
 .admin-table-container[data-module-anim="grid"] .transmittal-manager[data-view="grid"] {
 	animation: transmittalModeFadeIn 260ms ease;
 }
@@ -1207,6 +1301,24 @@
 	}
 }
 
+@keyframes transmittalSlideNext {
+	0% {
+		transform: translateX(28px);
+	}
+	100% {
+		transform: translateX(0);
+	}
+}
+
+@keyframes transmittalSlidePrev {
+	0% {
+		transform: translateX(-28px);
+	}
+	100% {
+		transform: translateX(0);
+	}
+}
+
 @keyframes transmittalModeFadeIn {
 	0% {
 		opacity: 0;
@@ -1223,6 +1335,8 @@
 	.admin-table-container[data-module-anim="table"] .table-sort-bar,
 	.admin-table-container[data-module-anim="table"] .table-scroll-area,
 	.admin-table-container[data-module-anim="table"] .table-footer-section,
+	.admin-table-container[data-transmittal-slide="next"] .tracking-table-scroll,
+	.admin-table-container[data-transmittal-slide="prev"] .tracking-table-scroll,
 	.admin-table-container[data-transmittal-anim="detail"] .table-scroll-area {
 		animation-duration: 1ms !important;
 	}
@@ -1888,6 +2002,26 @@ img {
         tr.notif-row-focus-returned td {
             background: #f5dbde !important;
             transition: background 0.8s ease;
+        }
+        tr.table-sort-row-enter td {
+            animation: tableSortRowEnter 260ms ease both;
+            animation-delay: var(--table-sort-row-delay, 0ms);
+        }
+        @keyframes tableSortRowEnter {
+            0% {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            tr.table-sort-row-enter td {
+                animation-duration: 1ms !important;
+                animation-delay: 0ms !important;
+            }
         }
         .notice-code-cell {
             position: relative;
