@@ -214,7 +214,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Page</title>
     <link rel="icon" type="image/x-icon" href="../assets/DHSUDLogo.ico">
-    <link rel="stylesheet" href="../main.css">
+    <link rel="stylesheet" href="../main.css?v=<?= urlencode((string)@filemtime(__DIR__ . '/../main.css')) ?>">
     <style>
         .batch-toggle-btn {
             border: none;
@@ -3005,7 +3005,10 @@ HREDRD-EMES
                 pendingTransmittals.add(newId);
                 openTransmittalDetail(newId, addTile);
             });
-            grid.appendChild(addTile);
+            const addTileWrap = document.createElement('div');
+            addTileWrap.className = 'transmittal-tile-wrap transmittal-tile-wrap-new';
+            addTileWrap.appendChild(addTile);
+            grid.appendChild(addTileWrap);
 
             if (filteredIds.length === 0) {
                 const empty = document.createElement('div');
