@@ -456,6 +456,99 @@ HREDRD-EMES
             </button>
         </div>
         <div class="top-bar-title">MAIL TRACKING RECORDS</div>
+        <div class="top-bar-right-main">
+            <?php
+            $years = [];
+            foreach ($rows as $row) {
+                $dateAfd = $row['Date released to AFD'] ?? '';
+                if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
+                    $years[] = $m[1];
+                }
+            }
+            $years = array_unique($years);
+            rsort($years);
+            ?>
+            <div class="table-sort-bar top-main-table-controls">
+                <div class="table-year-month-filter" id="tableYearMonthFilter">
+                    <button type="button" id="tableSortYearTrigger" class="table-year-trigger" aria-haspopup="true" aria-expanded="false">
+                        <span id="tableSortYearLabel">Year</span>
+                        <span class="table-year-trigger-icon" aria-hidden="true"></span>
+                    </button>
+                    <div id="tableYearMonthDropdown" class="table-year-month-dropdown" hidden>
+                        <div id="tableYearList" class="table-year-list" role="listbox" aria-label="Year options">
+                            <button type="button" class="table-year-option is-active" data-year="all">All</button>
+                            <?php foreach ($years as $year): ?>
+                                <button type="button" class="table-year-option" data-year="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                        <div id="tableMonthGrid" class="table-month-grid" aria-label="Month options" aria-hidden="true">
+                            <button type="button" class="table-month-option" data-month="01">Jan</button>
+                            <button type="button" class="table-month-option" data-month="02">Feb</button>
+                            <button type="button" class="table-month-option" data-month="03">Mar</button>
+                            <button type="button" class="table-month-option" data-month="04">Apr</button>
+                            <button type="button" class="table-month-option" data-month="05">May</button>
+                            <button type="button" class="table-month-option" data-month="06">Jun</button>
+                            <button type="button" class="table-month-option" data-month="07">Jul</button>
+                            <button type="button" class="table-month-option" data-month="08">Aug</button>
+                            <button type="button" class="table-month-option" data-month="09">Sep</button>
+                            <button type="button" class="table-month-option" data-month="10">Oct</button>
+                            <button type="button" class="table-month-option" data-month="11">Nov</button>
+                            <button type="button" class="table-month-option" data-month="12">Dec</button>
+                        </div>
+                    </div>
+                    <select id="tableSortYear" class="table-sort-select table-sort-select-native" required style="min-width:65px;">
+                        <option value="" disabled hidden>Year</option>
+                        <option value="all" selected>All</option>
+                        <?php
+                        foreach ($years as $year) {
+                            echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
+                        }
+                        ?>
+                    </select>
+                    <input type="hidden" id="tableSortMonth" value="">
+                </div>
+                <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
+                <button class="table-search-btn" id="tableSearchBtn">
+                    <img src="../assets/Search Icon.svg" alt="Search">
+                </button>
+                <button class="table-notif-btn" id="tableNotifBtn" title="Tracking Status Notifications">
+                    <img src="../assets/Notif_Icon.svg" alt="Notifications">
+                    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                </button>
+            </div>
+            <div class="transmittal-top-filter">
+                <div class="transmittal-year-month-filter" id="transmittalYearMonthFilter">
+                    <button type="button" id="transmittalSortYearTrigger" class="transmittal-year-trigger" aria-haspopup="true" aria-expanded="false">
+                        <span id="transmittalSortYearLabel">Year</span>
+                        <span class="transmittal-year-trigger-icon" aria-hidden="true"></span>
+                    </button>
+                    <div id="transmittalYearMonthDropdown" class="transmittal-year-month-dropdown" hidden>
+                        <div id="transmittalYearList" class="transmittal-year-list" role="listbox" aria-label="Transmittal year options">
+                            <button type="button" class="transmittal-year-option is-active" data-year="all">All</button>
+                        </div>
+                        <div id="transmittalMonthGrid" class="transmittal-month-grid" aria-label="Transmittal month options" aria-hidden="true">
+                            <button type="button" class="transmittal-month-option" data-month="01">Jan</button>
+                            <button type="button" class="transmittal-month-option" data-month="02">Feb</button>
+                            <button type="button" class="transmittal-month-option" data-month="03">Mar</button>
+                            <button type="button" class="transmittal-month-option" data-month="04">Apr</button>
+                            <button type="button" class="transmittal-month-option" data-month="05">May</button>
+                            <button type="button" class="transmittal-month-option" data-month="06">Jun</button>
+                            <button type="button" class="transmittal-month-option" data-month="07">Jul</button>
+                            <button type="button" class="transmittal-month-option" data-month="08">Aug</button>
+                            <button type="button" class="transmittal-month-option" data-month="09">Sep</button>
+                            <button type="button" class="transmittal-month-option" data-month="10">Oct</button>
+                            <button type="button" class="transmittal-month-option" data-month="11">Nov</button>
+                            <button type="button" class="transmittal-month-option" data-month="12">Dec</button>
+                        </div>
+                    </div>
+                    <select id="transmittalSortYear" class="table-sort-select table-sort-select-native" required style="min-width:65px;">
+                        <option value="" disabled hidden>Year</option>
+                        <option value="all" selected>All</option>
+                    </select>
+                    <input type="hidden" id="transmittalSortMonth" value="">
+                </div>
+            </div>
+        </div>
             <script>
             let scannerSelectedNoticeCode = '';
             let activeTransmittalId = '';
@@ -627,75 +720,10 @@ HREDRD-EMES
             });
 
             </script>
-        <div class="table-sort-bar">
-            <?php
-            $years = [];
-            foreach ($rows as $row) {
-                $dateAfd = $row['Date released to AFD'] ?? '';
-                if ($dateAfd && preg_match('/(\d{4})/', $dateAfd, $m)) {
-                    $years[] = $m[1];
-                }
-            }
-            $years = array_unique($years);
-            rsort($years);
-            ?>
-            <div class="table-year-month-filter" id="tableYearMonthFilter">
-                <button type="button" id="tableSortYearTrigger" class="table-year-trigger" aria-haspopup="true" aria-expanded="false">
-                    <span id="tableSortYearLabel">Year</span>
-                    <span class="table-year-trigger-icon" aria-hidden="true"></span>
-                </button>
-                <div id="tableYearMonthDropdown" class="table-year-month-dropdown" hidden>
-                    <div id="tableYearList" class="table-year-list" role="listbox" aria-label="Year options">
-                        <button type="button" class="table-year-option is-active" data-year="all">All</button>
-                        <?php foreach ($years as $year): ?>
-                            <button type="button" class="table-year-option" data-year="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></button>
-                        <?php endforeach; ?>
-                    </div>
-                    <div id="tableMonthGrid" class="table-month-grid" aria-label="Month options" aria-hidden="true">
-                        <button type="button" class="table-month-option" data-month="01">Jan</button>
-                        <button type="button" class="table-month-option" data-month="02">Feb</button>
-                        <button type="button" class="table-month-option" data-month="03">Mar</button>
-                        <button type="button" class="table-month-option" data-month="04">Apr</button>
-                        <button type="button" class="table-month-option" data-month="05">May</button>
-                        <button type="button" class="table-month-option" data-month="06">Jun</button>
-                        <button type="button" class="table-month-option" data-month="07">Jul</button>
-                        <button type="button" class="table-month-option" data-month="08">Aug</button>
-                        <button type="button" class="table-month-option" data-month="09">Sep</button>
-                        <button type="button" class="table-month-option" data-month="10">Oct</button>
-                        <button type="button" class="table-month-option" data-month="11">Nov</button>
-                        <button type="button" class="table-month-option" data-month="12">Dec</button>
-                    </div>
-                </div>
-                <select id="tableSortYear" class="table-sort-select table-sort-select-native" required style="min-width:65px;">
-                    <option value="" disabled hidden>Year</option>
-                    <option value="all" selected>All</option>
-                    <?php
-                    foreach ($years as $year) {
-                        echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
-                    }
-                    ?>
-                </select>
-                <input type="hidden" id="tableSortMonth" value="">
-            </div>
-            <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
-            <button class="table-search-btn" id="tableSearchBtn">
-                <img src="../assets/Search Icon.svg" alt="Search">
-            </button>
-            <button class="table-notif-btn" id="tableNotifBtn" title="Tracking Status Notifications">
-                <img src="../assets/Notif_Icon.svg" alt="Notifications">
-                <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
-            </button>
-        </div>
         </div>
 
         <div id="transmittalManager" class="transmittal-manager" data-view="grid" style="display:none;">
             <div class="transmittal-grid" id="transmittalGrid"></div>
-            <div class="transmittal-add-wrap">
-                <button type="button" class="transmittal-add-btn" id="addTransmittalBtn" style="display:none;" aria-label="Add Transmittal">
-                    <span class="transmittal-add-icon" aria-hidden="true" style="width:16px;height:16px;"><img src="../assets/plus.svg" alt=""></span>
-                    <span class="transmittal-add-label">New</span>
-                </button>
-            </div>
         </div>
 
         <div class="table-scroll-area">
@@ -2693,12 +2721,152 @@ HREDRD-EMES
             });
         }
 
+        function getTransmittalFilterSelection() {
+            const yearSelect = document.getElementById('transmittalSortYear');
+            const monthInput = document.getElementById('transmittalSortMonth');
+            if (!yearSelect || !monthInput) {
+                return { year: '', month: '' };
+            }
+            const yearRaw = ((yearSelect.value || '') + '').trim();
+            const year = (yearRaw === 'all') ? '' : yearRaw;
+            let month = ((monthInput.value || '') + '').trim();
+            if (!year) month = '';
+            return { year: year, month: month };
+        }
+
+        function syncTransmittalYearMonthFilterUI() {
+            const yearSelect = document.getElementById('transmittalSortYear');
+            const monthInput = document.getElementById('transmittalSortMonth');
+            const yearLabel = document.getElementById('transmittalSortYearLabel');
+            const yearTrigger = document.getElementById('transmittalSortYearTrigger');
+            const monthGrid = document.getElementById('transmittalMonthGrid');
+            if (!yearSelect || !monthInput) return;
+
+            const selectedYearRaw = ((yearSelect.value || '') + '').trim();
+            const selectedYear = (selectedYearRaw === 'all') ? '' : selectedYearRaw;
+            let selectedMonth = ((monthInput.value || '') + '').trim();
+
+            if (!selectedYear) {
+                selectedMonth = '';
+                monthInput.value = '';
+            }
+
+            if (yearLabel) {
+                const monthLabel = selectedMonth ? (' - ' + getMonthShortLabel(selectedMonth)) : '';
+                yearLabel.textContent = selectedYear ? (selectedYear + monthLabel) : 'Year';
+            }
+            if (yearTrigger) {
+                yearTrigger.classList.toggle('has-selection', !!selectedYear);
+            }
+
+            document.querySelectorAll('.transmittal-year-option').forEach(function(btn) {
+                const y = ((btn.getAttribute('data-year') || '') + '').trim();
+                const isActive = y === (selectedYear || 'all');
+                btn.classList.toggle('is-active', isActive);
+            });
+
+            if (monthGrid) {
+                const monthsEnabled = !!selectedYear;
+                monthGrid.classList.toggle('is-enabled', monthsEnabled);
+                monthGrid.setAttribute('aria-hidden', monthsEnabled ? 'false' : 'true');
+                monthGrid.querySelectorAll('.transmittal-month-option').forEach(function(btn) {
+                    const m = ((btn.getAttribute('data-month') || '') + '').trim();
+                    btn.disabled = !monthsEnabled;
+                    btn.classList.toggle('is-active', monthsEnabled && m === selectedMonth);
+                });
+            }
+        }
+
+        function rebuildTransmittalYearMonthFilterOptionsFromSelect() {
+            const yearSelect = document.getElementById('transmittalSortYear');
+            const yearList = document.getElementById('transmittalYearList');
+            if (!yearSelect || !yearList) {
+                syncTransmittalYearMonthFilterUI();
+                return;
+            }
+            const activeValue = ((yearSelect.value || '') + '').trim() || 'all';
+            const buttons = [];
+            Array.from(yearSelect.options).forEach(function(opt) {
+                const value = ((opt.value || '') + '').trim();
+                if (!value || value === '') return;
+                const label = (opt.textContent || '').trim() || value;
+                buttons.push(
+                    '<button type="button" class="transmittal-year-option' + (value === activeValue ? ' is-active' : '') + '" data-year="' +
+                    value.replace(/"/g, '&quot;') + '">' + label.replace(/</g, '&lt;') + '</button>'
+                );
+            });
+            yearList.innerHTML = buttons.join('');
+            syncTransmittalYearMonthFilterUI();
+        }
+
+        function closeTransmittalYearMonthDropdown() {
+            const dropdown = document.getElementById('transmittalYearMonthDropdown');
+            const trigger = document.getElementById('transmittalSortYearTrigger');
+            if (dropdown) dropdown.hidden = true;
+            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        }
+
+        function openTransmittalYearMonthDropdown() {
+            const dropdown = document.getElementById('transmittalYearMonthDropdown');
+            const trigger = document.getElementById('transmittalSortYearTrigger');
+            if (dropdown) dropdown.hidden = false;
+            if (trigger) trigger.setAttribute('aria-expanded', 'true');
+        }
+
+        function updateTransmittalYearSelectOptionsFromIds(ids) {
+            const yearSelect = document.getElementById('transmittalSortYear');
+            const monthInput = document.getElementById('transmittalSortMonth');
+            if (!yearSelect) return;
+
+            const previousYearValue = ((yearSelect.value || '') + '').trim() || 'all';
+            const previousMonthValue = monthInput ? ((monthInput.value || '') + '').trim() : '';
+            const yearSet = new Set();
+
+            (Array.isArray(ids) ? ids : []).forEach(function(tid) {
+                const parts = parseTransmittalIdParts(tid);
+                if (!parts || !parts.year) return;
+                yearSet.add(String(parts.year));
+            });
+
+            const years = Array.from(yearSet).sort(function(a, b) { return b.localeCompare(a); });
+            const opts = ['<option value="" disabled hidden>Year</option>', '<option value="all">All</option>'];
+            years.forEach(function(y) {
+                const yy = ((y || '') + '').trim();
+                if (yy) {
+                    opts.push('<option value="' + yy.replace(/"/g, '&quot;') + '">' + yy.replace(/</g, '&lt;') + '</option>');
+                }
+            });
+            yearSelect.innerHTML = opts.join('');
+
+            const hasPrevious = Array.from(yearSelect.options).some(function(opt) {
+                return ((opt.value || '') + '').trim() === previousYearValue;
+            });
+            if (hasPrevious) {
+                yearSelect.value = previousYearValue;
+                if (monthInput) monthInput.value = previousMonthValue;
+            } else {
+                yearSelect.value = 'all';
+                if (monthInput) monthInput.value = '';
+            }
+            rebuildTransmittalYearMonthFilterOptionsFromSelect();
+        }
+
         function updateTransmittalGrid() {
             const grid = document.getElementById('transmittalGrid');
             if (!grid) return;
             const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
             const summary = collectTransmittalSummary(rows);
             const ids = sortTransmittalIds(Array.from(summary.keys()));
+            updateTransmittalYearSelectOptionsFromIds(ids);
+            const transmittalFilter = getTransmittalFilterSelection();
+            const filteredIds = ids.filter(function(tid) {
+                if (!transmittalFilter.year && !transmittalFilter.month) return true;
+                const parts = parseTransmittalIdParts(tid);
+                if (!parts) return false;
+                const yearMatch = !transmittalFilter.year || String(parts.year) === transmittalFilter.year;
+                const monthMatch = !transmittalFilter.month || padTransmittalNum(parts.month, 2) === transmittalFilter.month;
+                return yearMatch && monthMatch;
+            });
 
             // Remove pending entries that now exist in DB.
             pendingTransmittals.forEach(function(tid) {
@@ -2708,15 +2876,52 @@ HREDRD-EMES
             });
 
             grid.innerHTML = '';
-            if (ids.length === 0) {
+
+            const addTile = document.createElement('button');
+            addTile.type = 'button';
+            addTile.className = 'transmittal-tile transmittal-tile-new';
+            addTile.setAttribute('aria-label', 'Add new transmittal');
+
+            const addFolder = document.createElement('div');
+            addFolder.className = 'transmittal-folder transmittal-folder-new';
+
+            const addBadge = document.createElement('span');
+            addBadge.className = 'transmittal-folder-add';
+            addBadge.setAttribute('aria-hidden', 'true');
+            const addBadgeIcon = document.createElement('img');
+            addBadgeIcon.src = '../assets/plus.svg';
+            addBadgeIcon.alt = '';
+            addBadge.appendChild(addBadgeIcon);
+            addFolder.appendChild(addBadge);
+
+            const addName = document.createElement('div');
+            addName.className = 'transmittal-name';
+            addName.textContent = 'New';
+
+            const addMeta = document.createElement('div');
+            addMeta.className = 'transmittal-meta';
+            addMeta.textContent = 'Add transmittal';
+
+            addTile.appendChild(addFolder);
+            addTile.appendChild(addName);
+            addTile.appendChild(addMeta);
+            addTile.addEventListener('click', function() {
+                const newId = generateNewTransmittalId();
+                pendingTransmittals.add(newId);
+                openTransmittalDetail(newId, addTile);
+            });
+            grid.appendChild(addTile);
+
+            if (filteredIds.length === 0) {
                 const empty = document.createElement('div');
                 empty.className = 'transmittal-empty';
-                empty.textContent = 'No transmittals yet.';
+                empty.textContent = (ids.length === 0) ? 'No transmittals yet.' : 'No transmittals for selected period.';
                 grid.appendChild(empty);
+                updateTransmittalNavButtons();
                 return;
             }
 
-            ids.forEach(function(tid) {
+            filteredIds.forEach(function(tid) {
                 const tile = document.createElement('button');
                 tile.type = 'button';
                 tile.className = 'transmittal-tile';
@@ -2911,7 +3116,6 @@ HREDRD-EMES
             const manager = document.getElementById('transmittalManager');
             const transBtn = document.querySelector('.transmittal-btn');
             const backBtn = document.getElementById('transmittalBackToListBtn');
-            const addBtn = document.getElementById('addTransmittalBtn');
             const nextView = (!view || view === 'none') ? 'none' : view;
             const previousView = currentTransmittalView;
             const shouldAnimate = !(options && options.animate === false);
@@ -2948,9 +3152,6 @@ HREDRD-EMES
                 backBtn.classList.toggle('module-active', isTransmittalGrid);
                 backBtn.setAttribute('aria-pressed', isTransmittalGrid ? 'true' : 'false');
                 backBtn.setAttribute('aria-label', 'Transmittal Module');
-            }
-            if (addBtn) {
-                addBtn.style.display = (view === 'grid') ? 'inline-flex' : 'none';
             }
             currentTransmittalView = nextView;
             if (shouldAnimate && previousView !== nextView) {
@@ -3006,8 +3207,15 @@ HREDRD-EMES
             const yearMonthFilterWrap = document.getElementById('tableYearMonthFilter');
             const yearList = document.getElementById('tableYearList');
             const monthGrid = document.getElementById('tableMonthGrid');
+            const transYearSelect = document.getElementById('transmittalSortYear');
+            const transMonthInput = document.getElementById('transmittalSortMonth');
+            const transYearTrigger = document.getElementById('transmittalSortYearTrigger');
+            const transYearMonthFilterWrap = document.getElementById('transmittalYearMonthFilter');
+            const transYearList = document.getElementById('transmittalYearList');
+            const transMonthGrid = document.getElementById('transmittalMonthGrid');
             updateStatusFilterButtonsUI();
             rebuildYearMonthFilterOptionsFromSelect();
+            rebuildTransmittalYearMonthFilterOptionsFromSelect();
             setTransmittalView('none', { animate: false });
             searchInput.addEventListener('input', function() {
                 scheduleFilterTableRows(150);
@@ -3064,10 +3272,65 @@ HREDRD-EMES
                     closeYearMonthDropdown();
                 });
             }
+            if (transYearSelect) {
+                transYearSelect.addEventListener('change', function() {
+                    if (transYearSelect.value === 'all' && transMonthInput) {
+                        transMonthInput.value = '';
+                    }
+                    syncTransmittalYearMonthFilterUI();
+                    updateTransmittalGrid();
+                });
+            }
+            if (transYearTrigger) {
+                transYearTrigger.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const dropdown = document.getElementById('transmittalYearMonthDropdown');
+                    if (!dropdown || dropdown.hidden) {
+                        openTransmittalYearMonthDropdown();
+                    } else {
+                        closeTransmittalYearMonthDropdown();
+                    }
+                });
+            }
+            if (transYearList) {
+                transYearList.addEventListener('click', function(e) {
+                    const btn = e.target.closest ? e.target.closest('.transmittal-year-option') : null;
+                    if (!btn || !transYearSelect) return;
+                    e.preventDefault();
+                    const yearValue = ((btn.getAttribute('data-year') || '') + '').trim() || 'all';
+                    transYearSelect.value = yearValue;
+                    if (yearValue === 'all' && transMonthInput) {
+                        transMonthInput.value = '';
+                    }
+                    syncTransmittalYearMonthFilterUI();
+                    updateTransmittalGrid();
+                });
+            }
+            if (transMonthGrid) {
+                transMonthGrid.addEventListener('click', function(e) {
+                    const btn = e.target.closest ? e.target.closest('.transmittal-month-option') : null;
+                    if (!btn || btn.disabled || !transYearSelect) return;
+                    e.preventDefault();
+                    const yearValue = ((transYearSelect.value || '') + '').trim();
+                    if (!yearValue || yearValue === 'all') return;
+                    const monthValue = ((btn.getAttribute('data-month') || '') + '').trim();
+                    if (transMonthInput) {
+                        transMonthInput.value = (transMonthInput.value === monthValue) ? '' : monthValue;
+                    }
+                    syncTransmittalYearMonthFilterUI();
+                    updateTransmittalGrid();
+                    closeTransmittalYearMonthDropdown();
+                });
+            }
             document.addEventListener('click', function(e) {
                 if (!yearMonthFilterWrap) return;
                 if (yearMonthFilterWrap.contains(e.target)) return;
                 closeYearMonthDropdown();
+            });
+            document.addEventListener('click', function(e) {
+                if (!transYearMonthFilterWrap) return;
+                if (transYearMonthFilterWrap.contains(e.target)) return;
+                closeTransmittalYearMonthDropdown();
             });
             document.addEventListener('click', function(e) {
                 const btn = e.target.closest ? e.target.closest('.stat-filter-btn') : null;
@@ -3094,15 +3357,6 @@ HREDRD-EMES
             if (transmittalBackBtn) {
                 transmittalBackBtn.addEventListener('click', function() {
                     openTransmittalGrid();
-                });
-            }
-
-            const addTransmittalBtn = document.getElementById('addTransmittalBtn');
-            if (addTransmittalBtn) {
-                addTransmittalBtn.addEventListener('click', function() {
-                    const newId = generateNewTransmittalId();
-                    pendingTransmittals.add(newId);
-                    openTransmittalDetail(newId);
                 });
             }
 
