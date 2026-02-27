@@ -23,9 +23,34 @@ try {
         $archiveCols[] = $c['Field'];
     }
     $hasOriginalMailId = in_array('original_mail_id', $archiveCols, true);
-    $hasTransmittalId = in_array('Transmittal ID', $archiveCols, true);
+
+    $mailtrackingCols = [];
+    $mailColStmt = $pdo->query("SHOW COLUMNS FROM mailtracking");
+    while ($c = $mailColStmt->fetch(PDO::FETCH_ASSOC)) {
+        $mailtrackingCols[] = $c['Field'];
+    }
+    $mailtrackingHasTransmittalId = in_array('Transmittal ID', $mailtrackingCols, true);
+
+    $resolveRowTransmittalId = function (array $row) {
+        $candidateKeys = [
+            'Transmittal ID',
+            'transmittal_id',
+            'transmittalId',
+            'TransmittalID',
+            'transmittalid',
+        ];
+        foreach ($candidateKeys as $k) {
+            if (!array_key_exists($k, $row)) continue;
+            $value = trim((string)$row[$k]);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+        return '';
+    };
 
     $focusId = 0;
+    $recoveredTransmittalIds = [];
     foreach ($ids as $archiveId) {
         $safeId = (int)$archiveId;
         if ($safeId <= 0) {
@@ -39,6 +64,11 @@ try {
             continue;
         }
 
+        $rowTransmittalId = $resolveRowTransmittalId($row);
+        if ($rowTransmittalId !== '') {
+            $recoveredTransmittalIds[$rowTransmittalId] = true;
+        }
+
         $insertCols = [
             'Notice/Order Code',
             'Date released to AFD',
@@ -49,15 +79,12 @@ try {
             'File Name (PDF)',
             'Tracking No.',
             'Status',
-            'Transmittal ID',
             'Transmittal Remarks/Received By',
             'Date',
             'Evaluator',
         ];
-        if (!$hasTransmittalId) {
-            $insertCols = array_values(array_filter($insertCols, function ($c) {
-                return $c !== 'Transmittal ID';
-            }));
+        if ($mailtrackingHasTransmittalId) {
+            array_splice($insertCols, 8, 0, ['Transmittal ID']);
         }
 
         // Restore original ID when archive tracks it.
@@ -74,6 +101,8 @@ try {
             $p = ':m_' . preg_replace('/[^a-z0-9_]/i', '_', $c);
             if ($c === 'id') {
                 $params[$p] = $hasOriginalMailId ? (int)$row['original_mail_id'] : (int)$row['id'];
+            } elseif ($c === 'Transmittal ID') {
+                $params[$p] = $rowTransmittalId;
             } else {
                 $params[$p] = $row[$c] ?? null;
             }
@@ -98,7 +127,14 @@ try {
     $pdo->commit();
 
     // Send user back to Home and focus the first recovered row by id.
-    header("Location: ../pages/Home_Page.php?recovered=1&scanned_id=" . urlencode((string)$focusId));
+    $redirectParams = [
+        'recovered' => '1',
+        'scanned_id' => (string)$focusId,
+    ];
+    if (!empty($recoveredTransmittalIds)) {
+        $redirectParams['recovered_transmittals'] = implode(',', array_keys($recoveredTransmittalIds));
+    }
+    header("Location: ../pages/Home_Page.php?" . http_build_query($redirectParams));
     exit;
 
 } catch (Exception $e) {

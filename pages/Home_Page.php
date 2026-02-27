@@ -554,6 +554,24 @@ HREDRD-EMES
             let activeTransmittalId = '';
             const pendingTransmittals = new Set();
 
+            function seedPendingRecoveredTransmittalsFromUrl() {
+                let url;
+                try {
+                    url = new URL(window.location.href);
+                } catch (e) {
+                    return;
+                }
+
+                const raw = ((url.searchParams.get('recovered_transmittals') || '') + '').trim();
+                if (!raw) return;
+                raw.split(',').forEach(function(id) {
+                    const tid = ((id || '') + '').trim();
+                    if (tid) pendingTransmittals.add(tid);
+                });
+            }
+
+            seedPendingRecoveredTransmittalsFromUrl();
+
             function openScannerModal(noticeCode) {
                 const modal = document.getElementById('scannerModal');
                 const frame = document.getElementById('scannerFrame');
@@ -2902,6 +2920,8 @@ HREDRD-EMES
                 if (monthInput) monthInput.value = '';
             }
             rebuildTransmittalYearMonthFilterOptionsFromSelect();
+        }
+
         var activeTransmittalMenuId = '';
         function closeTransmittalTileMenus() {
             activeTransmittalMenuId = '';
@@ -2996,7 +3016,7 @@ HREDRD-EMES
                 return;
             }
 
-            ids.forEach(function(tid) {
+            filteredIds.forEach(function(tid) {
                 const tileWrap = document.createElement('div');
                 tileWrap.className = 'transmittal-tile-wrap';
                 tileWrap.setAttribute('data-transmittal-id', tid);
@@ -3617,11 +3637,20 @@ HREDRD-EMES
             const url = new URL(window.location.href);
             const urlRowId = parseInt(url.searchParams.get('scanned_id') || '0', 10) || 0;
             const urlNotice = (url.searchParams.get('scanned_notice') || '').trim();
+            const recoveredParam = (url.searchParams.get('recovered') || '').trim();
+            const recoveredTransmittalsParam = (url.searchParams.get('recovered_transmittals') || '').trim();
             const storedRowId = parseInt(sessionStorage.getItem('dhsud_focus_id') || '0', 10) || 0;
             const storedNotice = (sessionStorage.getItem('dhsud_focus_notice') || '').trim();
             const rowId = urlRowId || storedRowId;
             const noticeCode = urlNotice || storedNotice;
-            if (rowId <= 0 && !noticeCode) return;
+            if (rowId <= 0 && !noticeCode) {
+                if (recoveredParam || recoveredTransmittalsParam) {
+                    url.searchParams.delete('recovered');
+                    url.searchParams.delete('recovered_transmittals');
+                    window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+                }
+                return;
+            }
 
             let row = null;
             if (rowId > 0) {
@@ -3643,9 +3672,11 @@ HREDRD-EMES
 
             sessionStorage.removeItem('dhsud_focus_notice');
             sessionStorage.removeItem('dhsud_focus_id');
-            if (urlNotice || urlRowId > 0) {
+            if (urlNotice || urlRowId > 0 || recoveredParam || recoveredTransmittalsParam) {
                 url.searchParams.delete('scanned_notice');
                 url.searchParams.delete('scanned_id');
+                url.searchParams.delete('recovered');
+                url.searchParams.delete('recovered_transmittals');
                 window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
             }
         }
