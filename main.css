@@ -498,7 +498,9 @@
 	top: calc(100% + 4px);
 	left: 0;
 	z-index: 130;
-	display: block;
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
 	max-width: min(92vw, 500px);
 }
 
@@ -1303,11 +1305,11 @@
 }
 
 .admin-table-container[data-transmittal-slide="next"] .tracking-table-scroll {
-	animation: transmittalSlideNext 520ms ease;
+	animation: transmittalSlideNext 600ms ease;
 }
 
 .admin-table-container[data-transmittal-slide="prev"] .tracking-table-scroll {
-	animation: transmittalSlidePrev 520ms ease;
+	animation: transmittalSlidePrev 700ms ease;
 }
 
 .admin-table-container[data-module-anim="grid"] .transmittal-manager[data-view="grid"] {
@@ -1333,7 +1335,7 @@
 
 @keyframes transmittalSlideNext {
 	0% {
-		transform: translateX(28px);
+		transform: translateX(20px);
 	}
 	100% {
 		transform: translateX(0);
@@ -1342,7 +1344,7 @@
 
 @keyframes transmittalSlidePrev {
 	0% {
-		transform: translateX(-28px);
+		transform: translateX(-20px);
 	}
 	100% {
 		transform: translateX(0);

@@ -3468,6 +3468,7 @@ HREDRD-EMES
             if (transYearTrigger) {
                 transYearTrigger.addEventListener('click', function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     const dropdown = document.getElementById('transmittalYearMonthDropdown');
                     if (!dropdown || dropdown.hidden) {
                         openTransmittalYearMonthDropdown();
@@ -3481,6 +3482,7 @@ HREDRD-EMES
                     const btn = e.target.closest ? e.target.closest('.transmittal-year-option') : null;
                     if (!btn || !transYearSelect) return;
                     e.preventDefault();
+                    e.stopPropagation();
                     const yearValue = ((btn.getAttribute('data-year') || '') + '').trim() || 'all';
                     transYearSelect.value = yearValue;
                     if (yearValue === 'all' && transMonthInput) {
@@ -3488,6 +3490,11 @@ HREDRD-EMES
                     }
                     syncTransmittalYearMonthFilterUI();
                     updateTransmittalGrid();
+                    if (yearValue === 'all') {
+                        closeTransmittalYearMonthDropdown();
+                    } else {
+                        openTransmittalYearMonthDropdown();
+                    }
                 });
             }
             if (transMonthGrid) {
@@ -3495,6 +3502,7 @@ HREDRD-EMES
                     const btn = e.target.closest ? e.target.closest('.transmittal-month-option') : null;
                     if (!btn || btn.disabled || !transYearSelect) return;
                     e.preventDefault();
+                    e.stopPropagation();
                     const yearValue = ((transYearSelect.value || '') + '').trim();
                     if (!yearValue || yearValue === 'all') return;
                     const monthValue = ((btn.getAttribute('data-month') || '') + '').trim();

@@ -36,6 +36,7 @@ td { max-width: 200px; border:1px solid #000; padding:4px; font-size:9px; word-w
 .shipper-label { font-weight: bold; }
 .date-label { font-weight: bold; }
 .title { font-weight: bold; font-size: 18px;}
+.signatory-space { height: 105px; }
 </style>
 </head>
 <body>
@@ -59,7 +60,7 @@ foreach ($rows as $r) {
     $no++;
 }
 
-$html .= '</table></body></html>';
+$html .= '</table><div class="signatory-space"></div></body></html>';
 
 // DOMPDF Setup
 $options = new Options();
@@ -71,8 +72,43 @@ $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
 
+// Draw signatory block only on the last page, bottom-left.
+$canvas = $dompdf->getCanvas();
+$fontMetrics = $dompdf->getFontMetrics();
+$fontRegular = $fontMetrics->getFont('DejaVu Sans', 'normal');
+$fontBold = $fontMetrics->getFont('DejaVu Sans', 'bold');
+
+$canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($fontRegular, $fontBold) {
+    if ($pageNumber !== $pageCount) {
+        return;
+    }
+
+    $leftX = 72; // 2.54cm
+    $bottomMargin = 14.2; // 0.5cm
+    $boxWidth = 170;
+    $boxHeight = 58;
+
+    $pageHeight = $canvas->get_height();
+    $boxY = $pageHeight - $bottomMargin - $boxHeight;
+    $titleY = $boxY - 34;
+
+    $canvas->text($leftX, $titleY, 'Prepared by:', $fontRegular, 10, [0, 0, 0]);
+    $canvas->text($leftX, $titleY + 13, 'Cindy A. Trasmano', $fontBold, 10, [0, 0, 0]);
+
+    $line1 = 'Received by:';
+    $line2 = 'Date:';
+    $line3 = 'Time:';
+    $fontSize = 10;
+    $labelStartX = $leftX;
+    $firstLineY = $boxY + 14;
+    $lineGap = 14;
+
+    $canvas->text($labelStartX, $firstLineY, $line1, $fontRegular, $fontSize, [0, 0, 0]);
+    $canvas->text($labelStartX, $firstLineY + $lineGap, $line2, $fontRegular, $fontSize, [0, 0, 0]);
+    $canvas->text($labelStartX, $firstLineY + ($lineGap * 2), $line3, $fontRegular, $fontSize, [0, 0, 0]);
+});
+
 // Download PDF
 $filename = "DHSUD_Report_" . date("Ymd_His") . ".pdf";
 $dompdf->stream($filename, ["Attachment" => false]);
 exit;
-
