@@ -93,7 +93,7 @@ $canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) u
     $titleY = $boxY - 30;
 
     $canvas->text($leftX, $titleY, 'Prepared by:', $fontRegular, 8, [0, 0, 0]);
-    $canvas->text($leftX, $titleY + 13, 'Cindy A. Trasmano', $fontBold, 8, [0, 0, 0]);
+    $canvas->text($leftX, $titleY + 13, 'Cindy A. Trasmaño', $fontBold, 8, [0, 0, 0]);
 
     $line1 = 'Received by:';
     $line2 = 'Date:';
