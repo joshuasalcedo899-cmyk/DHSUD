@@ -90,17 +90,17 @@ $canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) u
 
     $pageHeight = $canvas->get_height();
     $boxY = $pageHeight - $bottomMargin - $boxHeight;
-    $titleY = $boxY - 34;
+    $titleY = $boxY - 30;
 
-    $canvas->text($leftX, $titleY, 'Prepared by:', $fontRegular, 10, [0, 0, 0]);
-    $canvas->text($leftX, $titleY + 13, 'Cindy A. Trasmano', $fontBold, 10, [0, 0, 0]);
+    $canvas->text($leftX, $titleY, 'Prepared by:', $fontRegular, 8, [0, 0, 0]);
+    $canvas->text($leftX, $titleY + 13, 'Cindy A. Trasmano', $fontBold, 8, [0, 0, 0]);
 
     $line1 = 'Received by:';
     $line2 = 'Date:';
     $line3 = 'Time:';
-    $fontSize = 10;
+    $fontSize = 8;
     $labelStartX = $leftX;
-    $firstLineY = $boxY + 14;
+    $firstLineY = $boxY + 10;
     $lineGap = 14;
 
     $canvas->text($labelStartX, $firstLineY, $line1, $fontRegular, $fontSize, [0, 0, 0]);
