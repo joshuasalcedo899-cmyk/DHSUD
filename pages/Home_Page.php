@@ -601,6 +601,49 @@ HREDRD-EMES
 
             let lastPdfViewerFocus = null;
             let lastOngoingDeliveryFocus = null;
+            let exportPdfBlobUrl = '';
+
+            function normalizePdfFileName(rawName, fallbackName) {
+                let name = ((rawName || '') + '').trim();
+                if (!name) {
+                    name = ((fallbackName || '') + '').trim() || 'DHSUD_Report';
+                }
+                name = name.replace(/[\\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim().replace(/^[. ]+|[. ]+$/g, '');
+                if (!name) name = 'DHSUD_Report';
+                if (!/\.pdf$/i.test(name)) name += '.pdf';
+                return name;
+            }
+
+            function parseFilenameFromContentDisposition(value) {
+                const raw = ((value || '') + '').trim();
+                if (!raw) return '';
+                const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(raw);
+                if (utf8Match && utf8Match[1]) {
+                    try { return decodeURIComponent(utf8Match[1]); } catch (e) {}
+                }
+                const quotedMatch = /filename="([^"]+)"/i.exec(raw);
+                if (quotedMatch && quotedMatch[1]) return quotedMatch[1];
+                const plainMatch = /filename=([^;]+)/i.exec(raw);
+                if (plainMatch && plainMatch[1]) return plainMatch[1].trim();
+                return '';
+            }
+
+            function setPdfViewerDownloadTarget(url, fileName) {
+                const btn = document.getElementById('pdfViewerDownloadBtn');
+                if (!btn) return;
+                const safeUrl = ((url || '') + '').trim();
+                if (!safeUrl) {
+                    btn.removeAttribute('href');
+                    btn.removeAttribute('download');
+                    btn.setAttribute('aria-disabled', 'true');
+                    btn.classList.add('is-disabled');
+                    return;
+                }
+                btn.href = safeUrl;
+                btn.download = normalizePdfFileName(fileName, 'DHSUD_Report');
+                btn.setAttribute('aria-disabled', 'false');
+                btn.classList.remove('is-disabled');
+            }
 
             function restoreFocus(target) {
                 if (target && typeof target.focus === 'function' && document.contains(target)) {
@@ -628,6 +671,7 @@ HREDRD-EMES
                 frame.src = 'about:blank';
                 frame.src = fitUrl;
                 title.textContent = (pdfTitle || 'PDF Preview');
+                setPdfViewerDownloadTarget(cleanUrl, pdfTitle || 'PDF Preview');
                 modal.style.display = 'flex';
                 modal.setAttribute('aria-hidden', 'false');
                 modal.removeAttribute('inert');
@@ -650,6 +694,11 @@ HREDRD-EMES
                 modal.setAttribute('aria-hidden', 'true');
                 modal.setAttribute('inert', '');
                 frame.src = 'about:blank';
+                if (exportPdfBlobUrl) {
+                    try { URL.revokeObjectURL(exportPdfBlobUrl); } catch (e) {}
+                    exportPdfBlobUrl = '';
+                }
+                setPdfViewerDownloadTarget('', '');
                 lastPdfViewerFocus = null;
             }
 
@@ -966,6 +1015,9 @@ HREDRD-EMES
             <div class="pdf-viewer-panel">
                 <div class="pdf-viewer-head">
                     <h3 id="pdfViewerTitle" class="pdf-viewer-title">PDF Preview</h3>
+                    <div class="pdf-viewer-actions">
+                        <a id="pdfViewerDownloadBtn" class="pdf-viewer-download is-disabled" aria-disabled="true">Save PDF</a>
+                    </div>
                     <button type="button" class="pdf-viewer-close" onclick="closePdfViewerModal()"><img class="exit-modal" src="../assets/icon.svg" alt="Close"></button>
                 </div>
                 <iframe id="pdfViewerFrame" name="pdfViewerFrame" class="pdf-viewer-frame" src="about:blank" title="PDF Viewer"></iframe>
@@ -2660,9 +2712,10 @@ HREDRD-EMES
             ].join('|');
             const hasTransmittalFilter = activeTransmittal !== '';
             const isFiltering = (filter !== '' || selectedYear !== '' || selectedMonth !== '' || hasStatusFilter || hasTransmittalFilter);
-            // Preserve rowspan-based batch layout when using structured filters only
-            // (year/month/status) and no free-text search.
-            const batchPreserveMode = (filter === '' && (selectedYear !== '' || selectedMonth !== '' || hasStatusFilter) && !hasTransmittalFilter);
+            // Preserve rowspan-based batch layout when using structured filters
+            // (year/month/status/transmittal) and no free-text search.
+            const hasStructuredFilter = (selectedYear !== '' || selectedMonth !== '' || hasStatusFilter || hasTransmittalFilter);
+            const batchPreserveMode = (filter === '' && hasStructuredFilter);
             const table = document.querySelector('.admin-table-container table');
             if (!table) return;
             // Always restore previous search mutations before applying a new filter state.
@@ -2716,14 +2769,19 @@ HREDRD-EMES
                 }
             });
 
-            // Structured filters (year/status) should keep batch rows together.
+            // Structured filters should keep batch rows together.
             if (batchPreserveMode && matchedBatchIds.size > 0) {
                 Array.from(trs).forEach(function(tr) {
                     const cb = tr.querySelector('.row-checkbox');
                     const isChecked = !!(cb && cb.checked);
                     if (isChecked) return;
                     const batchId = (tr.dataset.batchId || '').trim();
-                    if (batchId && matchedBatchIds.has(batchId)) {
+                    const rowId = parseInt(tr.dataset.id || '0', 10) || 0;
+                    const notice = (tr.dataset.notice || '').trim();
+                    const rowObj = rowDataById.get(rowId) || rowDataByNotice.get(notice) || null;
+                    const rowTransmittal = ((rowObj && rowObj['Transmittal ID']) ? String(rowObj['Transmittal ID']) : (tr.dataset.transmittalId || '')).trim();
+                    const transmittalMatch = !hasTransmittalFilter || rowTransmittal === activeTransmittal;
+                    if (batchId && matchedBatchIds.has(batchId) && transmittalMatch) {
                         tr.style.display = '';
                     }
                 });
@@ -3684,43 +3742,62 @@ HREDRD-EMES
             }
         }
         
-        function submitPdfExportForNoticeCodes(codes, modalTitle) {
+        async function submitPdfExportForNoticeCodes(codes, modalTitle, transmittalName) {
             if (!Array.isArray(codes) || codes.length === 0) {
                 alert("No rows available for export.");
                 return;
             }
-            let form = document.createElement("form");
-            form.method = "POST";
-            form.action = "../api/jrs_tracking.php";
-            form.target = "pdfViewerFrame";
-
-            let input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "notice_codes";
-            input.value = JSON.stringify(codes);
 
             const modal = document.getElementById('pdfViewerModal');
             const frame = document.getElementById('pdfViewerFrame');
             const title = document.getElementById('pdfViewerTitle');
-            if (modal && frame && title) {
-                lastPdfViewerFocus = document.activeElement;
-                title.textContent = modalTitle || "Exported PDF";
-                frame.src = 'about:blank';
-                modal.style.display = 'flex';
-                modal.setAttribute('aria-hidden', 'false');
-                modal.removeAttribute('inert');
-                const closeBtn = modal.querySelector('.pdf-viewer-close');
-                if (closeBtn) {
-                    try { closeBtn.focus(); } catch (e) {}
-                }
+            if (!modal || !frame || !title) return;
+
+            lastPdfViewerFocus = document.activeElement;
+            title.textContent = modalTitle || "Exported PDF";
+            frame.src = 'about:blank';
+            setPdfViewerDownloadTarget('', '');
+            modal.style.display = 'flex';
+            modal.setAttribute('aria-hidden', 'false');
+            modal.removeAttribute('inert');
+            const closeBtn = modal.querySelector('.pdf-viewer-close');
+            if (closeBtn) {
+                try { closeBtn.focus(); } catch (e) {}
             }
 
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
-            setTimeout(function() {
-                if (form && form.parentNode) form.parentNode.removeChild(form);
-            }, 0);
+            try {
+                const formData = new URLSearchParams();
+                formData.set('notice_codes', JSON.stringify(codes));
+                formData.set('transmittal_name', (transmittalName || '').trim());
+
+                const response = await fetch("../api/jrs_tracking.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+                    body: formData.toString()
+                });
+                if (!response.ok) {
+                    throw new Error("PDF export failed");
+                }
+
+                const blob = await response.blob();
+                const disposition = response.headers.get('Content-Disposition') || '';
+                const headerFileName = parseFilenameFromContentDisposition(disposition);
+                const fallbackName = normalizePdfFileName(transmittalName || modalTitle || 'DHSUD_Report', 'DHSUD_Report');
+                const finalFileName = normalizePdfFileName(headerFileName, fallbackName);
+
+                if (exportPdfBlobUrl) {
+                    try { URL.revokeObjectURL(exportPdfBlobUrl); } catch (e) {}
+                    exportPdfBlobUrl = '';
+                }
+
+                exportPdfBlobUrl = URL.createObjectURL(blob);
+                frame.src = exportPdfBlobUrl + '#zoom=95';
+                setPdfViewerDownloadTarget(exportPdfBlobUrl, finalFileName);
+            } catch (err) {
+                console.error(err);
+                alert("Failed to export PDF.");
+                closePdfViewerModal();
+            }
         }
 
         function collectNoticeCodesForTransmittal(transmittalId) {
@@ -3748,7 +3825,8 @@ HREDRD-EMES
                 alert("No rows available for this transmittal.");
                 return;
             }
-            submitPdfExportForNoticeCodes(codes, formatTransmittalDisplayName(safeTid) + " Transmittal Export");
+            const transmittalName = formatTransmittalDisplayName(safeTid);
+            submitPdfExportForNoticeCodes(codes, transmittalName + " Transmittal Export", transmittalName);
         }
 
         function deleteTransmittalById(transmittalId) {
@@ -3854,7 +3932,8 @@ HREDRD-EMES
                 alert("Selected rows have no Notice/Order Code.");
                 return;
             }
-            submitPdfExportForNoticeCodes(codes, "Exported PDF");
+            const transmittalName = activeTid ? formatTransmittalDisplayName(activeTid) : "";
+            submitPdfExportForNoticeCodes(codes, "Exported PDF", transmittalName);
         }
 
         const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;

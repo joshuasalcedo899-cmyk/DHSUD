@@ -1,12 +1,15 @@
 {
   "name": "dhsud",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "1.0.1",
+  "main": "electron/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "install:deps": "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1",
     "install:deps:skip-browser": "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1 -SkipBrowserDownload",
-    "set:exe-icon": "powershell -ExecutionPolicy Bypass -File .\\scripts\\set-exe-icon.ps1"
+    "set:exe-icon": "powershell -ExecutionPolicy Bypass -File .\\scripts\\set-exe-icon.ps1",
+    "desktop:dev": "electron .",
+    "desktop:dist": "electron-builder --win nsis",
+    "desktop:portable": "electron-builder --win portable"
   },
   "repository": {
     "type": "git",
@@ -23,5 +26,49 @@
     "playwright": "^1.52.0",
     "playwright-core": "^1.52.0"
   },
-  "description": ""
+  "devDependencies": {
+    "electron": "^37.2.1",
+    "electron-builder": "^24.13.3"
+  },
+  "description": "",
+  "build": {
+    "appId": "com.dhsud.mailtracker",
+    "productName": "DHSUD Mail Tracker",
+    "directories": {
+      "output": "desktop-dist"
+    },
+    "files": [
+      "**/*",
+      "!desktop-dist{,/**/*}",
+      "!dist{,/**/*}",
+      "!dist(Old Version){,/**/*}",
+      "!.git{,/**/*}",
+      "!.github{,/**/*}",
+      "!.vscode{,/**/*}"
+    ],
+    "extraResources": [
+      {
+        "from": "installer/xampp",
+        "to": "xampp",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "assets/DHSUDLogo.ico",
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "DHSUD-Mail-Tracker-Setup-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "assets/DHSUDLogo.ico",
+      "uninstallerIcon": "assets/DHSUDLogo.ico"
+    }
+  }
 }

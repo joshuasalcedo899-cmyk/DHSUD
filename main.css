@@ -2118,6 +2118,37 @@ img {
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .pdf-viewer-actions {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+        }
+        .pdf-viewer-download {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 30px;
+            padding: 0 10px;
+            border-radius: 6px;
+            border: 1px solid #22336A;
+            background: #22336A;
+            color: #fff;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            margin-right: 6px;
+        }
+        .pdf-viewer-download:hover {
+            background: #1b2a58;
+            border-color: #1b2a58;
+        }
+        .pdf-viewer-download.is-disabled,
+        .pdf-viewer-download[aria-disabled="true"] {
+            opacity: 0.5;
+            pointer-events: none;
+            cursor: default;
+        }
         .pdf-viewer-close {
             border: none;
             background: none;
