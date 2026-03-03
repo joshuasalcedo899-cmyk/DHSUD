@@ -579,21 +579,6 @@ HREDRD-EMES
             let scannerSelectedNoticeCode = '';
             let activeTransmittalId = '';
             const pendingTransmittals = new Set();
-            const STATUS_VALUES = Object.freeze({
-                DELIVERED: 'DELIVERED',
-                RETURNED_TO_SENDER: 'RETURNED TO SENDER',
-                ONGOING_DELIVERY: 'ONGOING DELIVERY',
-                PERSONALLY_RECEIVED: 'PERSONALLY RECEIVED'
-            });
-            const STATUS_FILTER_VALUES = Object.freeze({
-                ALL: 'ALL',
-                TOTAL: 'TOTAL',
-                NDR: 'NDR'
-            });
-
-            function normalizeStatusText(value) {
-                return ((value || '') + '').trim().toUpperCase();
-            }
 
             function seedPendingRecoveredTransmittalsFromUrl() {
                 let url;
@@ -613,55 +598,31 @@ HREDRD-EMES
 
             seedPendingRecoveredTransmittalsFromUrl();
 
-            const ScannerModal = {
-                getElements: function() {
-                    return {
-                        modal: document.getElementById('scannerModal'),
-                        frame: document.getElementById('scannerFrame')
-                    };
-                },
-                focusFrame: function(frame) {
-                    if (!frame) return;
+            function openScannerModal(noticeCode) {
+                const modal = document.getElementById('scannerModal');
+                const frame = document.getElementById('scannerFrame');
+                if (!modal || !frame) return;
+                scannerSelectedNoticeCode = (noticeCode || '').trim();
+                if (!scannerSelectedNoticeCode) return;
+                frame.onload = function() {
                     try { frame.focus(); } catch (e) {}
                     try { if (frame.contentWindow) frame.contentWindow.focus(); } catch (e) {}
-                },
-                open: function(noticeCode) {
-                    const parts = this.getElements();
-                    const modal = parts.modal;
-                    const frame = parts.frame;
-                    if (!modal || !frame) return;
-                    scannerSelectedNoticeCode = (noticeCode || '').trim();
-                    if (!scannerSelectedNoticeCode) return;
-                    frame.onload = () => this.focusFrame(frame);
-                    frame.src = '../test.php?code=' + encodeURIComponent(scannerSelectedNoticeCode) + '&embedded=1';
-                    modal.style.display = 'flex';
-                    setTimeout(() => this.focusFrame(frame), 120);
-                },
-                close: function() {
-                    const parts = this.getElements();
-                    const modal = parts.modal;
-                    const frame = parts.frame;
-                    if (!modal || !frame) return;
-                    modal.style.display = 'none';
-                    frame.src = 'about:blank';
-                    scannerSelectedNoticeCode = '';
-                },
-                bindOverlayDismiss: function() {
-                    const parts = this.getElements();
-                    const modal = parts.modal;
-                    if (!modal) return;
-                    modal.addEventListener('click', (e) => {
-                        if (e.target === modal) this.close();
-                    });
-                }
-            };
-
-            function openScannerModal(noticeCode) {
-                ScannerModal.open(noticeCode);
+                };
+                frame.src = '../test.php?code=' + encodeURIComponent(scannerSelectedNoticeCode) + '&embedded=1';
+                modal.style.display = 'flex';
+                setTimeout(function() {
+                    try { frame.focus(); } catch (e) {}
+                    try { if (frame.contentWindow) frame.contentWindow.focus(); } catch (e) {}
+                }, 120);
             }
 
             function closeScannerModal() {
-                ScannerModal.close();
+                const modal = document.getElementById('scannerModal');
+                const frame = document.getElementById('scannerFrame');
+                if (!modal || !frame) return;
+                modal.style.display = 'none';
+                frame.src = 'about:blank';
+                scannerSelectedNoticeCode = '';
             }
 
             let lastPdfViewerFocus = null;
@@ -724,100 +685,74 @@ HREDRD-EMES
                     try { active.blur(); } catch (e) {}
                 }
             }
-            const ViewerModals = {
-                getPdfElements: function() {
-                    return {
-                        modal: document.getElementById('pdfViewerModal'),
-                        frame: document.getElementById('pdfViewerFrame'),
-                        title: document.getElementById('pdfViewerTitle')
-                    };
-                },
-                openPdf: function(pdfUrl, pdfTitle) {
-                    const els = this.getPdfElements();
-                    const modal = els.modal;
-                    const frame = els.frame;
-                    const title = els.title;
-                    if (!modal || !frame || !title || !pdfUrl) return;
-                    lastPdfViewerFocus = document.activeElement;
-                    const cleanUrl = String(pdfUrl).split('#')[0];
-                    const fitUrl = cleanUrl + '#zoom=95';
-                    frame.src = 'about:blank';
-                    frame.src = fitUrl;
-                    title.textContent = (pdfTitle || 'PDF Preview');
-                    setPdfViewerDownloadTarget(cleanUrl, pdfTitle || 'PDF Preview');
-                    modal.style.display = 'flex';
-                    modal.setAttribute('aria-hidden', 'false');
-                    modal.removeAttribute('inert');
-                    const closeBtn = modal.querySelector('.pdf-viewer-close');
-                    if (closeBtn) {
-                        try { closeBtn.focus(); } catch (e) {}
-                    }
-                },
-                closePdf: function() {
-                    const els = this.getPdfElements();
-                    const modal = els.modal;
-                    const frame = els.frame;
-                    if (!modal || !frame) return;
-                    if (modal.contains(document.activeElement)) {
-                        if (!restoreFocus(lastPdfViewerFocus)) {
-                            blurIfInside(modal);
-                        }
-                    }
-                    modal.style.display = 'none';
-                    modal.setAttribute('aria-hidden', 'true');
-                    modal.setAttribute('inert', '');
-                    frame.src = 'about:blank';
-                    if (exportPdfBlobUrl) {
-                        try { URL.revokeObjectURL(exportPdfBlobUrl); } catch (e) {}
-                        exportPdfBlobUrl = '';
-                    }
-                    setPdfViewerDownloadTarget('', '');
-                    lastPdfViewerFocus = null;
-                },
-                getOngoingElement: function() {
-                    return document.getElementById('ongoingDeliveryModal');
-                },
-                openOngoing: function() {
-                    const modal = this.getOngoingElement();
-                    if (!modal) return;
-                    lastOngoingDeliveryFocus = document.activeElement;
-                    modal.style.display = 'flex';
-                    modal.setAttribute('aria-hidden', 'false');
-                    modal.removeAttribute('inert');
-                    const closeBtn = modal.querySelector('.ongoing-delivery-close');
-                    if (closeBtn) {
-                        try { closeBtn.focus(); } catch (e) {}
-                    }
-                },
-                closeOngoing: function() {
-                    const modal = this.getOngoingElement();
-                    if (!modal) return;
-                    if (modal.contains(document.activeElement)) {
-                        if (!restoreFocus(lastOngoingDeliveryFocus)) {
-                            blurIfInside(modal);
-                        }
-                    }
-                    modal.style.display = 'none';
-                    modal.setAttribute('aria-hidden', 'true');
-                    modal.setAttribute('inert', '');
-                    lastOngoingDeliveryFocus = null;
-                }
-            };
 
             function openPdfViewerModal(pdfUrl, pdfTitle) {
-                ViewerModals.openPdf(pdfUrl, pdfTitle);
+                const modal = document.getElementById('pdfViewerModal');
+                const frame = document.getElementById('pdfViewerFrame');
+                const title = document.getElementById('pdfViewerTitle');
+                if (!modal || !frame || !title || !pdfUrl) return;
+                lastPdfViewerFocus = document.activeElement;
+                const cleanUrl = String(pdfUrl).split('#')[0];
+                const fitUrl = cleanUrl + '#zoom=95';
+                frame.src = 'about:blank';
+                frame.src = fitUrl;
+                title.textContent = (pdfTitle || 'PDF Preview');
+                setPdfViewerDownloadTarget(cleanUrl, pdfTitle || 'PDF Preview');
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('inert');
+                const closeBtn = modal.querySelector('.pdf-viewer-close');
+                if (closeBtn) {
+                    try { closeBtn.focus(); } catch (e) {}
+                }
             }
 
             function closePdfViewerModal() {
-                ViewerModals.closePdf();
+                const modal = document.getElementById('pdfViewerModal');
+                const frame = document.getElementById('pdfViewerFrame');
+                if (!modal || !frame) return;
+                if (modal.contains(document.activeElement)) {
+                    if (!restoreFocus(lastPdfViewerFocus)) {
+                        blurIfInside(modal);
+                    }
+                }
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden', 'true');
+                modal.setAttribute('inert', '');
+                frame.src = 'about:blank';
+                if (exportPdfBlobUrl) {
+                    try { URL.revokeObjectURL(exportPdfBlobUrl); } catch (e) {}
+                    exportPdfBlobUrl = '';
+                }
+                setPdfViewerDownloadTarget('', '');
+                lastPdfViewerFocus = null;
             }
 
             function openOngoingDeliveryModal() {
-                ViewerModals.openOngoing();
+                const modal = document.getElementById('ongoingDeliveryModal');
+                if (!modal) return;
+                lastOngoingDeliveryFocus = document.activeElement;
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('inert');
+                const closeBtn = modal.querySelector('.ongoing-delivery-close');
+                if (closeBtn) {
+                    try { closeBtn.focus(); } catch (e) {}
+                }
             }
 
             function closeOngoingDeliveryModal() {
-                ViewerModals.closeOngoing();
+                const modal = document.getElementById('ongoingDeliveryModal');
+                if (!modal) return;
+                if (modal.contains(document.activeElement)) {
+                    if (!restoreFocus(lastOngoingDeliveryFocus)) {
+                        blurIfInside(modal);
+                    }
+                }
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden', 'true');
+                modal.setAttribute('inert', '');
+                lastOngoingDeliveryFocus = null;
             }
 
             function resolveStatusFromLink(linkEl) {
@@ -848,8 +783,8 @@ HREDRD-EMES
                 const link = event.target.closest('.pdf-link-in-cell[data-pdf-url]');
                 if (link) {
                     event.preventDefault();
-                    const statusText = normalizeStatusText(resolveStatusFromLink(link));
-                    if (statusText === STATUS_VALUES.ONGOING_DELIVERY) {
+                    const statusText = resolveStatusFromLink(link);
+                    if (statusText === 'ONGOING DELIVERY') {
                         openOngoingDeliveryModal();
                         return;
                     }
@@ -1056,14 +991,10 @@ HREDRD-EMES
                                                 <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon">
                                             </button>
                                         <?php endif; ?>
-                                        <?php
-                                            $rowStatusUpper = strtoupper(trim((string)($row['Status'] ?? '')));
-                                            $isTerminalTrackStatus = in_array($rowStatusUpper, ['DELIVERED', 'RETURNED TO SENDER'], true);
-                                        ?>
-                                        <?php if (!empty($rowTrackingNo) && $rowTrackingNo !== '0' && !$isTerminalTrackStatus): ?>
+                                        <?php if (!empty($rowTrackingNo) && $rowTrackingNo !== '0'): ?>
                                             <span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span>
                                             <div class="track-result"></div>
-                                        <?php elseif (empty($rowTrackingNo) || $rowTrackingNo === '0'): ?>
+                                        <?php else: ?>
                                             <button type="button" class="btn-scan" onclick="openScannerModal('<?= htmlspecialchars($row['Notice/Order Code'] ?? '', ENT_QUOTES) ?>')" style="display:inline-block;text-decoration:none;">Scan</button>
                                         <?php endif; ?>
                                     </td>
@@ -1775,12 +1706,12 @@ HREDRD-EMES
                 if (scopeId !== '' && rowTransmittalId !== scopeId) return;
 
                 total += 1;
-                const status = normalizeStatusText(row['Status'] || '');
-                if (status === STATUS_VALUES.RETURNED_TO_SENDER) {
+                const status = ((row['Status'] || '') + '').trim().toUpperCase();
+                if (status === 'RETURNED TO SENDER') {
                     returnedToSender += 1;
-                } else if (status === STATUS_VALUES.ONGOING_DELIVERY) {
+                } else if (status === 'ONGOING DELIVERY') {
                     ongoingDelivery += 1;
-                } else if (status === STATUS_VALUES.DELIVERED) {
+                } else if (status === 'DELIVERED') {
                     delivered += 1;
                 }
             });
@@ -2255,14 +2186,14 @@ HREDRD-EMES
         }
 
         function getStatusClass(statusValue) {
-            switch (normalizeStatusText(statusValue)) {
-                case STATUS_VALUES.DELIVERED:
+            switch ((statusValue || '').trim()) {
+                case 'DELIVERED':
                     return 'status-text status-delivered';
-                case STATUS_VALUES.RETURNED_TO_SENDER:
+                case 'RETURNED TO SENDER':
                     return 'status-text status-returned';
-                case STATUS_VALUES.ONGOING_DELIVERY:
+                case 'ONGOING DELIVERY':
                     return 'status-text status-ongoing';
-                case STATUS_VALUES.PERSONALLY_RECEIVED:
+                case 'PERSONALLY RECEIVED':
                     return 'status-text status-personal';
                 default:
                     return '';
@@ -2496,62 +2427,36 @@ HREDRD-EMES
             }
 
             if (actionCell.getAttribute('data-temp-action') === '1') {
-                syncActionCellTrackingState(tr, safeRowObj);
+                const rowTracking = ((safeRowObj['Tracking No.'] || safeRowObj['Tracking No'] || tr.dataset.trackingNo || '') + '').trim();
+                const rowNotice = ((safeRowObj['Notice/Order Code'] || tr.dataset.notice || '') + '').trim();
+                actionCell.innerHTML = '';
+
+                if (rowTracking !== '' && rowTracking !== '0') {
+                    const label = document.createElement('span');
+                    label.style.fontSize = '0.72rem';
+                    label.style.color = '#22336A';
+                    label.style.fontWeight = '700';
+                    label.textContent = 'Auto Tracking';
+                    actionCell.appendChild(label);
+
+                    const result = document.createElement('div');
+                    result.className = 'track-result';
+                    actionCell.appendChild(result);
+                } else {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn-scan';
+                    button.style.display = 'inline-block';
+                    button.style.textDecoration = 'none';
+                    button.textContent = 'Scan';
+                    button.addEventListener('click', function() {
+                        openScannerModal(rowNotice);
+                    });
+                    actionCell.appendChild(button);
+                }
             }
 
             return actionCell;
-        }
-
-        function isTerminalTrackingStatus(statusValue) {
-            const s = normalizeStatusText(statusValue);
-            return s === STATUS_VALUES.DELIVERED || s === STATUS_VALUES.RETURNED_TO_SENDER;
-        }
-
-        function syncActionCellTrackingState(row, rowObj) {
-            if (!row) return;
-            const safeRowObj = rowObj || {};
-            const actionCell = row.querySelector('td.action-cell');
-            if (!actionCell) return;
-
-            const rowTracking = ((safeRowObj['Tracking No.'] || safeRowObj['Tracking No'] || row.dataset.trackingNo || '') + '').trim();
-            const rowNotice = ((safeRowObj['Notice/Order Code'] || row.dataset.notice || '') + '').trim();
-            const statusCell = getBatchAwareCell(row, 'Status');
-            const rowStatus = ((safeRowObj['Status'] || (statusCell ? statusCell.textContent : '') || '') + '').trim().toUpperCase();
-            const hasTracking = (rowTracking !== '' && rowTracking !== '0');
-            const isTerminal = isTerminalTrackingStatus(rowStatus);
-
-            const batchToggleBtn = actionCell.querySelector('.batch-toggle-btn');
-            actionCell.innerHTML = '';
-            if (batchToggleBtn) {
-                actionCell.appendChild(batchToggleBtn);
-            }
-
-            if (hasTracking && !isTerminal) {
-                const label = document.createElement('span');
-                label.style.fontSize = '0.72rem';
-                label.style.color = '#22336A';
-                label.style.fontWeight = '700';
-                label.textContent = 'Auto Tracking';
-                actionCell.appendChild(label);
-
-                const result = document.createElement('div');
-                result.className = 'track-result';
-                actionCell.appendChild(result);
-                return;
-            }
-
-            if (!hasTracking) {
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'btn-scan';
-                button.style.display = 'inline-block';
-                button.style.textDecoration = 'none';
-                button.textContent = 'Scan';
-                button.addEventListener('click', function() {
-                    openScannerModal(rowNotice);
-                });
-                actionCell.appendChild(button);
-            }
         }
 
         function findRowByNoticeCode(noticeCode) {
@@ -2649,12 +2554,6 @@ HREDRD-EMES
                 }
             }
 
-            syncActionCellTrackingState(row, {
-                'Tracking No.': ((data.trackingNo || row.dataset.trackingNo || '') + '').trim(),
-                'Notice/Order Code': resolvedNotice,
-                'Status': (typeof data.status !== 'undefined' ? data.status : ((statusCell && statusCell.textContent) ? statusCell.textContent : ''))
-            });
-
             const rowId = parseInt(row.dataset.id || '0', 10) || 0;
             const cachedRow = mailRowIndexById.get(rowId) || mailRowIndexByNotice.get(resolvedNotice) || null;
             if (cachedRow) {
@@ -2743,16 +2642,16 @@ HREDRD-EMES
 
         // Table search and sort functionality (filter by Notice/Order Code and year)
         // Keep checked rows visible regardless of filter, except when a status button filter is active.
-        let selectedStatusFilter = STATUS_FILTER_VALUES.ALL;
+        let selectedStatusFilter = 'ALL';
 
         function normalizeStatusFilterValue(rawValue) {
-            const value = normalizeStatusText(rawValue);
-            if (!value || value === STATUS_FILTER_VALUES.TOTAL) return STATUS_FILTER_VALUES.ALL;
-            if (value === STATUS_FILTER_VALUES.NDR) return STATUS_FILTER_VALUES.NDR;
-            if (value === STATUS_VALUES.DELIVERED) return STATUS_VALUES.DELIVERED;
-            if (value === STATUS_VALUES.RETURNED_TO_SENDER) return STATUS_VALUES.RETURNED_TO_SENDER;
-            if (value === STATUS_VALUES.ONGOING_DELIVERY) return STATUS_VALUES.ONGOING_DELIVERY;
-            return STATUS_FILTER_VALUES.ALL;
+            const value = ((rawValue || '') + '').trim().toUpperCase();
+            if (!value || value === 'TOTAL') return 'ALL';
+            if (value === 'NDR') return 'NDR';
+            if (value === 'DELIVERED') return 'DELIVERED';
+            if (value === 'RETURNED TO SENDER') return 'RETURNED TO SENDER';
+            if (value === 'ONGOING DELIVERY') return 'ONGOING DELIVERY';
+            return 'ALL';
         }
 
         function updateStatusFilterButtonsUI() {
@@ -2773,10 +2672,10 @@ HREDRD-EMES
         }
 
         function rowMatchesStatusFilter(statusText, normalizedFilter) {
-            const status = normalizeStatusText(statusText);
-            if (normalizedFilter === STATUS_FILTER_VALUES.ALL) return true;
-            if (normalizedFilter === STATUS_FILTER_VALUES.NDR) {
-                return status === STATUS_VALUES.RETURNED_TO_SENDER || status === STATUS_VALUES.ONGOING_DELIVERY;
+            const status = ((statusText || '') + '').trim().toUpperCase();
+            if (normalizedFilter === 'ALL') return true;
+            if (normalizedFilter === 'NDR') {
+                return status === 'RETURNED TO SENDER' || status === 'ONGOING DELIVERY';
             }
             return status === normalizedFilter;
         }
@@ -3774,7 +3673,14 @@ HREDRD-EMES
                 });
             }
 
-            ScannerModal.bindOverlayDismiss();
+            const scannerModal = document.getElementById('scannerModal');
+            if (scannerModal) {
+                scannerModal.addEventListener('click', function(e) {
+                    if (e.target === scannerModal) {
+                        closeScannerModal();
+                    }
+                });
+            }
 
         });
 
@@ -3820,9 +3726,9 @@ HREDRD-EMES
 
         function maybeAutoDownloadReceipt(trackingNumber, statusValue) {
             const safeTracking = ((trackingNumber || '') + '').trim();
-            const status = normalizeStatusText(statusValue);
+            const status = ((statusValue || '') + '').trim().toUpperCase();
             if (!safeTracking) return;
-            if (status !== STATUS_VALUES.DELIVERED && status !== STATUS_VALUES.RETURNED_TO_SENDER) return;
+            if (status !== 'DELIVERED' && status !== 'RETURNED TO SENDER') return;
 
             const key = safeTracking + '|' + status;
             if (receiptDownloadOnceKeys.has(key)) return;
@@ -4088,8 +3994,6 @@ HREDRD-EMES
         }
 
         const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
-        const AUTO_TRACK_MAX_CONCURRENCY = 4;
-        const AUTO_TRACK_BETWEEN_REQUEST_MS = 80;
         const autoTrackLastRunByKey = new Map();
         const IMMEDIATE_TRACK_DEDUP_WINDOW_MS = 3000;
         const immediateTrackLastRunAtByKey = new Map();
@@ -4175,10 +4079,6 @@ HREDRD-EMES
             const row = findRowByNoticeCode(safeNotice);
             if (!row) return;
 
-            const statusCell = row.querySelector('td[data-col="Status"]') || getBatchAwareCell(row, 'Status');
-            const statusText = normalizeStatusText((statusCell && statusCell.textContent) ? statusCell.textContent : '');
-            if (isTerminalTrackingStatus(statusText)) return;
-
             const trackingNo = (row.dataset.trackingNo || '').trim();
             if (!trackingNo || trackingNo === '0') return;
 
@@ -4208,10 +4108,10 @@ HREDRD-EMES
                 const batchId = (row.dataset.batchId || '').trim();
                 const trackingNo = (row.dataset.trackingNo || '').trim();
                 const statusCell = row.querySelector('td[data-col="Status"]');
-                const statusText = normalizeStatusText((statusCell && statusCell.textContent) ? statusCell.textContent : '');
+                const statusText = ((statusCell && statusCell.textContent) ? statusCell.textContent : '').trim().toUpperCase();
 
                 if (!noticeCode || !trackingNo || trackingNo === '0') return;
-                if (statusText !== STATUS_VALUES.ONGOING_DELIVERY) return;
+                if (statusText !== 'ONGOING DELIVERY') return;
 
                 if (batchId) {
                     if (seenBatchIds.has(batchId)) return;
@@ -4240,33 +4140,17 @@ HREDRD-EMES
                 autoTrackInProgress = false;
                 return;
             }
-            const queue = items.slice();
-            const workerCount = Math.min(AUTO_TRACK_MAX_CONCURRENCY, queue.length);
 
-            function runWorker() {
-                function runNext() {
-                    const item = queue.shift();
-                    if (!item) return Promise.resolve();
-                    return runTrackingUpdate(item.noticeCode, { silent: true })
-                        .finally(function() {
-                            autoTrackLastRunByKey.set(item.key, Date.now());
-                        })
-                        .then(function() {
-                            return new Promise(function(resolve) {
-                                setTimeout(resolve, AUTO_TRACK_BETWEEN_REQUEST_MS);
-                            });
-                        })
-                        .then(runNext);
-                }
-                return runNext();
-            }
-
-            const workers = [];
-            for (let i = 0; i < workerCount; i++) {
-                workers.push(runWorker());
-            }
-
-            Promise.all(workers).finally(function() {
+            items.reduce(function(chain, item) {
+                return chain.then(function() {
+                    return runTrackingUpdate(item.noticeCode, { silent: true }).finally(function() {
+                        autoTrackLastRunByKey.set(item.key, Date.now());
+                    });
+                }).then(function() {
+                    return new Promise(function(resolve) { setTimeout(resolve, 200); });
+                });
+            }, Promise.resolve())
+            .finally(function() {
                 autoTrackInProgress = false;
             });
         }
@@ -4282,197 +4166,33 @@ HREDRD-EMES
         let activeNotifActionId = 0;
 
         function isNotifiableStatus(statusValue) {
-            const s = normalizeStatusText(statusValue);
-            return s === STATUS_VALUES.DELIVERED || s === STATUS_VALUES.RETURNED_TO_SENDER;
+            const s = ((statusValue || '') + '').trim().toUpperCase();
+            return s === 'DELIVERED' || s === 'RETURNED TO SENDER';
         }
 
         function getNotificationStatusType(statusValue) {
-            const s = normalizeStatusText(statusValue);
-            return s === STATUS_VALUES.RETURNED_TO_SENDER ? 'returned' : 'delivered';
+            const s = ((statusValue || '') + '').trim().toUpperCase();
+            return s === 'RETURNED TO SENDER' ? 'returned' : 'delivered';
         }
 
-        const NotifStore = {
-            read: function() {
-                try {
-                    const raw = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
-                    if (!raw) return [];
-                    const parsed = JSON.parse(raw);
-                    return Array.isArray(parsed) ? parsed : [];
-                } catch (e) {
-                    return [];
-                }
-            },
-            write: function(items) {
-                try {
-                    localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(Array.isArray(items) ? items : []));
-                } catch (e) {
-                    // ignore storage failures
-                }
-            },
-            unreadCount: function(items) {
-                const list = Array.isArray(items) ? items : this.read();
-                return list.filter(function(n) { return !n.read; }).length;
-            },
-            upsertStatusChange: function(input) {
-                const notifications = this.read();
-                const existingIndex = notifications.findIndex(function(n) {
-                    return (((n && n.dedupeKey) ? String(n.dedupeKey) : '').trim()) === input.dedupeKey;
-                });
-                if (existingIndex >= 0) {
-                    notifications.splice(existingIndex, 1);
-                }
-                notifications.unshift(input.item);
-                if (notifications.length > 100) notifications.length = 100;
-                this.write(notifications);
-                return notifications;
-            },
-            markAsRead: function(id) {
-                const targetId = parseInt(id, 10) || 0;
-                if (targetId <= 0) {
-                    return { notifications: this.read(), noticeCode: '', statusType: '', changed: false };
-                }
-                const notifications = this.read();
-                let noticeCode = '';
-                let statusType = '';
-                let changed = false;
-                notifications.forEach(function(n) {
-                    if ((parseInt(n.id, 10) || 0) === targetId) {
-                        noticeCode = ((n.noticeCode || n.trackingId || '') + '').trim();
-                        statusType = (n.statusType === 'returned' ? 'returned' : 'delivered');
-                        if (!n.read) {
-                            n.read = true;
-                            changed = true;
-                        }
-                    }
-                });
-                if (changed) this.write(notifications);
-                return {
-                    notifications: notifications,
-                    noticeCode: noticeCode,
-                    statusType: statusType,
-                    changed: changed
-                };
-            },
-            deleteById: function(id) {
-                const targetId = parseInt(id, 10) || 0;
-                if (targetId <= 0) return this.read();
-                const nextNotifications = this.read().filter(function(n) {
-                    return (parseInt(n.id, 10) || 0) !== targetId;
-                });
-                this.write(nextNotifications);
-                return nextNotifications;
-            }
-        };
-
         function readNotifications() {
-            return NotifStore.read();
+            try {
+                const raw = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
         }
 
         function writeNotifications(items) {
-            NotifStore.write(items);
-        }
-
-        const NotifUI = {
-            _eventsBound: false,
-            updateBadge: function(count) {
-                const badge = document.getElementById('notifBadge');
-                if (!badge) return;
-                if (count > 0) {
-                    badge.textContent = count > 99 ? '99+' : count;
-                    badge.style.display = 'flex';
-                } else {
-                    badge.style.display = 'none';
-                }
-            },
-            renderList: function(notifications) {
-                const content = document.getElementById('notifModalContent');
-                if (!content) return;
-                if (!Array.isArray(notifications) || notifications.length === 0) {
-                    content.innerHTML = '<div class="notif-empty">No notifications</div>';
-                    this.updateBadge(0);
-                    return;
-                }
-                const unreadCount = NotifStore.unreadCount(notifications);
-                this.updateBadge(unreadCount);
-                content.innerHTML = notifications.map(notif => {
-                    const notifId = parseInt(notif.id, 10) || 0;
-                    const menuOpen = activeNotifActionId === notifId;
-                    return `
-                <div class="notif-item" data-notif-id="${notif.id}" data-notice="${escapeHtml(notif.trackingId)}" onclick="handleNotifClick(${notif.id})">
-                    <div class="notif-indicator ${notif.read ? 'read' : 'unread'}"></div>
-                    <div class="notif-content">
-                        <div class="notif-text">
-                            <span class="notif-tracking-id">${escapeHtml(notif.trackingId)}</span> is now <span class="notif-status ${notif.statusType}">${escapeHtml(notif.status)}</span>
-                        </div>
-                        <div class="notif-timestamp">
-                            <span>&#128339;</span> ${escapeHtml(formatNotificationTimestamp(notif))}
-                        </div>
-                    </div>
-                    <div class="notif-action-wrap" onclick="event.stopPropagation();">
-                        <button class="notif-action" onclick="event.stopPropagation(); handleNotifAction(${notif.id})" aria-label="More options">&#8942;</button>
-                        ${menuOpen ? `
-                        <div class="notif-action-menu">
-                            <button class="notif-action-item" onclick="event.stopPropagation(); deleteNotification(${notif.id});">Delete</button>
-                        </div>` : ''}
-                    </div>
-                </div>
-            `;
-                }).join('');
-            },
-            load: function() {
-                this.renderList(NotifStore.read());
-            },
-            bindEvents: function() {
-                if (this._eventsBound) return;
-                this._eventsBound = true;
-
-                const notifBtn = document.getElementById('tableNotifBtn');
-                if (notifBtn) {
-                    notifBtn.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        openNotifModal();
-                    });
-                }
-
-                window.addEventListener('resize', function() {
-                    if (NotifModal.isOpen()) {
-                        NotifModal.position();
-                    }
-                });
-
-                window.addEventListener('scroll', function() {
-                    if (NotifModal.isOpen()) {
-                        NotifModal.position();
-                    }
-                }, true);
-
-                const overlay = document.getElementById('notifModalOverlay');
-                if (overlay) {
-                    overlay.addEventListener('click', function(e) {
-                        if (e.target === overlay) {
-                            activeNotifActionId = 0;
-                            closeNotifModal();
-                        }
-                    });
-                }
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        if (NotifModal.isOpen()) {
-                            activeNotifActionId = 0;
-                            closeNotifModal();
-                        }
-                    }
-                });
-
-                document.addEventListener('click', function() {
-                    if (activeNotifActionId !== 0) {
-                        activeNotifActionId = 0;
-                        loadNotifications();
-                    }
-                });
+            try {
+                localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(Array.isArray(items) ? items : []));
+            } catch (e) {
+                // ignore storage failures
             }
-        };
+        }
 
         function formatNotificationTimestamp(notif) {
             const eventDate = ((notif && notif.eventDate) ? String(notif.eventDate) : '').trim();
@@ -4499,8 +4219,8 @@ HREDRD-EMES
             const displayTrackingId = ((options.displayTrackingId || '') + '').trim() || notice;
             const navigateNoticeCode = ((options.noticeCode || '') + '').trim() || notice;
             let dedupeKey = ((options.dedupeKey || '') + '').trim();
-            const prev = normalizeStatusText(previousStatus);
-            const next = normalizeStatusText(nextStatus);
+            const prev = ((previousStatus || '') + '').trim().toUpperCase();
+            const next = ((nextStatus || '') + '').trim().toUpperCase();
             const eventDate = ((eventDateText || '') + '').trim();
             if (!notice) return;
             if (!isNotifiableStatus(next)) return;
@@ -4514,6 +4234,7 @@ HREDRD-EMES
                 dedupeKey = 'notice:' + dedupeNotice + '|status:' + next + '|date:' + eventDate;
             }
 
+            const notifications = readNotifications();
             const notificationItem = {
                 id: Date.now() + Math.floor(Math.random() * 1000),
                 trackingId: displayTrackingId,
@@ -4526,87 +4247,130 @@ HREDRD-EMES
             };
 
             notificationItem.dedupeKey = dedupeKey;
-            const notifications = NotifStore.upsertStatusChange({
-                dedupeKey: dedupeKey,
-                item: notificationItem
+            const existingIndex = notifications.findIndex(function(n) {
+                return (((n && n.dedupeKey) ? String(n.dedupeKey) : '').trim()) === dedupeKey;
             });
-            NotifUI.updateBadge(NotifStore.unreadCount(notifications));
+            if (existingIndex >= 0) {
+                notifications.splice(existingIndex, 1);
+            }
+
+            notifications.unshift(notificationItem);
+
+            if (notifications.length > 100) notifications.length = 100;
+            writeNotifications(notifications);
+            updateNotifBadge(notifications.filter(function(n) { return !n.read; }).length);
         }
 
-        const NotifModal = {
-            getElements: function() {
-                const overlay = document.getElementById('notifModalOverlay');
-                return {
-                    overlay: overlay,
-                    modal: overlay ? overlay.querySelector('.notif-modal') : null,
-                    trigger: document.getElementById('tableNotifBtn')
-                };
-            },
-            position: function() {
-                const parts = this.getElements();
-                const overlay = parts.overlay;
-                const modal = parts.modal;
-                const notifBtn = parts.trigger;
-                if (!overlay || !modal || !notifBtn) return;
-
-                const btnRect = notifBtn.getBoundingClientRect();
-                const modalWidth = Math.min(420, Math.max(260, window.innerWidth - 16));
-                let left = btnRect.right - modalWidth;
-                left = Math.max(8, Math.min(left, window.innerWidth - modalWidth - 8));
-
-                const top = Math.max(8, btnRect.bottom + 10);
-                const maxHeight = Math.max(220, window.innerHeight - top - 10);
-                const arrowLeft = Math.max(18, Math.min(modalWidth - 18, btnRect.right - left - 14));
-
-                overlay.style.setProperty('--notif-left', left + 'px');
-                overlay.style.setProperty('--notif-top', top + 'px');
-                overlay.style.setProperty('--notif-max-height', maxHeight + 'px');
-                overlay.style.setProperty('--notif-arrow-left', arrowLeft + 'px');
-            },
-            open: function() {
-                const parts = this.getElements();
-                if (!parts.overlay) return;
-                this.position();
-                parts.overlay.classList.add('show');
-                loadNotifications();
-            },
-            close: function() {
-                const parts = this.getElements();
-                if (!parts.overlay) return;
-                parts.overlay.classList.remove('show');
-            },
-            isOpen: function() {
-                const parts = this.getElements();
-                return !!(parts.overlay && parts.overlay.classList.contains('show'));
-            }
-        };
-
         function positionNotifModal() {
-            NotifModal.position();
+            const overlay = document.getElementById('notifModalOverlay');
+            const modal = overlay ? overlay.querySelector('.notif-modal') : null;
+            const notifBtn = document.getElementById('tableNotifBtn');
+            if (!overlay || !modal || !notifBtn) return;
+
+            const btnRect = notifBtn.getBoundingClientRect();
+            const modalWidth = Math.min(420, Math.max(260, window.innerWidth - 16));
+            let left = btnRect.right - modalWidth;
+            left = Math.max(8, Math.min(left, window.innerWidth - modalWidth - 8));
+
+            const top = Math.max(8, btnRect.bottom + 10);
+            const maxHeight = Math.max(220, window.innerHeight - top - 10);
+            const arrowLeft = Math.max(18, Math.min(modalWidth - 18, btnRect.right - left - 14));
+
+            overlay.style.setProperty('--notif-left', left + 'px');
+            overlay.style.setProperty('--notif-top', top + 'px');
+            overlay.style.setProperty('--notif-max-height', maxHeight + 'px');
+            overlay.style.setProperty('--notif-arrow-left', arrowLeft + 'px');
         }
 
         // Notification Modal Functions
         function openNotifModal() {
-            NotifModal.open();
+            const overlay = document.getElementById('notifModalOverlay');
+            if (overlay) {
+                positionNotifModal();
+                overlay.classList.add('show');
+                loadNotifications();
+            }
         }
 
         function closeNotifModal() {
-            NotifModal.close();
+            const overlay = document.getElementById('notifModalOverlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
         }
 
         function loadNotifications() {
-            NotifUI.load();
+            const content = document.getElementById('notifModalContent');
+            if (!content) return;
+
+            const notifications = readNotifications();
+
+            if (notifications.length === 0) {
+                content.innerHTML = '<div class="notif-empty">No notifications</div>';
+                updateNotifBadge(0);
+                return;
+            }
+
+            const unreadCount = notifications.filter(n => !n.read).length;
+            updateNotifBadge(unreadCount);
+
+            content.innerHTML = notifications.map(notif => {
+                const notifId = parseInt(notif.id, 10) || 0;
+                const menuOpen = activeNotifActionId === notifId;
+                return `
+                <div class="notif-item" data-notif-id="${notif.id}" data-notice="${escapeHtml(notif.trackingId)}" onclick="handleNotifClick(${notif.id})">
+                    <div class="notif-indicator ${notif.read ? 'read' : 'unread'}"></div>
+                    <div class="notif-content">
+                        <div class="notif-text">
+                            <span class="notif-tracking-id">${escapeHtml(notif.trackingId)}</span> is now <span class="notif-status ${notif.statusType}">${escapeHtml(notif.status)}</span>
+                        </div>
+                        <div class="notif-timestamp">
+                            <span>&#128339;</span> ${escapeHtml(formatNotificationTimestamp(notif))}
+                        </div>
+                    </div>
+                    <div class="notif-action-wrap" onclick="event.stopPropagation();">
+                        <button class="notif-action" onclick="event.stopPropagation(); handleNotifAction(${notif.id})" aria-label="More options">&#8942;</button>
+                        ${menuOpen ? `
+                        <div class="notif-action-menu">
+                            <button class="notif-action-item" onclick="event.stopPropagation(); deleteNotification(${notif.id});">Delete</button>
+                        </div>` : ''}
+                    </div>
+                </div>
+            `;
+            }).join('');
         }
 
         function updateNotifBadge(count) {
-            NotifUI.updateBadge(count);
+            const badge = document.getElementById('notifBadge');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
         }
 
         function handleNotifClick(notifId) {
-            const result = NotifStore.markAsRead(notifId);
-            const noticeCode = result.noticeCode;
-            const statusType = result.statusType;
-            if (result.changed) {
+            const targetId = parseInt(notifId, 10) || 0;
+            if (targetId <= 0) return;
+            const notifications = readNotifications();
+            let noticeCode = '';
+            let statusType = '';
+            let changed = false;
+            notifications.forEach(function(n) {
+                if ((parseInt(n.id, 10) || 0) === targetId) {
+                    noticeCode = ((n.noticeCode || n.trackingId || '') + '').trim();
+                    statusType = (n.statusType === 'returned' ? 'returned' : 'delivered');
+                    if (!n.read) {
+                        n.read = true;
+                        changed = true;
+                    }
+                }
+            });
+            if (changed) {
+                writeNotifications(notifications);
                 loadNotifications();
             }
 
@@ -4722,8 +4486,14 @@ HREDRD-EMES
         }
 
         function deleteNotification(notifId) {
-            NotifStore.deleteById(notifId);
+            const targetId = parseInt(notifId, 10) || 0;
+            if (targetId <= 0) return;
+            const notifications = readNotifications();
+            const nextNotifications = notifications.filter(function(n) {
+                return (parseInt(n.id, 10) || 0) !== targetId;
+            });
             activeNotifActionId = 0;
+            writeNotifications(nextNotifications);
             loadNotifications();
         }
 
@@ -4781,7 +4551,58 @@ HREDRD-EMES
 
         // Initialize notification button click handler
         document.addEventListener('DOMContentLoaded', function() {
-            NotifUI.bindEvents();
+            const notifBtn = document.getElementById('tableNotifBtn');
+            if (notifBtn) {
+                notifBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openNotifModal();
+                });
+            }
+
+            window.addEventListener('resize', function() {
+                const overlay = document.getElementById('notifModalOverlay');
+                if (overlay && overlay.classList.contains('show')) {
+                    positionNotifModal();
+                }
+            });
+
+            window.addEventListener('scroll', function() {
+                const overlay = document.getElementById('notifModalOverlay');
+                if (overlay && overlay.classList.contains('show')) {
+                    positionNotifModal();
+                }
+            }, true);
+
+            // Close modal when clicking outside
+            const overlay = document.getElementById('notifModalOverlay');
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) {
+                        activeNotifActionId = 0;
+                        closeNotifModal();
+                    }
+                });
+            }
+
+            // Close modal on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const overlay = document.getElementById('notifModalOverlay');
+                    if (overlay && overlay.classList.contains('show')) {
+                        activeNotifActionId = 0;
+                        closeNotifModal();
+                    }
+                    closeHomeSidebar();
+                }
+            });
+
+            document.addEventListener('click', function() {
+                if (activeNotifActionId !== 0) {
+                    activeNotifActionId = 0;
+                    loadNotifications();
+                }
+            });
+            initHomeSidebar();
 
             // Load initial notification count
             loadNotifications();
