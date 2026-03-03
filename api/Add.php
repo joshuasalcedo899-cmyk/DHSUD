@@ -26,7 +26,7 @@ error_log("POST data: " . json_encode($_POST));
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dateReleased = trim($_POST['Date released to AFD'] ?? $_POST['dateReleased'] ?? '');
-    $parcelNo = trim($_POST['Parcel No.'] ?? $_POST['parcelNo'] ?? '');
+    $parcelNo = 0;
     $recipientDetails = trim($_POST['Recipient Details'] ?? $_POST['recipientDetails'] ?? '');
     $trackingNo = trim($_POST['Tracking No.'] ?? $_POST['trackingNo'] ?? '');
     $transmittalId = trim($_POST['transmittal_id'] ?? $_POST['Transmittal ID'] ?? '');
@@ -103,13 +103,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $formattedDate = date('F-d-Y', $st);
             $senderDetailsBase = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538" . "\n\n" . "(" . $formattedDate . ")";
             $newFormatDate = date('ymd', $st);
-            $formattedParcelNo = sprintf("%03d", (int)$parcelNo);
-            $baseFileName = "EMES-" . $newFormatDate . "-" . $formattedParcelNo;
 
             $batchId = null;
             if (count($pairs) > 1) {
                 $batchId = 'BATCH-' . date('Ymd-His') . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
             }
+
+            $pdo->beginTransaction();
+
+            $parcelScopeTransmittalId = ($transmittalId !== '' ? $transmittalId : '');
+            $maxParcelStmt = $pdo->prepare('SELECT COALESCE(MAX(`Parcel No.`), 0) FROM mailtracking WHERE `Transmittal ID` = :transmittal_id');
+            $maxParcelStmt->execute([
+                ':transmittal_id' => $parcelScopeTransmittalId
+            ]);
+            $maxParcelNo = (int)$maxParcelStmt->fetchColumn();
+            if ($maxParcelNo < 0) {
+                $maxParcelNo = 0;
+            }
+            $parcelNo = $maxParcelNo + 1;
+            $formattedParcelNo = sprintf("%03d", $parcelNo);
+            $baseFileName = "EMES-" . $newFormatDate . "-" . $formattedParcelNo;
 
             $sql = 'INSERT INTO mailtracking 
                     (`Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, 
@@ -117,8 +130,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (:notice_code, :date_released, :parcel_no, :recipient_details, 
                             :parcel_details, :sender_details, :file_name, :tracking_no, :transmittal_id)';
             $stmt = $pdo->prepare($sql);
-
-            $pdo->beginTransaction();
             $inserted = 0;
             foreach ($pairs as $index => $pair) {
                 $senderDetails = $senderDetailsBase;
@@ -129,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([
                     ':notice_code' => $pair['notice'],
                     ':date_released' => $dateReleased,
-                    ':parcel_no' => $parcelNo !== '' ? (int)$parcelNo : 0,
+                    ':parcel_no' => $parcelNo,
                     ':recipient_details' => $recipientDetails,
                     ':parcel_details' => $pair['parcel_details'],
                     ':sender_details' => $senderDetails,
@@ -147,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $messageType = 'success';
             $success = true;
-            error_log("SUCCESS: Added records = " . $inserted . ($batchId ? " | Batch ID: " . $batchId : ""));
+            error_log("SUCCESS: Added records = " . $inserted . " | Parcel No: " . $parcelNo . ($batchId ? " | Batch ID: " . $batchId : ""));
             $_POST = [];
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -172,6 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'success' => $success,
             'message' => $message,
             'messageType' => $messageType,
+            'parcelNo' => (int)($parcelNo ?? 0),
             'insertedNotices' => $insertedNotices,
             'firstNotice' => $insertedNotices[0] ?? ''
         ]);

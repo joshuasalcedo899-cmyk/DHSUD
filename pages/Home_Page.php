@@ -415,7 +415,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         </div>
                         <div>
                             <label for="addParcelNo">Parcel No.</label>
-                            <input type="number" name="parcelNo" id="addParcelNo">
+                            <input type="number" name="parcelNo" id="addParcelNo" readonly>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addTrackingNo">Tracking No.</label>
@@ -1167,9 +1167,31 @@ HREDRD-EMES
             var input = document.getElementById('addTransmittalId');
             if (input) input.value = (activeTransmittalId || '').trim();
         }
+        function getNextParcelNoForTransmittal(transmittalId) {
+            var rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            var scopeId = ((transmittalId || '') + '').trim();
+            var maxParcel = 0;
+            rows.forEach(function(row) {
+                if (!row || typeof row !== 'object') return;
+                var rowTransmittalId = ((row['Transmittal ID'] || '') + '').trim();
+                if (rowTransmittalId !== scopeId) return;
+                var parsed = parseInt(((row['Parcel No.'] || '') + '').trim(), 10);
+                if (Number.isFinite(parsed) && parsed > maxParcel) {
+                    maxParcel = parsed;
+                }
+            });
+            return maxParcel + 1;
+        }
+        function syncAddParcelNoField() {
+            var input = document.getElementById('addParcelNo');
+            if (!input) return;
+            var nextNo = getNextParcelNoForTransmittal(activeTransmittalId);
+            input.value = String(nextNo);
+        }
         // Add Modal logic
         function openAddModal() {
             syncAddTransmittalField();
+            syncAddParcelNoField();
             document.getElementById('addModalOverlay').style.display = 'flex';
         }
         function closeAddModal() {
@@ -1191,6 +1213,7 @@ HREDRD-EMES
             var form = document.getElementById('addForm');
             if (form) form.reset();
             syncAddTransmittalField();
+            syncAddParcelNoField();
             var rowsWrap = document.getElementById('addPairRows');
             if (rowsWrap) {
                 rowsWrap.innerHTML = '';
