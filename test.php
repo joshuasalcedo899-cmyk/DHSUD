@@ -18,13 +18,28 @@
             text-align:center;
             background:#f2f2f2;
             margin:0;
+            padding:12px;
+            box-sizing:border-box;
+        }
+        body:not(.is-embedded){
             min-height:100vh;
             display:flex;
             flex-direction:column;
             justify-content:center;
             align-items:center;
-            padding:12px;
-            box-sizing:border-box;
+        }
+        body.is-embedded{
+            min-height:0;
+            display:block;
+            text-align:left;
+            padding:8px;
+        }
+        .scanner-shell{
+            width:min(700px, 100%);
+            margin:0 auto;
+            display:flex;
+            flex-direction:column;
+            gap:10px;
         }
         #cameraSection,
         #usbSection{
@@ -33,26 +48,28 @@
             flex-direction:column;
             align-items:center;
         }
-        #reader{
-            width:640px;
+        .reader{
+            width:100%;
             max-width:100%;
-            margin:auto;
+            margin:0 auto;
         }
         #preview{
             width:100%;
-            height:100%;
+            aspect-ratio:1 / 1;
             border-radius:8px;
             background:#000;
             display:block;
             object-fit:cover;
+            min-height:220px;
         }
         .usb-reference-image{
             width:100%;
-            height:100%;
+            aspect-ratio:1 / 1;
             display:block;
             object-fit:cover;
             border-radius:8px;
             background:#111827;
+            min-height:220px;
         }
         .polydev-qrcode-animate {
             width: 100%;
@@ -111,12 +128,12 @@
             50% { opacity: 0.35; }
         }
         .scan-mode-controls{
-            width:640px;
-            max-width:100%;
+            width:100%;
             margin:10px auto 0;
             display:flex;
             gap:8px;
             align-items:center;
+            flex-wrap:wrap;
         }
         .scan-mode-controls label{
             font-size:14px;
@@ -125,22 +142,23 @@
             font-weight:600;
         }
         #scanModeSelect{
-            flex:1 1 auto;
+            flex:1 1 240px;
             min-width:0;
             padding:8px;
         }
         #cameraSelect{
             padding:8px;
-            width:100%;
-            max-width:100%;
+            flex:1 1 240px;
+            min-width:0;
         }
         .camera-controls{
-            width:640px;
-            max-width:100%;
+            width:100%;
             margin:12px auto 0;
             display:flex;
             gap:8px;
             align-items:center;
+            flex-wrap:wrap;
+            justify-content:center;
         }
         .camera-controls label{
             font-size:14px;
@@ -163,15 +181,33 @@
             display:none !important;
         }
         .result{
-            margin-top:20px;
-            font-size:20px;
+            margin-top:8px;
+            font-size:18px;
             color:green;
             font-weight:bold;
+            min-height:24px;
+            text-align:center;
+        }
+        @media (max-width: 640px){
+            body{
+                padding:8px;
+            }
+            .scan-mode-controls label,
+            .camera-controls label{
+                width:100%;
+                text-align:left;
+            }
+            #scanModeSelect,
+            #cameraSelect,
+            #refreshCamerasBtn{
+                width:100%;
+            }
         }
     </style>
 </head>
-<body>
+<body class="<?= $embedded ? 'is-embedded' : '' ?>">
 
+<div class="scanner-shell">
 
 <div class="scan-mode-controls">
     <label for="scanModeSelect">Scanner Mode:</label>
@@ -182,7 +218,7 @@
 </div>
 
 <div id="cameraSection">
-    <div id="reader" class="polydev-qrcode-animate">
+    <div class="reader polydev-qrcode-animate">
         <div class="qa-info">
             <div class="scan-qa" id="scanFrame">
                 <video id="preview" autoplay muted playsinline></video>
@@ -198,7 +234,7 @@
 </div>
 
 <div id="usbSection">
-    <div id="reader" class="polydev-qrcode-animate">
+    <div class="reader polydev-qrcode-animate">
         <div class="qa-info">
             <div class="scan-qa" id="usbScanFrame">
                 <img src="assets/qr.jpg" alt="QR Reference" class="usb-reference-image">
@@ -210,6 +246,7 @@
 
 
 <div class="result" id="result">Waiting for scan...</div>
+</div>
 
     
 
@@ -602,7 +639,7 @@ async function applyScanMode(mode, updateResult = true) {
         await stopCurrentStream();
         isProcessing = false;
         if (updateResult) {
-            document.getElementById("result").innerHTML = "Waiting for USB scan...";
+            document.getElementById("result").innerHTML = "Waiting for scan...";
         }
         focusUsbCaptureSurface();
         return true;
@@ -697,4 +734,3 @@ initScanner().catch((e) => {
 
 </body>
 </html>
-
