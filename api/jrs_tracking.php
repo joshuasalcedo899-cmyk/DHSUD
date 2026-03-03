@@ -68,8 +68,9 @@ $html = '
 body { font-family: DejaVu Sans, sans-serif; font-size: 11px; }
 h2 { text-align:center; color:#22336A; }
 table { width:100%; border-collapse: collapse; }
-th { background:#22336A; color:white; padding:6px; font-size:10px; }
-td { max-width: 200px; border:1px solid #000; padding:4px; font-size:9px; word-wrap:break-word; word-break: break-word; white-space: normal; text-align:center; }
+th { background:#22336A; color:white; padding:5px; font-size:10px; line-height: 1.15; }
+td { max-width: 200px; border:1px solid #000; padding:3px 4px; font-size:9px; line-height: 1.15; word-wrap:break-word; word-break: break-word; white-space: normal; text-align:center; }
+tr, td, th { page-break-inside: avoid; break-inside: avoid; }
 .shipper-label { font-weight: bold; }
 .date-label { font-weight: bold; }
 .title { font-weight: bold; font-size: 18px;}
@@ -86,13 +87,50 @@ td { max-width: 200px; border:1px solid #000; padding:4px; font-size:9px; word-w
 <th>Type of Letter</th>
 </tr>';
 
-
+// Group rows by Parcel No., remove duplicates, and merge content inside each cell.
+// This avoids DOMPDF rowspan/page-break rendering glitches.
+$groupOrder = [];
+$groupedRows = [];
 foreach ($rows as $r) {
-    $html .= "<tr>
-        <td>{$r['Parcel No.']}</td>
-        <td style=\"white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;\">{$r['Recipient Details']}</td>
-        <td style=\"white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;\">{$r['Parcel Details']}<br>{$r['Notice/Order Code']}</td>
-    </tr>";
+    $parcelNo = trim((string)($r['Parcel No.'] ?? ''));
+    if (!array_key_exists($parcelNo, $groupedRows)) {
+        $groupedRows[$parcelNo] = [];
+        $groupOrder[] = $parcelNo;
+    }
+    $groupedRows[$parcelNo][] = $r;
+}
+
+foreach ($groupOrder as $parcelNo) {
+    $items = $groupedRows[$parcelNo];
+
+    $recipientLines = [];
+    $typeLines = [];
+    $seenPairs = [];
+    foreach ($items as $item) {
+        $recipient = trim((string)($item['Recipient Details'] ?? ''));
+        $typeText = trim((string)($item['Parcel Details'] ?? '')) . "\n" . trim((string)($item['Notice/Order Code'] ?? ''));
+        $pairKey = $recipient . '||' . $typeText;
+        if (isset($seenPairs[$pairKey])) {
+            continue;
+        }
+        $seenPairs[$pairKey] = true;
+
+        if ($recipient !== '' && !in_array($recipient, $recipientLines, true)) {
+            $recipientLines[] = $recipient;
+        }
+        if ($typeText !== '' && !in_array($typeText, $typeLines, true)) {
+            $typeLines[] = $typeText;
+        }
+    }
+
+    $recipientText = htmlspecialchars(implode("\n", $recipientLines), ENT_QUOTES, 'UTF-8');
+    $typeText = htmlspecialchars(implode("\n\n", $typeLines), ENT_QUOTES, 'UTF-8');
+
+    $html .= "<tr>";
+    $html .= '<td>' . htmlspecialchars($parcelNo, ENT_QUOTES, 'UTF-8') . '</td>';
+    $html .= '<td style="white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;">' . $recipientText . '</td>';
+    $html .= '<td style="white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;">' . $typeText . '</td>';
+    $html .= "</tr>";
 }
 
 $html .= '</table><div class="signatory-space"></div></body></html>';
