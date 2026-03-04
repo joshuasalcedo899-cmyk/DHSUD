@@ -53,12 +53,30 @@ function parseDateToTimestamp($value) {
     return ($ts === false) ? null : $ts;
 }
 
-function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
+function detectDepartmentCode($noticeCode, $senderDetails) {
+    $noticeText = trim((string)$noticeCode);
+    if ($noticeText !== '' && preg_match('/^([A-Z]+)-/i', $noticeText, $m)) {
+        return strtoupper(trim((string)$m[1]));
+    }
+
+    $senderText = (string)$senderDetails;
+    if ($senderText !== '' && preg_match('/\bHREDRD-([A-Z]+)\b/i', $senderText, $m)) {
+        return strtoupper(trim((string)$m[1]));
+    }
+
+    return 'EMES';
+}
+
+function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue, $departmentCode = 'EMES') {
     $ts = parseDateToTimestamp($dateReleasedValue);
     if (!$ts) return '';
     $formattedDate = date('ymd', $ts);
     $formattedParcelNo = sprintf('%03d', (int)$parcelNoValue);
-    return 'EMES-' . $formattedDate . '-' . $formattedParcelNo;
+    $code = strtoupper(trim((string)$departmentCode));
+    if ($code === '') {
+        $code = 'EMES';
+    }
+    return $code . '-' . $formattedDate . '-' . $formattedParcelNo;
 }
 
 function computeAdaptiveIntervalSeconds($shipmentStartTs, $nowTs) {
@@ -371,7 +389,8 @@ if ($statusText === 'DELIVERED' && $receiver !== '') {
 
 // Keep File Name (PDF) in sync for final statuses so UI can show it immediately.
 if (($statusText === 'DELIVERED' || $statusText === 'RETURNED TO SENDER') && $trackingNo !== '' && $trackingNo !== '0') {
-    $proofFileName = buildDefaultPdfFileName($selectedRow['Date released to AFD'] ?? '', $selectedRow['Parcel No.'] ?? 0);
+    $deptCode = detectDepartmentCode($selectedRow['Notice/Order Code'] ?? '', $selectedRow['Sender Details'] ?? '');
+    $proofFileName = buildDefaultPdfFileName($selectedRow['Date released to AFD'] ?? '', $selectedRow['Parcel No.'] ?? 0, $deptCode);
     if ($isBatch) {
         $fileStmt = $pdo->prepare("UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `Sender Details` LIKE :batchLike");
         $fileStmt->execute([

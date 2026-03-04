@@ -23,18 +23,26 @@ try {
     }
 
     $triggerStmt = $pdo->prepare("
-        SELECT COUNT(*) FROM information_schema.TRIGGERS
+        SELECT ACTION_STATEMENT
+        FROM information_schema.TRIGGERS
         WHERE TRIGGER_SCHEMA = DATABASE()
           AND EVENT_OBJECT_TABLE = 'mailtracking'
           AND EVENT_MANIPULATION = 'DELETE'
     ");
     $triggerStmt->execute();
-    $hasDeleteTrigger = ((int)$triggerStmt->fetchColumn() > 0);
+    $hasArchiveDeleteTrigger = false;
+    while ($tr = $triggerStmt->fetch(PDO::FETCH_ASSOC)) {
+        $action = strtolower((string)($tr['ACTION_STATEMENT'] ?? ''));
+        if (strpos($action, 'insert') !== false && strpos($action, 'archive') !== false) {
+            $hasArchiveDeleteTrigger = true;
+            break;
+        }
+    }
 
     // Support both archive schemas:
     // 1) legacy mirror table
     // 2) archive with `original_mail_id` and/or `deleted_at`
-    if (!$hasDeleteTrigger) {
+    if (!$hasArchiveDeleteTrigger) {
         $archiveCols = [];
         $colStmt = $pdo->query("SHOW COLUMNS FROM archive");
         while ($c = $colStmt->fetch(PDO::FETCH_ASSOC)) {

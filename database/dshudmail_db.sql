@@ -166,7 +166,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `created_at`, `updated_at`) VALUES
-(1, 'admin', 'admin@dhsud.com', '$2y$10$aBJpl0gNN4xrsYQn9nQm8OWOQnnPprmZAI9FdT5nTfHsLJCDDn7em', '2026-02-14 11:31:18', '2026-02-14 11:31:18');
+(1, 'admin', 'admin@dhsud.com', '$2y$10$h0h5u4RCBoLxgmgjM.GXzei4HINq3zqgmd/1uAgJhNNlArEi5eL1y', '2026-02-14 11:31:18', '2026-02-14 11:31:18');
 
 --
 -- Indexes for dumped tables

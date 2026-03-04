@@ -25,6 +25,21 @@ error_log("POST data: " . json_encode($_POST));
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $departmentConfig = [
+        'emes' => ['code' => 'EMES', 'sender' => 'HREDRD-EMES'],
+        'prls' => ['code' => 'PRLS', 'sender' => 'HREDRD-PRLS'],
+        'afd' => ['code' => 'AFD', 'sender' => 'HREDRD-AFD'],
+        'phsd' => ['code' => 'PHSD', 'sender' => 'HREDRD-PHSD'],
+        'elupd' => ['code' => 'ELUPD', 'sender' => 'HREDRD-ELUPD'],
+        'ord' => ['code' => 'ORD', 'sender' => 'HREDRD-ORD'],
+    ];
+    $currentDept = strtolower(trim((string)($_POST['department_id'] ?? $_POST['dept'] ?? 'emes')));
+    if (!isset($departmentConfig[$currentDept])) {
+        $currentDept = 'emes';
+    }
+    $currentDeptCode = $departmentConfig[$currentDept]['code'];
+    $currentDeptSenderTag = $departmentConfig[$currentDept]['sender'];
+
     $dateReleased = trim($_POST['Date released to AFD'] ?? $_POST['dateReleased'] ?? '');
     $parcelNo = 0;
     $recipientDetails = trim($_POST['Recipient Details'] ?? $_POST['recipientDetails'] ?? '');
@@ -101,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $formattedDate = date('F-d-Y', $st);
-            $senderDetailsBase = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538" . "\n\n" . "(" . $formattedDate . ")";
+            $senderDetailsBase = "Department of Human Settlements and Urban Development Region 4A\n" . $currentDeptSenderTag . "\n0935 542 1538" . "\n\n" . "(" . $formattedDate . ")";
             $newFormatDate = date('ymd', $st);
 
             $batchId = null;
@@ -122,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $parcelNo = $maxParcelNo + 1;
             $formattedParcelNo = sprintf("%03d", $parcelNo);
-            $baseFileName = "EMES-" . $newFormatDate . "-" . $formattedParcelNo;
+            $baseFileName = $currentDeptCode . "-" . $newFormatDate . "-" . $formattedParcelNo;
 
             $sql = 'INSERT INTO mailtracking 
                     (`Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, 

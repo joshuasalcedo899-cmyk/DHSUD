@@ -44,14 +44,33 @@ function extractBatchIdFromSenderDetails($senderDetails) {
     return '';
 }
 
-function buildDefaultSenderDetails($dateReleasedValue, $batchId = '') {
+function detectSenderTag($senderDetails, $noticeCode = '') {
+    $senderText = (string)$senderDetails;
+    if (preg_match('/\bHREDRD-([A-Z]+)\b/i', $senderText, $m)) {
+        return 'HREDRD-' . strtoupper(trim((string)$m[1]));
+    }
+
+    $noticeText = trim((string)$noticeCode);
+    if (preg_match('/^([A-Z]+)-/i', $noticeText, $m)) {
+        return 'HREDRD-' . strtoupper(trim((string)$m[1]));
+    }
+
+    return 'HREDRD-EMES';
+}
+
+function buildDefaultSenderDetails($dateReleasedValue, $batchId = '', $senderTag = 'HREDRD-EMES') {
     $dateText = '';
     $ts = strtotime((string)$dateReleasedValue);
     if ($ts !== false) {
         $dateText = date('F-d-Y', $ts);
     }
 
-    $sender = "Department of Human Settlements and Urban Development Region 4A\nHREDRD-EMES\n0935 542 1538";
+    $normalizedSenderTag = strtoupper(trim((string)$senderTag));
+    if ($normalizedSenderTag === '') {
+        $normalizedSenderTag = 'HREDRD-EMES';
+    }
+
+    $sender = "Department of Human Settlements and Urban Development Region 4A\n" . $normalizedSenderTag . "\n0935 542 1538";
     if ($dateText !== '') {
         $sender .= "\n\n(" . $dateText . ")";
     }
@@ -245,7 +264,7 @@ try {
 
     // Determine if this record belongs to a batch.
     $batchId = '';
-    $senderStmt = $pdo->prepare('SELECT `Sender Details`, `Tracking No.`, `File Name (PDF)`, `Date released to AFD`, `Status` FROM mailtracking WHERE `id` = :row_id LIMIT 1');
+    $senderStmt = $pdo->prepare('SELECT `Sender Details`, `Tracking No.`, `File Name (PDF)`, `Date released to AFD`, `Status`, `Notice/Order Code` FROM mailtracking WHERE `id` = :row_id LIMIT 1');
     $senderStmt->execute([':row_id' => $originalId]);
     $currentRecord = $senderStmt->fetch(PDO::FETCH_ASSOC) ?: [];
     $currentSenderDetails = (string)($currentRecord['Sender Details'] ?? '');
@@ -311,8 +330,9 @@ try {
         }
     }
 
-    // Always enforce canonical sender details on edit.
-    $defaultSender = buildDefaultSenderDetails($dateForDefaultSender, $batchId);
+    // Always enforce canonical sender details on edit while preserving the record department.
+    $senderTag = detectSenderTag($currentSenderDetails, (string)($currentRecord['Notice/Order Code'] ?? $originalNotice));
+    $defaultSender = buildDefaultSenderDetails($dateForDefaultSender, $batchId, $senderTag);
     $columnValues['Sender Details'] = $defaultSender;
     $senderParamName = ':p_' . preg_replace('/[^a-z0-9_]/i', '_', 'Sender Details');
     $params[$senderParamName] = $defaultSender;
