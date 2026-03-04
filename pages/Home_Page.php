@@ -5,6 +5,21 @@ require_once __DIR__ . '/../auth.php';
 // Require login to access this page
 requireLogin();
 
+$departmentConfig = [
+    'emes' => ['code' => 'EMES', 'sender' => 'HREDRD-EMES'],
+    'prls' => ['code' => 'PRLS', 'sender' => 'HREDRD-PRLS'],
+    'afd' => ['code' => 'AFD', 'sender' => 'HREDRD-AFD'],
+    'phsd' => ['code' => 'PHSD', 'sender' => 'HREDRD-PHSD'],
+    'elupd' => ['code' => 'ELUPD', 'sender' => 'HREDRD-ELUPD'],
+    'ord' => ['code' => 'ORD', 'sender' => 'HREDRD-ORD'],
+];
+$currentDept = strtolower(trim((string)($_GET['dept'] ?? 'emes')));
+if (!isset($departmentConfig[$currentDept])) {
+    $currentDept = 'emes';
+}
+$currentDeptCode = $departmentConfig[$currentDept]['code'];
+$currentDeptSenderTag = $departmentConfig[$currentDept]['sender'];
+
 // Handle status update when submitted per-row
 $message = '';
 $updatedNotice = '';
@@ -58,7 +73,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST['row_id']) || !empty
 try {
     // Keep rows from the same batch adjacent so merged-cell rendering stays coherent,
     // including records recovered from archive.
-    $rows = $pdo->query('SELECT * FROM mailtracking ORDER BY `Sender Details` ASC, `id` ASC')->fetchAll();
+    $deptPrefix = strtoupper($currentDeptCode) . '-%';
+    $deptSenderPattern = '%' . strtoupper($currentDeptSenderTag) . '%';
+    $rowsStmt = $pdo->prepare(
+        'SELECT * FROM mailtracking
+         WHERE UPPER(COALESCE(`Notice/Order Code`, \'\')) LIKE :dept_prefix
+            OR UPPER(COALESCE(`Sender Details`, \'\')) LIKE :dept_sender
+         ORDER BY `Sender Details` ASC, `id` ASC'
+    );
+    $rowsStmt->execute([
+        ':dept_prefix' => $deptPrefix,
+        ':dept_sender' => $deptSenderPattern,
+    ]);
+    $rows = $rowsStmt->fetchAll();
 } catch (Exception $e) {
     $rows = [];
     $message = 'Failed to load records: ' . $e->getMessage();
@@ -135,13 +162,14 @@ function formatDateCell($value) {
 }
 
 function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
+    global $currentDeptCode;
     $text = trim((string)$dateReleasedValue);
     if ($text === '' || $text === '0000-00-00' || $text === '0000-00-00 00:00:00') return '';
     $ts = strtotime($text);
     if ($ts === false) return '';
     $formattedDate = date('ymd', $ts);
     $formattedParcelNo = sprintf('%03d', (int)$parcelNoValue);
-    return 'EMES-' . $formattedDate . '-' . $formattedParcelNo;
+    return strtoupper($currentDeptCode) . '-' . $formattedDate . '-' . $formattedParcelNo;
 }
 
 function normalizedCellValueForMerge($row, $colName) {
@@ -290,7 +318,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
     </style>
 </head>
 
-<body class="admin-home-bg">
+<body class="admin-home-bg dept-theme-<?= htmlspecialchars($currentDept) ?>">
     <div class="admin-home-header">
         <div class="admin-home-header-main">
             <div class="sidebar-trigger-wrap">
@@ -314,12 +342,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         </div>
 
         <nav class="home-sidebar-nav" aria-label="Department menu">
-            <a href="Home_Page.php" class="home-sidebar-link dept-emes is-active" data-dept="emes"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>EMES</span></a>
-            <a href="PRLS_Page.php" class="home-sidebar-link dept-prls" data-dept="prls"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PRLS</span></a>
-            <a href="AFD_Page.php" class="home-sidebar-link dept-afd" data-dept="afd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>AFD</span></a>
-            <a href="PHSD_Page.php" class="home-sidebar-link dept-phsd" data-dept="phsd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PHSD</span></a>
-            <a href="ELUPD_Page.php" class="home-sidebar-link dept-elupd" data-dept="elupd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ELUPD</span></a>
-            <a href="ORD_Page.php" class="home-sidebar-link dept-ord" data-dept="ord"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ORD</span></a>
+            <a href="Home_Page.php?dept=emes" class="home-sidebar-link dept-emes<?= $currentDept === 'emes' ? ' is-active' : '' ?>" data-dept="emes"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>EMES</strong><small>Mail Tracking Records</small></span></a>
+            <a href="Home_Page.php?dept=prls" class="home-sidebar-link dept-prls<?= $currentDept === 'prls' ? ' is-active' : '' ?>" data-dept="prls"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>PRLS</strong><small>Mail Tracking Records</small></span></a>
+            <a href="Home_Page.php?dept=afd" class="home-sidebar-link dept-afd<?= $currentDept === 'afd' ? ' is-active' : '' ?>" data-dept="afd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>AFD</strong><small>Mail Tracking Records</small></span></a>
+            <a href="Home_Page.php?dept=phsd" class="home-sidebar-link dept-phsd<?= $currentDept === 'phsd' ? ' is-active' : '' ?>" data-dept="phsd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>PHSD</strong><small>Mail Tracking Records</small></span></a>
+            <a href="Home_Page.php?dept=elupd" class="home-sidebar-link dept-elupd<?= $currentDept === 'elupd' ? ' is-active' : '' ?>" data-dept="elupd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>ELUPD</strong><small>Mail Tracking Records</small></span></a>
+            <a href="Home_Page.php?dept=ord" class="home-sidebar-link dept-ord<?= $currentDept === 'ord' ? ' is-active' : '' ?>" data-dept="ord"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>ORD</strong><small>Mail Tracking Records</small></span></a>
         </nav>
 
         <a href="logout.php" class="home-sidebar-logout">
@@ -382,6 +410,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
                 <h2>ADD RECORD</h2>
                 <form id="addForm" action="../api/Add.php" method="post" autocomplete="off">
+                    <input type="hidden" name="department_id" value="<?= htmlspecialchars($currentDept) ?>">
                     <input type="hidden" name="transmittal_id" id="addTransmittalId">
 
                     <div style="display:contents">
@@ -454,7 +483,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         <div style="grid-column:1/span 2;">
                             <label for="addSender">Sender Details</label>
                             <textarea name="senderDetails" rows="3" id="addSender" readonly>Department of Human Settlements and Urban Development Region 4A
-HREDRD-EMES
+<?= htmlspecialchars($currentDeptSenderTag) . "\n" ?>
 0935 542 1538</textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
@@ -481,7 +510,7 @@ HREDRD-EMES
                 <span class="module-btn-label">Transmittal</span>
             </button>
         </div>
-        <div class="top-bar-title">MAIL TRACKING RECORDS</div>
+        <div class="top-bar-title"><?= htmlspecialchars($currentDeptCode) ?> MAIL TRACKING RECORDS</div>
         <div class="top-bar-right-main">
             <?php
             $years = [];
@@ -575,7 +604,9 @@ HREDRD-EMES
                 </div>
             </div>
         </div>
-            <script>
+    <script>
+        const currentDeptCode = <?= json_encode($currentDeptCode, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+
             let scannerSelectedNoticeCode = '';
             let activeTransmittalId = '';
             const pendingTransmittals = new Set();
@@ -2220,7 +2251,7 @@ HREDRD-EMES
             const dd = String(parsed.getDate()).padStart(2, '0');
             const parcel = parseInt(((rowObj['Parcel No.'] || '') + '').trim(), 10);
             const formattedParcel = String(Number.isFinite(parcel) ? parcel : 0).padStart(3, '0');
-            return `EMES-${yy}${mm}${dd}-${formattedParcel}`;
+            return `${currentDeptCode}-${yy}${mm}${dd}-${formattedParcel}`;
         }
 
         function buildProofPdfAssetNameFromTracking(trackingNo) {
@@ -2496,7 +2527,7 @@ HREDRD-EMES
             const dd = String(parsed.getDate()).padStart(2, '0');
             const parcel = parseInt(parcelText, 10);
             const formattedParcel = String(Number.isFinite(parcel) ? parcel : 0).padStart(3, '0');
-            return `EMES-${yy}${mm}${dd}-${formattedParcel}`;
+            return `${currentDeptCode}-${yy}${mm}${dd}-${formattedParcel}`;
         }
 
         function updateTrackingRow(noticeCode, data, options = {}) {
@@ -4528,6 +4559,82 @@ HREDRD-EMES
             document.body.classList.remove('home-sidebar-open');
         }
 
+        let isDeptSwitchNavigating = false;
+        function initDepartmentSwitchAnimations() {
+            let raw = '';
+            try {
+                raw = sessionStorage.getItem('dhsud_dept_switch_pending') || '';
+            } catch (e) {
+                raw = '';
+            }
+            if (!raw) return;
+
+            let payload = null;
+            try {
+                payload = JSON.parse(raw);
+            } catch (e) {
+                payload = null;
+            }
+
+            try {
+                sessionStorage.removeItem('dhsud_dept_switch_pending');
+            } catch (e) {}
+
+            if (!payload || !payload.ts) return;
+
+            const ageMs = Date.now() - Number(payload.ts);
+            if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > 5000) return;
+
+            document.body.classList.add('dept-switch-enter');
+            window.setTimeout(function() {
+                document.body.classList.remove('dept-switch-enter');
+            }, 280);
+        }
+
+        function bindDepartmentSwitchLinks() {
+            const links = document.querySelectorAll('.home-sidebar-nav .home-sidebar-link[href*="dept="]');
+            if (!links || links.length === 0) return;
+
+            links.forEach(function(link) {
+                link.addEventListener('click', function(event) {
+                    if (isDeptSwitchNavigating) {
+                        event.preventDefault();
+                        return;
+                    }
+                    if (event.defaultPrevented) return;
+                    if (event.button !== 0) return;
+                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                    if (link.target && link.target !== '' && link.target !== '_self') return;
+
+                    const currentUrl = new URL(window.location.href);
+                    const targetUrl = new URL(link.href, window.location.href);
+                    const sameDestination = (currentUrl.pathname === targetUrl.pathname && currentUrl.search === targetUrl.search);
+
+                    event.preventDefault();
+                    closeHomeSidebar();
+
+                    if (sameDestination) {
+                        return;
+                    }
+
+                    isDeptSwitchNavigating = true;
+                    document.body.classList.add('dept-switch-leaving');
+
+                    try {
+                        sessionStorage.setItem('dhsud_dept_switch_pending', JSON.stringify({
+                            ts: Date.now(),
+                            from: currentUrl.searchParams.get('dept') || '',
+                            to: targetUrl.searchParams.get('dept') || ''
+                        }));
+                    } catch (e) {}
+
+                    window.setTimeout(function() {
+                        window.location.assign(targetUrl.toString());
+                    }, 170);
+                });
+            });
+        }
+
         function initHomeSidebar() {
             const trigger = document.getElementById('homeSidebarTrigger');
             const closeBtn = document.getElementById('homeSidebarClose');
@@ -4547,10 +4654,13 @@ HREDRD-EMES
             overlay.addEventListener('click', function() {
                 closeHomeSidebar();
             });
+
+            bindDepartmentSwitchLinks();
         }
 
         // Initialize notification button click handler
         document.addEventListener('DOMContentLoaded', function() {
+            initDepartmentSwitchAnimations();
             const notifBtn = document.getElementById('tableNotifBtn');
             if (notifBtn) {
                 notifBtn.addEventListener('click', function(e) {
