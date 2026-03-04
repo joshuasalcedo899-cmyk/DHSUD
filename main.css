@@ -3487,7 +3487,7 @@ body.admin-login-page .return-button img {
 .home-sidebar-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: end;
     margin-bottom: 40px;
 }
 

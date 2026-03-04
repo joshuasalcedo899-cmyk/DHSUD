@@ -284,11 +284,34 @@ rsort($years);
         }
     </style>
 </head>
-<body>
+<body class="admin-home-bg">
     <div class="admin-home-header">
-        <img src="../assets/DHSUD_Header.svg" alt="DHSUD Header" class="admin-home-header-img">
+        <div class="admin-home-header-main">
+            <div class="sidebar-trigger-wrap">
+                <button type="button" id="homeSidebarTrigger" class="sidebar-menu-trigger" aria-label="Open sidebar" title="Menu" aria-controls="homeSidebar" aria-expanded="false">
+                    <img src="../assets/Sidebar_Menu_Icon.svg" alt="" aria-hidden="true">
+                </button>
+            </div>
+            <img src="../assets/DHSUD_Header.svg" alt="Admin Home Header" class="admin-home-header-img">
+        </div>
         <div class="admin-home-header-border"></div>
     </div>
+
+    <div id="homeSidebarOverlay" class="home-sidebar-overlay" hidden></div>
+    <aside id="homeSidebar" class="home-sidebar" aria-hidden="true">
+        <div class="home-sidebar-head">
+            <button type="button" id="homeSidebarClose" class="home-sidebar-close" aria-label="Close sidebar">&times;</button>
+        </div>
+
+        <nav class="home-sidebar-nav" aria-label="Department menu">
+            <a href="Tracking_Page.php" class="home-sidebar-link dept-emes is-active" data-dept="emes"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>EMES</span></a>
+            <span class="home-sidebar-link dept-prls" data-dept="prls" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PRLS</span></span>
+            <span class="home-sidebar-link dept-afd" data-dept="afd" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>AFD</span></span>
+            <span class="home-sidebar-link dept-phsd" data-dept="phsd" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PHSD</span></span>
+            <span class="home-sidebar-link dept-elupd" data-dept="elupd" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ELUPD</span></span>
+            <span class="home-sidebar-link dept-ord" data-dept="ord" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ORD</span></span>
+        </nav>
+    </aside>
 
     <div class="tracking-view-shell admin-table-container">
         <div class="top-bar">
@@ -708,10 +731,58 @@ rsort($years);
                 });
             });
 
+            function openHomeSidebar() {
+                const sidebar = document.getElementById('homeSidebar');
+                const overlay = document.getElementById('homeSidebarOverlay');
+                const trigger = document.getElementById('homeSidebarTrigger');
+                if (!sidebar || !overlay || !trigger) return;
+                sidebar.classList.add('open');
+                overlay.hidden = false;
+                overlay.classList.add('show');
+                sidebar.setAttribute('aria-hidden', 'false');
+                trigger.setAttribute('aria-expanded', 'true');
+                document.body.classList.add('home-sidebar-open');
+            }
+
+            function closeHomeSidebar() {
+                const sidebar = document.getElementById('homeSidebar');
+                const overlay = document.getElementById('homeSidebarOverlay');
+                const trigger = document.getElementById('homeSidebarTrigger');
+                if (!sidebar || !overlay || !trigger) return;
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+                overlay.hidden = true;
+                sidebar.setAttribute('aria-hidden', 'true');
+                trigger.setAttribute('aria-expanded', 'false');
+                document.body.classList.remove('home-sidebar-open');
+            }
+
+            function initHomeSidebar() {
+                const trigger = document.getElementById('homeSidebarTrigger');
+                const closeBtn = document.getElementById('homeSidebarClose');
+                const overlay = document.getElementById('homeSidebarOverlay');
+                const sidebar = document.getElementById('homeSidebar');
+                if (!trigger || !closeBtn || !overlay || !sidebar) return;
+
+                trigger.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    openHomeSidebar();
+                });
+
+                closeBtn.addEventListener('click', function() {
+                    closeHomeSidebar();
+                });
+
+                overlay.addEventListener('click', function() {
+                    closeHomeSidebar();
+                });
+            }
+
             updateStatusFilterButtonsUI();
             rebuildYearMonthFilterOptionsFromSelect();
             filterRows();
             closeYearMonthDropdown();
+            initHomeSidebar();
         })();
     </script>
 </body>
