@@ -1,8 +1,35 @@
 ﻿<?php
 require_once __DIR__ . '/../config.php';
 
+$departmentConfig = [
+    'emes' => ['code' => 'EMES', 'sender' => 'HREDRD-EMES'],
+    'prls' => ['code' => 'PRLS', 'sender' => 'HREDRD-PRLS'],
+    'afd' => ['code' => 'AFD', 'sender' => 'HREDRD-AFD'],
+    'phsd' => ['code' => 'PHSD', 'sender' => 'HREDRD-PHSD'],
+    'elupd' => ['code' => 'ELUPD', 'sender' => 'HREDRD-ELUPD'],
+    'ord' => ['code' => 'ORD', 'sender' => 'HREDRD-ORD'],
+];
+$currentDept = strtolower(trim((string)($_GET['dept'] ?? 'emes')));
+if (!isset($departmentConfig[$currentDept])) {
+    $currentDept = 'emes';
+}
+$currentDeptCode = $departmentConfig[$currentDept]['code'];
+$currentDeptSenderTag = $departmentConfig[$currentDept]['sender'];
+
 try {
-    $rows = $pdo->query('SELECT * FROM mailtracking ORDER BY `Sender Details` ASC, `id` ASC')->fetchAll();
+    $deptPrefix = strtoupper($currentDeptCode) . '-%';
+    $deptSenderPattern = '%' . strtoupper($currentDeptSenderTag) . '%';
+    $rowsStmt = $pdo->prepare(
+        'SELECT * FROM mailtracking
+         WHERE UPPER(COALESCE(`Notice/Order Code`, \'\')) LIKE :dept_prefix
+            OR UPPER(COALESCE(`Sender Details`, \'\')) LIKE :dept_sender
+         ORDER BY `Sender Details` ASC, `id` ASC'
+    );
+    $rowsStmt->execute([
+        ':dept_prefix' => $deptPrefix,
+        ':dept_sender' => $deptSenderPattern,
+    ]);
+    $rows = $rowsStmt->fetchAll();
 } catch (Exception $e) {
     $rows = [];
 }
@@ -60,6 +87,7 @@ function formatDateCell($value) {
 }
 
 function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
+    global $currentDeptCode;
     $text = trim((string)$dateReleasedValue);
     if ($text === '' || $text === '0000-00-00' || $text === '0000-00-00 00:00:00') {
         return '';
@@ -72,7 +100,7 @@ function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
 
     $formattedDate = date('ymd', $ts);
     $formattedParcelNo = sprintf('%03d', (int)$parcelNoValue);
-    return 'EMES-' . $formattedDate . '-' . $formattedParcelNo;
+    return strtoupper($currentDeptCode) . '-' . $formattedDate . '-' . $formattedParcelNo;
 }
 
 function extractBatchIdFromSenderDetails($senderDetails) {
@@ -284,7 +312,7 @@ rsort($years);
         }
     </style>
 </head>
-<body class="admin-home-bg">
+<body class="admin-home-bg dept-theme-<?= htmlspecialchars($currentDept) ?>">
     <div class="admin-home-header">
         <div class="admin-home-header-main">
             <div class="sidebar-trigger-wrap">
@@ -304,12 +332,12 @@ rsort($years);
         </div>
 
         <nav class="home-sidebar-nav" aria-label="Department menu">
-            <a href="Tracking_Page.php" class="home-sidebar-link dept-emes is-active" data-dept="emes"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>EMES</span></a>
-            <span class="home-sidebar-link dept-prls" data-dept="prls" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PRLS</span></span>
-            <span class="home-sidebar-link dept-afd" data-dept="afd" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>AFD</span></span>
-            <span class="home-sidebar-link dept-phsd" data-dept="phsd" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PHSD</span></span>
-            <span class="home-sidebar-link dept-elupd" data-dept="elupd" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ELUPD</span></span>
-            <span class="home-sidebar-link dept-ord" data-dept="ord" aria-disabled="true"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ORD</span></span>
+            <a href="Tracking_Page.php?dept=emes" class="home-sidebar-link dept-emes<?= $currentDept === 'emes' ? ' is-active' : '' ?>" data-dept="emes"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>EMES</span></a>
+            <a href="Tracking_Page.php?dept=prls" class="home-sidebar-link dept-prls<?= $currentDept === 'prls' ? ' is-active' : '' ?>" data-dept="prls"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PRLS</span></a>
+            <a href="Tracking_Page.php?dept=afd" class="home-sidebar-link dept-afd<?= $currentDept === 'afd' ? ' is-active' : '' ?>" data-dept="afd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>AFD</span></a>
+            <a href="Tracking_Page.php?dept=phsd" class="home-sidebar-link dept-phsd<?= $currentDept === 'phsd' ? ' is-active' : '' ?>" data-dept="phsd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PHSD</span></a>
+            <a href="Tracking_Page.php?dept=elupd" class="home-sidebar-link dept-elupd<?= $currentDept === 'elupd' ? ' is-active' : '' ?>" data-dept="elupd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ELUPD</span></a>
+            <a href="Tracking_Page.php?dept=ord" class="home-sidebar-link dept-ord<?= $currentDept === 'ord' ? ' is-active' : '' ?>" data-dept="ord"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ORD</span></a>
         </nav>
     </aside>
 
