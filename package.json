@@ -1,74 +1,85 @@
 {
-  "name": "dhsud",
-  "version": "1.0.1",
-  "main": "electron/main.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "install:deps": "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1",
-    "install:deps:skip-browser": "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1 -SkipBrowserDownload",
-    "set:exe-icon": "powershell -ExecutionPolicy Bypass -File .\\scripts\\set-exe-icon.ps1",
-    "desktop:dev": "electron .",
-    "desktop:dist": "electron-builder --win nsis",
-    "desktop:portable": "electron-builder --win portable"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/joshuasalcedo899-cmyk/DHSUD.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/joshuasalcedo899-cmyk/DHSUD/issues"
-  },
-  "homepage": "https://github.com/joshuasalcedo899-cmyk/DHSUD#readme",
-  "dependencies": {
-    "playwright": "^1.52.0",
-    "playwright-core": "^1.52.0"
-  },
-  "devDependencies": {
-    "electron": "^37.2.1",
-    "electron-builder": "^24.13.3"
-  },
-  "description": "",
-  "build": {
-    "appId": "com.dhsud.mailtracker",
-    "productName": "DHSUD Mail Tracker",
-    "directories": {
-      "output": "desktop-dist"
-    },
-    "files": [
-      "**/*",
-      "!desktop-dist{,/**/*}",
-      "!dist{,/**/*}",
-      "!dist(Old Version){,/**/*}",
-      "!.git{,/**/*}",
-      "!.github{,/**/*}",
-      "!.vscode{,/**/*}"
-    ],
-    "extraResources": [
-      {
-        "from": "installer/xampp",
-        "to": "xampp",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "icon": "assets/DHSUDLogo.ico",
-      "target": [
-        "nsis"
-      ],
-      "artifactName": "DHSUD-Mail-Tracker-Setup-${version}.exe"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "installerIcon": "assets/DHSUDLogo.ico",
-      "uninstallerIcon": "assets/DHSUDLogo.ico"
-    }
-  }
+    "name":  "dhsud",
+    "version":  "1.0.1",
+    "main":  "electron/main.js",
+    "scripts":  {
+                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1",
+                    "install:deps":  "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1",
+                    "install:deps:skip-browser":  "powershell -ExecutionPolicy Bypass -File .\\scripts\\install-deps.ps1 -SkipBrowserDownload",
+                    "installer:build":  "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-installer.ps1",
+                    "installer:build:skip-browser":  "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-installer.ps1 -SkipPlaywrightBrowserInstall",
+                    "installer:build:portable":  "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-installer.ps1 -Portable",
+                    "set:exe-icon":  "powershell -ExecutionPolicy Bypass -File .\\scripts\\set-exe-icon.ps1",
+                    "desktop:dev":  "electron .",
+                    "desktop:dist":  "electron-builder --win nsis",
+                    "desktop:portable":  "electron-builder --win portable",
+                    "desktop:dist:noedit":  "electron-builder --win nsis --config.win.signAndEditExecutable=false",
+                    "desktop:dist:from-unpacked:noedit":  "electron-builder --win nsis --prepackaged \"desktop-dist/win-unpacked\" --config.win.signAndEditExecutable=false",
+                    "desktop:portable:noedit":  "electron-builder --win portable --config.win.signAndEditExecutable=false"
+                },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/joshuasalcedo899-cmyk/DHSUD.git"
+                   },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "bugs":  {
+                 "url":  "https://github.com/joshuasalcedo899-cmyk/DHSUD/issues"
+             },
+    "homepage":  "https://github.com/joshuasalcedo899-cmyk/DHSUD#readme",
+    "dependencies":  {
+                         "playwright":  "^1.52.0",
+                         "playwright-core":  "^1.52.0"
+                     },
+    "devDependencies":  {
+                            "electron":  "^37.2.1",
+                            "electron-builder":  "^24.13.3"
+                        },
+    "description":  "",
+    "build":  {
+                  "appId":  "com.dhsud.mailtracker",
+                  "productName":  "DHSUD Mail Tracker",
+                  "directories":  {
+                                      "output":  "desktop-dist"
+                                  },
+                  "files":  [
+                                "**/*",
+                                "!desktop-dist{,/**/*}",
+                                "!dist{,/**/*}",
+                                "!dist(Old Version){,/**/*}",
+                                "!.git{,/**/*}",
+                                "!.github{,/**/*}",
+                                "!.vscode{,/**/*}"
+                            ],
+                  "extraResources":  [
+                                         {
+                                             "from":  "installer/xampp",
+                                             "to":  "xampp",
+                                             "filter":  [
+                                                            "**/*"
+                                                        ]
+                                         }
+                                     ],
+                  "win":  {
+                              "icon":  "assets/DHSUDLogo.ico",
+                              "target":  [
+                                             "nsis"
+                                         ],
+                              "artifactName":  "DHSUD-Mail-Tracker-Setup-${version}.exe"
+                          },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "perMachine":  true,
+                               "allowElevation":  true,
+                               "allowToChangeInstallationDirectory":  true,
+                               "createDesktopShortcut":  true,
+                               "createStartMenuShortcut":  true,
+                               "installerIcon":  "assets/DHSUDLogo.ico",
+                               "uninstallerIcon":  "assets/DHSUDLogo.ico",
+                               "include":  "build/installer.nsh"
+                           }
+              }
 }

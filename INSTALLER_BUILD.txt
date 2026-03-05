@@ -1,0 +1,29 @@
+DHSUD Installer Build Guide
+
+Prerequisites
+1) Windows machine with Node.js LTS installed.
+2) XAMPP payload present in installer\xampp as either:
+   - a portable XAMPP zip (*.zip), or
+   - extracted apache/, mysql/, php/ folders.
+
+Build commands (from project root)
+1) Standard NSIS installer:
+   npm run installer:build
+
+2) Skip Playwright browser download:
+   npm run installer:build:skip-browser
+
+3) Portable desktop package:
+   npm run installer:build:portable
+
+Alternative launcher
+- build-installer.bat
+
+What the build script does
+1) Validates installer\xampp payload
+2) Installs npm dependencies (npm ci if lockfile exists)
+3) Installs Playwright Chromium (unless skipped)
+4) Runs Electron Builder (NSIS or portable)
+
+Output
+- desktop-dist\

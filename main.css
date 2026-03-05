@@ -3653,48 +3653,38 @@ body.dept-theme-ord {
     --dept-theme-border: #cc88d5;
 }
 
-body.admin-home-bg .admin-home-header,
-body.admin-home-bg .admin-table-container,
-body.admin-home-bg .table-footer-section {
+body.admin-home-bg .admin-table-container .table-scroll-area {
     transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
     will-change: opacity, transform, filter;
 }
 
-body.admin-home-bg.dept-switch-leaving .admin-home-header,
-body.admin-home-bg.dept-switch-leaving .admin-table-container,
-body.admin-home-bg.dept-switch-leaving .table-footer-section {
+body.admin-home-bg.dept-switch-leaving .admin-table-container .table-scroll-area {
     opacity: 0;
-    transform: translateY(8px) scale(0.995);
-    filter: blur(1px);
+    transform: translateX(12px) scale(0.998);
+    filter: blur(0.8px);
     pointer-events: none;
 }
 
-body.admin-home-bg.dept-switch-enter .admin-home-header,
-body.admin-home-bg.dept-switch-enter .admin-table-container,
-body.admin-home-bg.dept-switch-enter .table-footer-section {
+body.admin-home-bg.dept-switch-enter .admin-table-container .table-scroll-area {
     animation: deptSwitchEnter 250ms ease both;
 }
 
 @keyframes deptSwitchEnter {
     from {
         opacity: 0;
-        transform: translateY(10px) scale(0.995);
-        filter: blur(1px);
+        transform: translateX(-14px) scale(0.998);
+        filter: blur(0.8px);
     }
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(0) scale(1);
         filter: blur(0);
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    body.admin-home-bg .admin-home-header,
-    body.admin-home-bg .admin-table-container,
-    body.admin-home-bg .table-footer-section,
-    body.admin-home-bg.dept-switch-enter .admin-home-header,
-    body.admin-home-bg.dept-switch-enter .admin-table-container,
-    body.admin-home-bg.dept-switch-enter .table-footer-section {
+    body.admin-home-bg .admin-table-container .table-scroll-area,
+    body.admin-home-bg.dept-switch-enter .admin-table-container .table-scroll-area {
         transition-duration: 1ms !important;
         animation-duration: 1ms !important;
         filter: none !important;
