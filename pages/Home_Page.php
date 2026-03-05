@@ -1153,18 +1153,32 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 }
                 currentRowMenuId = safeRowId;
                 dropdown.style.display = 'block';
+                var scrollArea = event.currentTarget.closest('.table-scroll-area') || document.querySelector('.admin-table-container .table-scroll-area');
                 var rect = event.currentTarget.getBoundingClientRect();
-                var left = rect.left;
-                var top = rect.bottom + 6;
+                var ddRect = dropdown.getBoundingClientRect();
+                var areaRect = scrollArea ? scrollArea.getBoundingClientRect() : { left: 8, top: 8, right: window.innerWidth - 8, bottom: window.innerHeight - 8 };
+                var areaLeft = areaRect.left + 8;
+                var areaRight = areaRect.right - 8;
+                var areaTop = areaRect.top + 8;
+                var areaBottom = areaRect.bottom - 8;
+
+                var left = rect.left + ((rect.width - ddRect.width) / 2);
+                var minLeft = areaLeft;
+                var maxLeft = Math.max(minLeft, areaRight - ddRect.width);
+                left = Math.max(minLeft, Math.min(left, maxLeft));
+
+                var topBelow = rect.bottom + 6;
+                var topAbove = rect.top - ddRect.height - 6;
+                var top = topBelow;
+                if (topBelow + ddRect.height > areaBottom) {
+                    top = topAbove;
+                }
+                var minTop = areaTop;
+                var maxTop = Math.max(minTop, areaBottom - ddRect.height);
+                top = Math.max(minTop, Math.min(top, maxTop));
+
                 dropdown.style.left = left + 'px';
                 dropdown.style.top = top + 'px';
-                var ddRect = dropdown.getBoundingClientRect();
-                if (ddRect.right > window.innerWidth - 8) {
-                    dropdown.style.left = Math.max(8, window.innerWidth - ddRect.width - 8) + 'px';
-                }
-                if (ddRect.bottom > window.innerHeight - 8) {
-                    dropdown.style.top = Math.max(8, rect.top - ddRect.height - 6) + 'px';
-                }
             }
             function editRowFromMenu() {
                 var rowId = currentRowMenuId;
@@ -3316,12 +3330,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         }
 
         let defaultTopBarTitle = '';
+        const defaultDeptTopBarTitle = `${currentDeptCode} MAIL TRACKING RECORDS`;
         function setTopBarTitle(nextTitle) {
             const topTitle = document.querySelector('.top-bar-title');
             const headbarTitle = document.getElementById('transmittalTableBarTitle');
             if (topTitle) {
                 if (!defaultTopBarTitle) {
-                    defaultTopBarTitle = topTitle.textContent || 'MAIL TRACKING RECORDS';
+                    defaultTopBarTitle = (topTitle.textContent || '').trim() || defaultDeptTopBarTitle;
                 }
                 topTitle.textContent = nextTitle || defaultTopBarTitle;
             }
@@ -4300,12 +4315,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             const btnRect = notifBtn.getBoundingClientRect();
             const modalWidth = Math.min(420, Math.max(260, window.innerWidth - 16));
-            let left = btnRect.right - modalWidth;
+            let left = btnRect.left;
             left = Math.max(8, Math.min(left, window.innerWidth - modalWidth - 8));
 
-            const top = Math.max(8, btnRect.bottom + 10);
+            const top = Math.max(8, btnRect.bottom + 8);
             const maxHeight = Math.max(220, window.innerHeight - top - 10);
-            const arrowLeft = Math.max(18, Math.min(modalWidth - 18, btnRect.right - left - 14));
+            const btnCenterX = btnRect.left + (btnRect.width / 2);
+            const arrowLeft = Math.max(18, Math.min(modalWidth - 18, btnCenterX - left));
 
             overlay.style.setProperty('--notif-left', left + 'px');
             overlay.style.setProperty('--notif-top', top + 'px');
@@ -4661,6 +4677,19 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         // Initialize notification button click handler
         document.addEventListener('DOMContentLoaded', function() {
             initDepartmentSwitchAnimations();
+            function moveModalToBody(modalId) {
+                const el = document.getElementById(modalId);
+                if (el && el.parentElement !== document.body) {
+                    document.body.appendChild(el);
+                }
+            }
+            moveModalToBody('pdfViewerModal');
+            moveModalToBody('ongoingDeliveryModal');
+            moveModalToBody('rowMenuDropdown');
+            const notifOverlayRoot = document.getElementById('notifModalOverlay');
+            if (notifOverlayRoot && notifOverlayRoot.parentElement !== document.body) {
+                document.body.appendChild(notifOverlayRoot);
+            }
             const notifBtn = document.getElementById('tableNotifBtn');
             if (notifBtn) {
                 notifBtn.addEventListener('click', function(e) {

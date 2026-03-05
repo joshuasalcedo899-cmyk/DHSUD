@@ -310,6 +310,9 @@ rsort($years);
         .statistics-title {
             margin-right: 0.4rem;
         }
+        .home-sidebar-head {
+            justify-content: end;
+        }
     </style>
 </head>
 <body class="admin-home-bg dept-theme-<?= htmlspecialchars($currentDept) ?>">
@@ -348,7 +351,7 @@ rsort($years);
                     <img src="../assets/Return_Icon.svg" alt="Return"> <span>Return</span>
                 </a>
             </div>
-            <div class="top-bar-title">MAIL TRACKING RECORDS</div>
+            <div class="top-bar-title"><?= htmlspecialchars($currentDeptCode) ?> MAIL TRACKING RECORDS</div>
             <div class="table-sort-bar">
                 <div class="table-year-month-filter" id="tableYearMonthFilter">
                     <button type="button" id="tableSortYearTrigger" class="table-year-trigger" aria-haspopup="true" aria-expanded="false">

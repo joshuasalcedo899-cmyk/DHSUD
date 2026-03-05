@@ -1504,7 +1504,8 @@
 	white-space: pre-wrap;
 }
 .listview-table th {
-	background: #22336A;
+	background: var(--dept-theme-color, #22336A);
+	color: var(--dept-theme-header-text, #fff);
 	font-weight: 700;
 	letter-spacing: 0.05em;
 }
@@ -2003,7 +2004,8 @@ img {
             position: sticky;
             top: 0;
             z-index: 3;
-            background: #22336A !important;
+            background: var(--dept-theme-color, #22336A) !important;
+            color: var(--dept-theme-header-text, #fff);
             padding: 0px;
         }
         form.inline { margin:0; }
@@ -2090,12 +2092,19 @@ img {
             background: rgba(0, 0, 0, 0.72);
             justify-content: center;
             align-items: center;
-            padding: 14px;
+            padding: 12px;
             box-sizing: border-box;
+            overflow: auto;
         }
         .pdf-viewer-panel {
-            width: min(95vw, calc(185vh * 210 / 297));
-            height: min(92vh, calc(95vw * 297 / 210));
+            width: calc(100vw - 24px);
+            height: calc(100vh - 24px);
+            width: calc(90dvw - 24px);
+            height: calc(100dvh - 24px);
+            max-width: calc(100vw - 24px);
+            max-height: calc(100vh - 24px);
+            max-width: calc(100dvw - 24px);
+            max-height: calc(100dvh - 24px);
             background: #fff;
             border-radius: 8px;
             box-shadow: 0 10px 30px rgba(0,0,0,.28);
@@ -2667,7 +2676,7 @@ img {
             position: absolute;
             top: var(--notif-top, 84px);
             left: var(--notif-left, calc(100vw - 436px));
-            transform-origin: top right;
+            transform-origin: top left;
             animation: popFromNotifBtn 0.22s ease-out;
         }
         .notif-modal::before {
@@ -3487,7 +3496,7 @@ body.admin-login-page .return-button img {
 .home-sidebar-head {
     display: flex;
     align-items: center;
-    justify-content: end;
+    justify-content: space-between;
     margin-bottom: 40px;
 }
 
@@ -3626,31 +3635,37 @@ body.admin-login-page .return-button img {
 body.dept-theme-emes {
     --dept-theme-color: #23366A;
     --dept-theme-border: #8fa0c7;
+    --dept-theme-header-text: #ffffff;
 }
 
 body.dept-theme-prls {
     --dept-theme-color: #FFCC00;
     --dept-theme-border: #e8c84f;
+    --dept-theme-header-text: #1a1a1a;
 }
 
 body.dept-theme-afd {
     --dept-theme-color: #FF8D28;
     --dept-theme-border: #e8ad70;
+    --dept-theme-header-text: #1a1a1a;
 }
 
 body.dept-theme-phsd {
     --dept-theme-color: #00C8B3;
     --dept-theme-border: #7fd9cd;
+    --dept-theme-header-text: #1a1a1a;
 }
 
 body.dept-theme-elupd {
     --dept-theme-color: #6155F5;
     --dept-theme-border: #a4a0eb;
+    --dept-theme-header-text: #ffffff;
 }
 
 body.dept-theme-ord {
     --dept-theme-color: #CB30E0;
     --dept-theme-border: #cc88d5;
+    --dept-theme-header-text: #ffffff;
 }
 
 body.admin-home-bg .admin-table-container .table-scroll-area {
