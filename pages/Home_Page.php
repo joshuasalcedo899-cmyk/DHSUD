@@ -3316,12 +3316,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         }
 
         let defaultTopBarTitle = '';
+        const defaultDeptTopBarTitle = `${currentDeptCode} MAIL TRACKING RECORDS`;
         function setTopBarTitle(nextTitle) {
             const topTitle = document.querySelector('.top-bar-title');
             const headbarTitle = document.getElementById('transmittalTableBarTitle');
             if (topTitle) {
                 if (!defaultTopBarTitle) {
-                    defaultTopBarTitle = topTitle.textContent || 'MAIL TRACKING RECORDS';
+                    defaultTopBarTitle = (topTitle.textContent || '').trim() || defaultDeptTopBarTitle;
                 }
                 topTitle.textContent = nextTitle || defaultTopBarTitle;
             }
@@ -4300,12 +4301,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             const btnRect = notifBtn.getBoundingClientRect();
             const modalWidth = Math.min(420, Math.max(260, window.innerWidth - 16));
-            let left = btnRect.right - modalWidth;
+            let left = btnRect.left;
             left = Math.max(8, Math.min(left, window.innerWidth - modalWidth - 8));
 
-            const top = Math.max(8, btnRect.bottom + 10);
+            const top = Math.max(8, btnRect.bottom + 8);
             const maxHeight = Math.max(220, window.innerHeight - top - 10);
-            const arrowLeft = Math.max(18, Math.min(modalWidth - 18, btnRect.right - left - 14));
+            const btnCenterX = btnRect.left + (btnRect.width / 2);
+            const arrowLeft = Math.max(18, Math.min(modalWidth - 18, btnCenterX - left));
 
             overlay.style.setProperty('--notif-left', left + 'px');
             overlay.style.setProperty('--notif-top', top + 'px');
@@ -4661,6 +4663,18 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         // Initialize notification button click handler
         document.addEventListener('DOMContentLoaded', function() {
             initDepartmentSwitchAnimations();
+            function moveModalToBody(modalId) {
+                const el = document.getElementById(modalId);
+                if (el && el.parentElement !== document.body) {
+                    document.body.appendChild(el);
+                }
+            }
+            moveModalToBody('pdfViewerModal');
+            moveModalToBody('ongoingDeliveryModal');
+            const notifOverlayRoot = document.getElementById('notifModalOverlay');
+            if (notifOverlayRoot && notifOverlayRoot.parentElement !== document.body) {
+                document.body.appendChild(notifOverlayRoot);
+            }
             const notifBtn = document.getElementById('tableNotifBtn');
             if (notifBtn) {
                 notifBtn.addEventListener('click', function(e) {
