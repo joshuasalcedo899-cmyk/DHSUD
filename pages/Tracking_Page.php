@@ -428,11 +428,14 @@ rsort($years);
                                     } elseif ($dateAfdRaw !== '' && preg_match('/(\d{4})/', $dateAfdRaw, $m)) {
                                         $rowYear = $m[1];
                                     }
-                                    $rowTextSearch = strtoupper(implode(' ', array_map(static function ($v) {
-                                        return trim((string)$v);
-                                    }, $row)));
-
                                     $trackingNo = trim((string)($row['Tracking No.'] ?? $row['Tracking No'] ?? ''));
+                                    $parcelDetails = trim((string)($row['Parcel Details'] ?? ''));
+                                    $noticeCode = trim((string)($row['Notice/Order Code'] ?? ''));
+                                    $rowTextSearch = strtoupper(trim(implode(' ', [
+                                        $noticeCode,
+                                        $parcelDetails,
+                                        $trackingNo,
+                                    ])));
                                     $statusValue = strtoupper(trim((string)($row['Status'] ?? '')));
                                     $statusClass = '';
                                     if ($statusValue === 'DELIVERED') {
@@ -552,6 +555,57 @@ rsort($years);
                 return status === normalizedFilter;
             }
 
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = (text || '').toString();
+                return div.innerHTML;
+            }
+
+            function escapeRegExp(text) {
+                return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            function renderSearchHighlightedText(text, searchTerm) {
+                const rawText = (text || '').toString();
+                const needle = ((searchTerm || '') + '').trim();
+                if (!needle) return escapeHtml(rawText);
+                const rx = new RegExp(escapeRegExp(needle), 'ig');
+                let lastIndex = 0;
+                let html = '';
+                rawText.replace(rx, function(match, offset) {
+                    html += escapeHtml(rawText.slice(lastIndex, offset));
+                    html += '<mark class="table-search-highlight">' + escapeHtml(match) + '</mark>';
+                    lastIndex = offset + match.length;
+                    return match;
+                });
+                html += escapeHtml(rawText.slice(lastIndex));
+                return html;
+            }
+
+            function applyCellHighlight(cell, sourceText, searchTerm) {
+                if (!cell) return;
+                cell.innerHTML = renderSearchHighlightedText(sourceText, searchTerm);
+            }
+
+            function applyRowSearchHighlight(row, searchTerm) {
+                if (!row) return;
+                const noticeSpan = row.querySelector('td.notice-code-cell > div > span');
+                const parcelCell = row.querySelector('td[data-col="Parcel Details"]');
+                const trackingCell = row.querySelector('td[data-col="Tracking No."]');
+
+                const noticeText = ((noticeSpan && noticeSpan.getAttribute('data-raw-text')) || '').trim() || ((noticeSpan && noticeSpan.textContent) ? noticeSpan.textContent.trim() : '');
+                const parcelText = ((parcelCell && parcelCell.getAttribute('data-raw-text')) || '').trim() || ((parcelCell && parcelCell.textContent) ? parcelCell.textContent.trim() : '');
+                const trackingText = ((trackingCell && trackingCell.getAttribute('data-raw-text')) || '').trim() || ((trackingCell && trackingCell.textContent) ? trackingCell.textContent.trim() : '');
+
+                if (noticeSpan && !noticeSpan.hasAttribute('data-raw-text')) noticeSpan.setAttribute('data-raw-text', noticeText);
+                if (parcelCell && !parcelCell.hasAttribute('data-raw-text')) parcelCell.setAttribute('data-raw-text', parcelText);
+                if (trackingCell && !trackingCell.hasAttribute('data-raw-text')) trackingCell.setAttribute('data-raw-text', trackingText);
+
+                applyCellHighlight(noticeSpan, noticeText, searchTerm);
+                applyCellHighlight(parcelCell, parcelText, searchTerm);
+                applyCellHighlight(trackingCell, trackingText, searchTerm);
+            }
+
             function updateStatusFilterButtonsUI() {
                 const active = normalizeStatusFilterValue(selectedStatusFilter);
                 statButtons.forEach(function (btn) {
@@ -665,6 +719,7 @@ rsort($years);
                     const searchMatch = (search === '' || rowSearch.indexOf(search) !== -1);
                     const statusMatch = rowMatchesStatusFilter(rowStatus, normalizedStatusFilter);
                     const visible = (yearMatch && monthMatch && searchMatch && statusMatch);
+                    applyRowSearchHighlight(row, search);
                     if (visible && batchPreserveMode && rowBatchId !== '') {
                         matchedBatchIds.add(rowBatchId);
                     }
