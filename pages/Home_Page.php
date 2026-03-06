@@ -315,6 +315,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             overflow-wrap: anywhere;
             max-width: 0;
         }
+
     </style>
 </head>
 
@@ -4651,6 +4652,24 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             });
         }
 
+        function bindLogoutLink() {
+            const logoutLink = document.querySelector('.home-sidebar-logout');
+            if (!logoutLink) return;
+
+            logoutLink.addEventListener('click', function(event) {
+                if (event.defaultPrevented) return;
+                if (event.button !== 0) return;
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                if (logoutLink.target && logoutLink.target !== '' && logoutLink.target !== '_self') return;
+
+                event.preventDefault();
+                logoutLink.classList.add('is-clicked');
+                window.setTimeout(function() {
+                    window.location.assign(logoutLink.href);
+                }, 130);
+            });
+        }
+
         function initHomeSidebar() {
             const trigger = document.getElementById('homeSidebarTrigger');
             const closeBtn = document.getElementById('homeSidebarClose');
@@ -4672,6 +4691,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             });
 
             bindDepartmentSwitchLinks();
+            bindLogoutLink();
         }
 
         // Initialize notification button click handler

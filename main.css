@@ -3727,9 +3727,23 @@ body.admin-home-bg.dept-switch-enter .admin-table-container .table-scroll-area {
     display: block;
 }
 
+.home-sidebar-logout:hover img,
+.home-sidebar-logout:focus-visible img,
+.home-sidebar-logout.is-active img {
+    filter: brightness(0) invert(1);
+    opacity: 1;
+}
+
 .home-sidebar-logout:hover,
 .home-sidebar-logout:focus-visible {
-    background: #dbdbdb;
+    background: #3f3a3a;
+    color: #fff;
+    outline: none;
+}
+
+.home-sidebar-logout img:hover,
+.home-sidebar-logout img:focus-visible {
+    background: #fff;
     outline: none;
 }
 
