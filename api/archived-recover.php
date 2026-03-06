@@ -50,7 +50,32 @@ try {
     };
 
     $focusId = 0;
+    $focusDept = 'emes';
     $recoveredTransmittalIds = [];
+
+    $detectDeptKeyFromRow = function (array $row) {
+        $noticeText = trim((string)($row['Notice/Order Code'] ?? ''));
+        if ($noticeText !== '' && preg_match('/^([A-Z]+)-/i', $noticeText, $m)) {
+            $code = strtoupper(trim((string)$m[1]));
+        } else {
+            $senderText = (string)($row['Sender Details'] ?? '');
+            $code = '';
+            if ($senderText !== '' && preg_match('/\bHREDRD-([A-Z]+)\b/i', $senderText, $m)) {
+                $code = strtoupper(trim((string)$m[1]));
+            }
+        }
+
+        $deptMap = [
+            'EMES' => 'emes',
+            'PRLS' => 'prls',
+            'AFD' => 'afd',
+            'PHSD' => 'phsd',
+            'ELUPD' => 'elupd',
+            'ORD' => 'ord',
+        ];
+        return $deptMap[$code] ?? 'emes';
+    };
+
     foreach ($ids as $archiveId) {
         $safeId = (int)$archiveId;
         if ($safeId <= 0) {
@@ -121,6 +146,7 @@ try {
             if ($focusId <= 0) {
                 $focusId = $hasOriginalMailId ? (int)($row['original_mail_id'] ?? 0) : (int)($row['id'] ?? 0);
             }
+            $focusDept = $detectDeptKeyFromRow($row);
         }
     }
 
@@ -128,6 +154,7 @@ try {
 
     // Send user back to Home and focus the first recovered row by id.
     $redirectParams = [
+        'dept' => $focusDept,
         'recovered' => '1',
         'scanned_id' => (string)$focusId,
     ];

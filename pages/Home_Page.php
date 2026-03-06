@@ -419,12 +419,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 <div class="add-pair-row">
                                     <div>
                                         <label>Code*</label>
-                                        <input type="text" name="noticeCodes[]" placeholder="Notice/Order Code" required>
+                                        <input type="text" name="noticeCodes[]" placeholder="Notice/Order Code">
                                     </div>
                                     <button type="button" class="pair-row-btn" title="Add row">+</button>
                                     <div>
                                         <label>Parcel Details</label>
-                                        <textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details" required></textarea>
+                                        <textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -606,6 +606,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         </div>
     <script>
         const currentDeptCode = <?= json_encode($currentDeptCode, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+        const currentDeptKey = <?= json_encode($currentDept, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
 
             let scannerSelectedNoticeCode = '';
             let activeTransmittalId = '';
@@ -2370,6 +2371,64 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             return value;
         }
 
+        function escapeRegExp(text) {
+            return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function renderSearchHighlightedText(text, searchTerm) {
+            const rawText = (text || '').toString();
+            const needle = ((searchTerm || '') + '').trim();
+            if (!needle) return escapeHtml(rawText);
+            const rx = new RegExp(escapeRegExp(needle), 'ig');
+            let lastIndex = 0;
+            let html = '';
+            rawText.replace(rx, function(match, offset) {
+                html += escapeHtml(rawText.slice(lastIndex, offset));
+                html += '<mark class="table-search-highlight">' + escapeHtml(match) + '</mark>';
+                lastIndex = offset + match.length;
+                return match;
+            });
+            html += escapeHtml(rawText.slice(lastIndex));
+            return html;
+        }
+
+        function applyNoticeCellSearchHighlight(tr, searchTerm, rowObj) {
+            if (!tr) return;
+            const noticeSpan = tr.querySelector('.notice-code-cell > div > span');
+            if (!noticeSpan) return;
+            const sourceText = ((rowObj && rowObj['Notice/Order Code']) ? String(rowObj['Notice/Order Code']) : (tr.dataset.notice || '')).trim();
+            noticeSpan.innerHTML = renderSearchHighlightedText(sourceText, searchTerm);
+        }
+
+        function applySearchHighlightToCell(cell, sourceText, searchTerm) {
+            if (!cell) return;
+            const existingRaw = cell.getAttribute('data-search-raw-text');
+            const rawText = (existingRaw !== null) ? existingRaw : (sourceText || '').toString();
+            if (existingRaw === null) {
+                cell.setAttribute('data-search-raw-text', rawText);
+            }
+            cell.innerHTML = renderSearchHighlightedText(rawText, searchTerm);
+        }
+
+        function applyParcelAndTrackingSearchHighlights(tr, rowObj, searchTerm) {
+            if (!tr) return;
+            const parcelCell = tr.querySelector('td[data-col="Parcel Details"]');
+            const trackingCell = tr.querySelector('td[data-col="Tracking No."]');
+
+            if (parcelCell) {
+                const parcelText = ((rowObj && rowObj['Parcel Details']) ? String(rowObj['Parcel Details']) : parcelCell.textContent || '').trim();
+                applySearchHighlightToCell(parcelCell, parcelText, searchTerm);
+            }
+
+            if (trackingCell) {
+                const trackingText = ((rowObj && (rowObj['Tracking No.'] ?? rowObj['Tracking No'] ?? rowObj['tracking_no'] ?? rowObj['TrackingNo']))
+                    ? String(rowObj['Tracking No.'] ?? rowObj['Tracking No'] ?? rowObj['tracking_no'] ?? rowObj['TrackingNo'])
+                    : (trackingCell.textContent || '')
+                ).trim();
+                applySearchHighlightToCell(trackingCell, trackingText, searchTerm);
+            }
+        }
+
         function clearTempSearchCells(table) {
             if (!table) return;
             table.querySelectorAll('td[data-temp-fill="1"]').forEach(function(td) {
@@ -2400,7 +2459,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             restoreRowspansFromSearch(table);
         }
 
-        function rebuildVisibleRowCellsForSearch(tr, rowObj) {
+        function rebuildVisibleRowCellsForSearch(tr, rowObj, searchTerm) {
             if (!tr) return;
             const safeRowObj = rowObj || {};
             const actionCell = ensureActionCellForSearch(tr, safeRowObj);
@@ -2440,8 +2499,21 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             td.appendChild(link);
                         }
                     } else {
-                        td.textContent = text;
+                        const shouldHighlight = (colName === 'Parcel Details' || colName === 'Tracking No.');
+                        if (shouldHighlight) {
+                            td.setAttribute('data-search-raw-text', text);
+                            td.innerHTML = renderSearchHighlightedText(text, searchTerm);
+                        } else {
+                            td.textContent = text;
+                        }
                     }
+                }
+                if (td && (colName === 'Parcel Details' || colName === 'Tracking No.')) {
+                    const rawText = td.getAttribute('data-search-raw-text');
+                    if (rawText === null) {
+                        td.setAttribute('data-search-raw-text', (td.textContent || '').trim());
+                    }
+                    td.innerHTML = renderSearchHighlightedText(td.getAttribute('data-search-raw-text') || '', searchTerm);
                 }
                 if (td.hasAttribute('rowspan')) {
                     if (!td.hasAttribute('data-original-rowspan')) {
@@ -2685,7 +2757,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
 
 
-        // Table search and sort functionality (filter by Notice/Order Code and year)
+        // Table search and sort functionality (filter by Notice/Order Code, Parcel Details, Tracking No., and year)
         // Keep checked rows visible regardless of filter, except when a status button filter is active.
         let selectedStatusFilter = 'ALL';
 
@@ -2829,16 +2901,23 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 const rowObj = rowDataById.get(rowId) || rowDataByNotice.get(notice) || null;
                 const rowStatus = ((rowObj && rowObj['Status']) ? String(rowObj['Status']) : '').trim();
                 const statusMatch = rowMatchesStatusFilter(rowStatus, normalizedStatusFilter);
+                applyNoticeCellSearchHighlight(tr, filter, rowObj);
+                applyParcelAndTrackingSearchHighlights(tr, rowObj, filter);
 
                 if (isChecked && !hasStatusFilter && !hasTransmittalFilter) {
                     tr.style.display = '';
                     if (isFiltering && !batchPreserveMode) {
-                        rebuildVisibleRowCellsForSearch(tr, rowObj);
+                        rebuildVisibleRowCellsForSearch(tr, rowObj, filter);
                     }
                     return;
                 }
 
+                const parcelDetails = ((rowObj && rowObj['Parcel Details']) ? String(rowObj['Parcel Details']) : '').trim();
+                const trackingNo = ((rowObj && (rowObj['Tracking No.'] ?? rowObj['Tracking No'] ?? rowObj['tracking_no'] ?? rowObj['TrackingNo'])) ? String(rowObj['Tracking No.'] ?? rowObj['Tracking No'] ?? rowObj['tracking_no'] ?? rowObj['TrackingNo']) : (tr.dataset.trackingNo || '')).trim();
                 const codeMatch = notice.toLowerCase().indexOf(filter) > -1;
+                const parcelMatch = parcelDetails.toLowerCase().indexOf(filter) > -1;
+                const trackingMatch = trackingNo.toLowerCase().indexOf(filter) > -1;
+                const searchMatch = codeMatch || parcelMatch || trackingMatch;
                 const rowTransmittal = ((rowObj && rowObj['Transmittal ID']) ? String(rowObj['Transmittal ID']) : (tr.dataset.transmittalId || '')).trim();
                 const transmittalMatch = !hasTransmittalFilter || rowTransmittal === activeTransmittal;
 
@@ -2853,13 +2932,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     }
                 }
 
-                const visible = codeMatch && yearMatch && monthMatch && statusMatch && transmittalMatch;
+                const visible = searchMatch && yearMatch && monthMatch && statusMatch && transmittalMatch;
                 if (visible && batchPreserveMode && batchId !== '') {
                     matchedBatchIds.add(batchId);
                 }
                 tr.style.display = visible ? '' : 'none';
                 if (visible && isFiltering && !batchPreserveMode) {
-                    rebuildVisibleRowCellsForSearch(tr, rowObj);
+                    rebuildVisibleRowCellsForSearch(tr, rowObj, filter);
                 }
             });
 
@@ -4221,6 +4300,54 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             return s === 'RETURNED TO SENDER' ? 'returned' : 'delivered';
         }
 
+        const DEPT_CODE_TO_KEY = Object.freeze({
+            EMES: 'emes',
+            PRLS: 'prls',
+            AFD: 'afd',
+            PHSD: 'phsd',
+            ELUPD: 'elupd',
+            ORD: 'ord'
+        });
+
+        const DEPT_KEY_TO_CODE = Object.freeze({
+            emes: 'EMES',
+            prls: 'PRLS',
+            afd: 'AFD',
+            phsd: 'PHSD',
+            elupd: 'ELUPD',
+            ord: 'ORD'
+        });
+
+        function normalizeDepartmentKey(rawValue) {
+            const key = ((rawValue || '') + '').trim().toLowerCase();
+            return Object.prototype.hasOwnProperty.call(DEPT_KEY_TO_CODE, key) ? key : 'emes';
+        }
+
+        function resolveNotificationDepartmentKey(noticeCode, fallbackDeptKey) {
+            const notice = ((noticeCode || '') + '').trim();
+            if (notice) {
+                const codeMatch = notice.match(/^([A-Za-z]+)-/);
+                if (codeMatch && codeMatch[1]) {
+                    const mapped = DEPT_CODE_TO_KEY[String(codeMatch[1]).trim().toUpperCase()] || '';
+                    if (mapped) return mapped;
+                }
+            }
+            return normalizeDepartmentKey(fallbackDeptKey || currentDeptKey);
+        }
+
+        function getNotificationDepartmentKey(notif) {
+            if (!notif || typeof notif !== 'object') return normalizeDepartmentKey(currentDeptKey);
+            const rawStored = ((notif.department || '') + '').trim();
+            if (rawStored) return normalizeDepartmentKey(rawStored);
+            const noticeCode = ((notif.noticeCode || notif.trackingId || '') + '').trim();
+            return resolveNotificationDepartmentKey(noticeCode, currentDeptKey);
+        }
+
+        function getNotificationDepartmentLabel(notif) {
+            const deptKey = getNotificationDepartmentKey(notif);
+            return DEPT_KEY_TO_CODE[deptKey] || 'EMES';
+        }
+
         function readNotifications() {
             try {
                 const raw = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
@@ -4265,6 +4392,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const displayTrackingId = ((options.displayTrackingId || '') + '').trim() || notice;
             const navigateNoticeCode = ((options.noticeCode || '') + '').trim() || notice;
             let dedupeKey = ((options.dedupeKey || '') + '').trim();
+            const fallbackDepartment = normalizeDepartmentKey(options.department || currentDeptKey);
+            const notificationDepartment = resolveNotificationDepartmentKey(navigateNoticeCode || notice, fallbackDepartment);
             const prev = ((previousStatus || '') + '').trim().toUpperCase();
             const next = ((nextStatus || '') + '').trim().toUpperCase();
             const eventDate = ((eventDateText || '') + '').trim();
@@ -4289,6 +4418,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 statusType: getNotificationStatusType(next),
                 eventDate: eventDate,
                 timestampIso: new Date().toISOString(),
+                department: notificationDepartment,
                 read: false
             };
 
@@ -4371,6 +4501,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         <div class="notif-text">
                             <span class="notif-tracking-id">${escapeHtml(notif.trackingId)}</span> is now <span class="notif-status ${notif.statusType}">${escapeHtml(notif.status)}</span>
                         </div>
+                        <div class="notif-dept">Department: ${escapeHtml(getNotificationDepartmentLabel(notif))}</div>
                         <div class="notif-timestamp">
                             <span>&#128339;</span> ${escapeHtml(formatNotificationTimestamp(notif))}
                         </div>
@@ -4405,11 +4536,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const notifications = readNotifications();
             let noticeCode = '';
             let statusType = '';
+            let targetDeptKey = normalizeDepartmentKey(currentDeptKey);
             let changed = false;
             notifications.forEach(function(n) {
                 if ((parseInt(n.id, 10) || 0) === targetId) {
                     noticeCode = ((n.noticeCode || n.trackingId || '') + '').trim();
                     statusType = (n.statusType === 'returned' ? 'returned' : 'delivered');
+                    targetDeptKey = resolveNotificationDepartmentKey(noticeCode, getNotificationDepartmentKey(n));
                     if (!n.read) {
                         n.read = true;
                         changed = true;
@@ -4419,6 +4552,18 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             if (changed) {
                 writeNotifications(notifications);
                 loadNotifications();
+            }
+
+            if (noticeCode && targetDeptKey !== normalizeDepartmentKey(currentDeptKey)) {
+                closeNotifModal();
+                const targetUrl = new URL(window.location.href);
+                targetUrl.searchParams.set('dept', targetDeptKey);
+                targetUrl.searchParams.set('scanned_notice', noticeCode);
+                targetUrl.searchParams.delete('scanned_id');
+                targetUrl.searchParams.delete('recovered');
+                targetUrl.searchParams.delete('recovered_transmittals');
+                window.location.assign(targetUrl.toString());
+                return;
             }
 
             // Always return to the main table when opening from notifications.

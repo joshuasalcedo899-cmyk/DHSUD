@@ -724,6 +724,12 @@
 	display: flex;
 	align-items: center;
 }
+.table-search-highlight {
+	background: #ffe58f;
+	color: inherit;
+	padding: 0;
+	border-radius: 2px;
+}
 .admin-home-container, .admin-table-container {
 	position: fixed;
 	left: 0;
@@ -2775,6 +2781,13 @@ img {
             color: #1E1E1E;
             margin-bottom: 6px;
             line-height: 1.4;
+        }
+        .notif-dept {
+            font-size: 0.72rem;
+            color: #4b5563;
+            margin-bottom: 6px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
         }
         .notif-tracking-id {
             font-weight: 700;
