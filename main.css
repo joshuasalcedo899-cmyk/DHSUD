@@ -119,6 +119,26 @@
 	max-width: 95vw;
 	position: relative;
 }
+.edit-modal,
+.pdf-viewer-panel,
+.ongoing-delivery-panel,
+#scannerModal .modal-panel {
+    transform-origin: var(--modal-origin-x, 50%) var(--modal-origin-y, 18%);
+    will-change: transform, opacity;
+}
+.modal-pop-enter {
+    animation: modalPopFromTrigger 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes modalPopFromTrigger {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -10px, 0) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
 .edit-modal h2 {
 	margin-top: 0;
 	color: #22336a;
@@ -2751,6 +2771,34 @@ img {
             gap: 12px;
             cursor: pointer;
             transition: background 0.2s;
+            overflow: hidden;
+        }
+        .notif-item.is-deleting {
+            pointer-events: none;
+            animation: notifPullOutStack 260ms cubic-bezier(0.25, 0.85, 0.25, 1) forwards;
+        }
+        @keyframes notifPullOutStack {
+            0% {
+                opacity: 1;
+                transform: translateX(0) scale(1) rotate(0deg);
+                max-height: 180px;
+                margin-bottom: 0;
+                padding-top: 16px;
+                padding-bottom: 16px;
+                border-bottom-color: #f3f4f6;
+            }
+            55% {
+                transform: translateX(28px) scale(0.97) rotate(2.5deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(54px) scale(0.9) rotate(4deg);
+                max-height: 0;
+                margin-bottom: -1px;
+                padding-top: 0;
+                padding-bottom: 0;
+                border-bottom-color: transparent;
+            }
         }
         .notif-item:hover {
             background: #f9fafb;
@@ -3711,6 +3759,12 @@ body.admin-home-bg.dept-switch-enter .admin-table-container .table-scroll-area {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .notif-item.is-deleting {
+        animation-duration: 1ms !important;
+    }
+    .modal-pop-enter {
+        animation-duration: 1ms !important;
+    }
     body.admin-home-bg .admin-table-container .table-scroll-area,
     body.admin-home-bg.dept-switch-enter .admin-table-container .table-scroll-area {
         transition-duration: 1ms !important;

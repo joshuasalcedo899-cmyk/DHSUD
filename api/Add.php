@@ -26,12 +26,12 @@ error_log("POST data: " . json_encode($_POST));
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $departmentConfig = [
-        'emes' => ['code' => 'EMES', 'sender' => 'HREDRD-EMES'],
-        'prls' => ['code' => 'PRLS', 'sender' => 'HREDRD-PRLS'],
-        'afd' => ['code' => 'AFD', 'sender' => 'HREDRD-AFD'],
-        'phsd' => ['code' => 'PHSD', 'sender' => 'HREDRD-PHSD'],
-        'elupd' => ['code' => 'ELUPD', 'sender' => 'HREDRD-ELUPD'],
-        'ord' => ['code' => 'ORD', 'sender' => 'HREDRD-ORD'],
+        'emes' => ['code' => 'EMES', 'sender' => getDepartmentSenderTag('emes')],
+        'prls' => ['code' => 'PRLS', 'sender' => getDepartmentSenderTag('prls')],
+        'afd' => ['code' => 'AFD', 'sender' => getDepartmentSenderTag('afd')],
+        'phsd' => ['code' => 'PHSD', 'sender' => getDepartmentSenderTag('phsd')],
+        'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
+        'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
     ];
     $currentDept = strtolower(trim((string)($_POST['department_id'] ?? $_POST['dept'] ?? 'emes')));
     if (!isset($departmentConfig[$currentDept])) {
@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dateReleased = trim($_POST['Date released to AFD'] ?? $_POST['dateReleased'] ?? '');
     $parcelNo = 0;
     $recipientDetails = trim($_POST['Recipient Details'] ?? $_POST['recipientDetails'] ?? '');
+    $customSenderDetails = trim($_POST['Sender Details'] ?? $_POST['senderDetails'] ?? '');
     $trackingNo = trim($_POST['Tracking No.'] ?? $_POST['trackingNo'] ?? '');
     $transmittalId = trim($_POST['transmittal_id'] ?? $_POST['Transmittal ID'] ?? '');
 
@@ -79,6 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'parcel_details' => $parcelDetails
         ];
     }
+    // If no pair rows have values, still insert one record with empty notice/parcel details.
+    if (count($pairs) === 0) {
+        $pairs[] = [
+            'notice' => '',
+            'parcel_details' => ''
+        ];
+    }
 
     error_log("dateReleased: '$dateReleased'");
     error_log("pairs count: " . count($pairs));
@@ -87,25 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Date Released to AFD is required.';
         $messageType = 'error';
         error_log("ERROR: Date released is empty");
-    } elseif (count($pairs) === 0) {
-        $message = 'At least one Notice/Order Code + Parcel Details pair is required.';
-        $messageType = 'error';
-        error_log("ERROR: No pairs were provided");
-    } else {
-        foreach ($pairs as $index => $pair) {
-            if ($pair['notice'] === '') {
-                $message = 'Notice/Order Code is required for pair #' . ($index + 1) . '.';
-                $messageType = 'error';
-                error_log("ERROR: Empty notice code in pair index " . $index);
-                break;
-            }
-            if ($pair['parcel_details'] === '') {
-                $message = 'Parcel Details is required for pair #' . ($index + 1) . '.';
-                $messageType = 'error';
-                error_log("ERROR: Empty parcel details in pair index " . $index);
-                break;
-            }
-        }
     }
 
     if ($messageType !== 'error') {
@@ -116,7 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $formattedDate = date('F-d-Y', $st);
-            $senderDetailsBase = "Department of Human Settlements and Urban Development Region 4A\n" . $currentDeptSenderTag . "\n0935 542 1538" . "\n\n" . "(" . $formattedDate . ")";
+            $senderContactNo = getSenderContactNumber($currentDept, $currentDeptSenderTag);
+            $senderDetailsBase = "Department of Human Settlements and Urban Development Region 4A\n" . $currentDeptSenderTag . "\n" . $senderContactNo . "\n\n" . "(" . $formattedDate . ")";
             $newFormatDate = date('ymd', $st);
 
             $batchId = null;
@@ -127,9 +117,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             $parcelScopeTransmittalId = ($transmittalId !== '' ? $transmittalId : '');
-            $maxParcelStmt = $pdo->prepare('SELECT COALESCE(MAX(`Parcel No.`), 0) FROM mailtracking WHERE `Transmittal ID` = :transmittal_id');
+            $maxParcelStmt = $pdo->prepare(
+                'SELECT COALESCE(MAX(`Parcel No.`), 0)
+                 FROM mailtracking
+                 WHERE `Transmittal ID` = :transmittal_id
+                   AND UPPER(COALESCE(`Sender Details`, \'\')) LIKE :dept_sender'
+            );
             $maxParcelStmt->execute([
-                ':transmittal_id' => $parcelScopeTransmittalId
+                ':transmittal_id' => $parcelScopeTransmittalId,
+                ':dept_sender' => '%' . strtoupper($currentDeptSenderTag) . '%'
             ]);
             $maxParcelNo = (int)$maxParcelStmt->fetchColumn();
             if ($maxParcelNo < 0) {
@@ -148,6 +144,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $inserted = 0;
             foreach ($pairs as $index => $pair) {
                 $senderDetails = $senderDetailsBase;
+                if ($customSenderDetails !== '') {
+                    $senderDetails = $customSenderDetails . "\n" . $senderDetails;
+                }
                 if ($batchId !== null) {
                     $senderDetails .= "\nBatch ID: " . $batchId;
                 }

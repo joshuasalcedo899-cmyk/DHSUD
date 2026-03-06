@@ -18,17 +18,17 @@ function respondError($message, $statusCode = 400, $isAjax = false) {
     exit;
 }
 
-if (!isset($_POST['tracking']) || !isset($_POST['codes'])) {
+if (!isset($_POST['tracking']) || !isset($_POST['ids'])) {
     respondError('Invalid request', 400, $isAjax);
 }
 
 
 $trackingNo = trim($_POST['tracking']);
-$codes = $_POST['codes'];                // selected notice/order codes
+$ids = $_POST['ids']; // selected row IDs
 
 // ensure array
-if (!is_array($codes)) {
-    $codes = [$codes];
+if (!is_array($ids)) {
+    $ids = [$ids];
 }
 
 function extractBatchIdFromSenderDetails($senderDetails) {
@@ -40,34 +40,34 @@ function extractBatchIdFromSenderDetails($senderDetails) {
     return '';
 }
 
-// Normalize selected codes
-$normalizedCodes = [];
-foreach ($codes as $code) {
-    $c = trim((string)$code);
-    if ($c !== '') $normalizedCodes[$c] = true;
+// Normalize selected ids
+$normalizedIds = [];
+foreach ($ids as $idValue) {
+    $id = (int)$idValue;
+    if ($id > 0) $normalizedIds[$id] = true;
 }
-$codes = array_keys($normalizedCodes);
+$ids = array_keys($normalizedIds);
 
-if ($trackingNo === '' || empty($codes)) {
+if ($trackingNo === '' || empty($ids)) {
     respondError('Invalid request', 400, $isAjax);
 }
 
 try {
     $pdo->beginTransaction();
 
-    // Collect target notice codes:
-    // 1) explicitly selected codes
-    // 2) all rows that share batch ID with any selected code
-    $targetCodes = [];
-    foreach ($codes as $code) {
-        $targetCodes[$code] = true;
+    // Collect target row ids:
+    // 1) explicitly selected ids
+    // 2) all rows that share batch ID with any selected row
+    $targetIds = [];
+    foreach ($ids as $id) {
+        $targetIds[$id] = true;
     }
 
-    $selectSenderStmt = $pdo->prepare("SELECT `Sender Details` FROM mailtracking WHERE `Notice/Order Code` = ? LIMIT 1");
-    $selectBatchMembersStmt = $pdo->prepare("SELECT `Notice/Order Code` FROM mailtracking WHERE `Sender Details` LIKE ?");
+    $selectSenderStmt = $pdo->prepare("SELECT `Sender Details` FROM mailtracking WHERE `id` = ? LIMIT 1");
+    $selectBatchMembersStmt = $pdo->prepare("SELECT `id` FROM mailtracking WHERE `Sender Details` LIKE ?");
 
-    foreach ($codes as $code) {
-        $selectSenderStmt->execute([$code]);
+    foreach ($ids as $id) {
+        $selectSenderStmt->execute([$id]);
         $senderDetails = $selectSenderStmt->fetchColumn();
         $batchId = extractBatchIdFromSenderDetails($senderDetails ?: '');
         if ($batchId === '') {
@@ -75,10 +75,10 @@ try {
         }
 
         $selectBatchMembersStmt->execute(['%Batch ID: ' . $batchId . '%']);
-        while ($batchCode = $selectBatchMembersStmt->fetchColumn()) {
-            $batchCode = trim((string)$batchCode);
-            if ($batchCode !== '') {
-                $targetCodes[$batchCode] = true;
+        while ($batchRowId = $selectBatchMembersStmt->fetchColumn()) {
+            $batchRowId = (int)$batchRowId;
+            if ($batchRowId > 0) {
+                $targetIds[$batchRowId] = true;
             }
         }
     }
@@ -87,10 +87,24 @@ try {
     $updateStmt = $pdo->prepare("
         UPDATE mailtracking
         SET `Tracking No.` = ?
-        WHERE `Notice/Order Code` = ?
+        WHERE `id` = ?
     ");
-    foreach (array_keys($targetCodes) as $targetCode) {
-        $updateStmt->execute([$trackingNo, $targetCode]);
+    foreach (array_keys($targetIds) as $targetId) {
+        $updateStmt->execute([$trackingNo, $targetId]);
+    }
+
+    $updatedIds = array_values(array_keys($targetIds));
+    $updatedNotices = [];
+    if (!empty($updatedIds)) {
+        $noticePlaceholders = implode(',', array_fill(0, count($updatedIds), '?'));
+        $noticeStmt = $pdo->prepare("SELECT `Notice/Order Code` FROM mailtracking WHERE `id` IN ($noticePlaceholders)");
+        $noticeStmt->execute($updatedIds);
+        while ($n = $noticeStmt->fetchColumn()) {
+            $notice = trim((string)$n);
+            if ($notice !== '') {
+                $updatedNotices[] = $notice;
+            }
+        }
     }
 
     $pdo->commit();
@@ -106,7 +120,8 @@ if ($isAjax) {
         'success' => true,
         'message' => 'Tracking number saved',
         'tracking' => $trackingNo,
-        'updatedNotices' => array_values(array_keys($targetCodes)),
+        'updatedIds' => $updatedIds ?? [],
+        'updatedNotices' => $updatedNotices ?? [],
     ]);
     exit;
 }

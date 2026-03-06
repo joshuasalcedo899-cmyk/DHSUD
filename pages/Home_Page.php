@@ -6,12 +6,12 @@ require_once __DIR__ . '/../auth.php';
 requireLogin();
 
 $departmentConfig = [
-    'emes' => ['code' => 'EMES', 'sender' => 'HREDRD-EMES'],
-    'prls' => ['code' => 'PRLS', 'sender' => 'HREDRD-PRLS'],
-    'afd' => ['code' => 'AFD', 'sender' => 'HREDRD-AFD'],
-    'phsd' => ['code' => 'PHSD', 'sender' => 'HREDRD-PHSD'],
-    'elupd' => ['code' => 'ELUPD', 'sender' => 'HREDRD-ELUPD'],
-    'ord' => ['code' => 'ORD', 'sender' => 'HREDRD-ORD'],
+    'emes' => ['code' => 'EMES', 'sender' => getDepartmentSenderTag('emes')],
+    'prls' => ['code' => 'PRLS', 'sender' => getDepartmentSenderTag('prls')],
+    'afd' => ['code' => 'AFD', 'sender' => getDepartmentSenderTag('afd')],
+    'phsd' => ['code' => 'PHSD', 'sender' => getDepartmentSenderTag('phsd')],
+    'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
+    'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
 ];
 $currentDept = strtolower(trim((string)($_GET['dept'] ?? 'emes')));
 if (!isset($departmentConfig[$currentDept])) {
@@ -19,35 +19,29 @@ if (!isset($departmentConfig[$currentDept])) {
 }
 $currentDeptCode = $departmentConfig[$currentDept]['code'];
 $currentDeptSenderTag = $departmentConfig[$currentDept]['sender'];
+$currentDeptContactNo = getSenderContactNumber($currentDept, $currentDeptSenderTag);
 
 // Handle status update when submitted per-row
 $message = '';
 $updatedNotice = '';
 $updatedStatus = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST['row_id']) || !empty($_POST['notice_code'])) && isset($_POST['status'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['row_id']) && isset($_POST['status'])) {
     requireCsrfToken();
     $rowId = (int)($_POST['row_id'] ?? 0);
-    $notice = trim($_POST['notice_code'] ?? '');
     $status = trim($_POST['status']);
     $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest';
-    if ($rowId <= 0 && $notice === '') {
+    if ($rowId <= 0) {
         $message = 'Missing record id.';
     } elseif ($status === '') {
         // placeholder or empty selection — don't save
         $message = 'No status selected.';
     } else {
         try {
-            $sql = ($rowId > 0)
-                ? 'UPDATE mailtracking SET `Status` = :status WHERE `id` = :row_id'
-                : 'UPDATE mailtracking SET `Status` = :status WHERE `Notice/Order Code` = :notice';
+            $sql = 'UPDATE mailtracking SET `Status` = :status WHERE `id` = :row_id';
             $stmt = $pdo->prepare($sql);
-            if ($rowId > 0) {
-                $stmt->execute([':status' => $status, ':row_id' => $rowId]);
-            } else {
-                $stmt->execute([':status' => $status, ':notice' => $notice]);
-            }
+            $stmt->execute([':status' => $status, ':row_id' => $rowId]);
             // track which row was updated so we can show a per-row message in the UI
-            $updatedNotice = $notice;
+            $updatedNotice = '';
             $updatedStatus = $status;
             $message = '';
         } catch (PDOException $e) {
@@ -366,8 +360,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     <input type="hidden" name="original_notice_code" id="editNoticeCode">
                     <div style="display:contents">
                         <div>
-                            <label for="editNoticeCodeDisplay">Notice/Order Code*</label>
-                            <input type="text" name="Notice/Order Code" id="editNoticeCodeDisplay" style="background:#f7f8fa;" required />
+                            <label for="editNoticeCodeDisplay">Notice/Order Code</label>
+                            <input type="text" name="Notice/Order Code" id="editNoticeCodeDisplay" style="background:#f7f8fa;" />
                         </div>
                         <div>
                             <label for="editDateAfd">Date Released to AFD*</label>
@@ -466,8 +460,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             });
                             </script>
                         <div>
-                            <label for="addDateAfd">Date Released to AFD</label>
-                            <input type="date" name="dateReleased" id="addDateAfd">
+                            <label for="addDateAfd">Date Released to AFD*</label>
+                            <input type="date" name="dateReleased" id="addDateAfd" required>
                         </div>
                         <div>
                             <label for="addParcelNo">Parcel No.</label>
@@ -483,9 +477,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addSender">Sender Details</label>
-                            <textarea name="senderDetails" rows="3" id="addSender" readonly>Department of Human Settlements and Urban Development Region 4A
-<?= htmlspecialchars($currentDeptSenderTag) . "\n" ?>
-0935 542 1538</textarea>
+                            <textarea name="senderDetails" rows="2" id="addSender" placeholder="Optional additional sender details"></textarea>
                         </div>
                         <div style="grid-column:1/span 2;">
                             <label for="addFileName">File Name (PDF)</label>
@@ -610,6 +602,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         const currentDeptKey = <?= json_encode($currentDept, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
 
             let scannerSelectedNoticeCode = '';
+            let scannerSelectedRowId = 0;
             let activeTransmittalId = '';
             const pendingTransmittals = new Set();
 
@@ -631,18 +624,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             seedPendingRecoveredTransmittalsFromUrl();
 
-            function openScannerModal(noticeCode) {
+            function openScannerModal(noticeCode, rowId) {
                 const modal = document.getElementById('scannerModal');
                 const frame = document.getElementById('scannerFrame');
                 if (!modal || !frame) return;
                 scannerSelectedNoticeCode = (noticeCode || '').trim();
-                if (!scannerSelectedNoticeCode) return;
+                scannerSelectedRowId = parseInt(rowId || '0', 10) || 0;
+                if (scannerSelectedRowId <= 0) return;
                 frame.onload = function() {
                     try { frame.focus(); } catch (e) {}
                     try { if (frame.contentWindow) frame.contentWindow.focus(); } catch (e) {}
                 };
-                frame.src = '../test.php?code=' + encodeURIComponent(scannerSelectedNoticeCode) + '&embedded=1';
+                frame.src = '../test.php?row_id=' + encodeURIComponent(String(scannerSelectedRowId)) + '&code=' + encodeURIComponent(scannerSelectedNoticeCode) + '&embedded=1';
                 modal.style.display = 'flex';
+                animateModalPanelFromTrigger(modal, modal.querySelector('.modal-panel'), document.activeElement);
                 setTimeout(function() {
                     try { frame.focus(); } catch (e) {}
                     try { if (frame.contentWindow) frame.contentWindow.focus(); } catch (e) {}
@@ -656,6 +651,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 modal.style.display = 'none';
                 frame.src = 'about:blank';
                 scannerSelectedNoticeCode = '';
+                scannerSelectedRowId = 0;
             }
 
             let lastPdfViewerFocus = null;
@@ -719,7 +715,36 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 }
             }
 
-            function openPdfViewerModal(pdfUrl, pdfTitle) {
+            function animateModalPanelFromTrigger(overlayEl, panelEl, triggerEl) {
+                if (!overlayEl || !panelEl) return;
+                const trigger = (triggerEl && typeof triggerEl.getBoundingClientRect === 'function')
+                    ? triggerEl
+                    : (document.activeElement && typeof document.activeElement.getBoundingClientRect === 'function' ? document.activeElement : null);
+                const triggerRect = trigger ? trigger.getBoundingClientRect() : null;
+
+                requestAnimationFrame(function() {
+                    const panelRect = panelEl.getBoundingClientRect();
+                    let originX = panelRect.width / 2;
+                    let originY = Math.min(56, panelRect.height / 2);
+
+                    if (triggerRect) {
+                        const cx = triggerRect.left + (triggerRect.width / 2);
+                        const cy = triggerRect.top + (triggerRect.height / 2);
+                        originX = cx - panelRect.left;
+                        originY = cy - panelRect.top;
+                    }
+
+                    originX = Math.max(24, Math.min(panelRect.width - 24, originX));
+                    originY = Math.max(20, Math.min(panelRect.height - 20, originY));
+                    panelEl.style.setProperty('--modal-origin-x', originX + 'px');
+                    panelEl.style.setProperty('--modal-origin-y', originY + 'px');
+                    panelEl.classList.remove('modal-pop-enter');
+                    void panelEl.offsetWidth;
+                    panelEl.classList.add('modal-pop-enter');
+                });
+            }
+
+            function openPdfViewerModal(pdfUrl, pdfTitle, triggerEl) {
                 const modal = document.getElementById('pdfViewerModal');
                 const frame = document.getElementById('pdfViewerFrame');
                 const title = document.getElementById('pdfViewerTitle');
@@ -734,6 +759,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 modal.style.display = 'flex';
                 modal.setAttribute('aria-hidden', 'false');
                 modal.removeAttribute('inert');
+                animateModalPanelFromTrigger(modal, modal.querySelector('.pdf-viewer-panel'), triggerEl);
                 const closeBtn = modal.querySelector('.pdf-viewer-close');
                 if (closeBtn) {
                     try { closeBtn.focus(); } catch (e) {}
@@ -761,13 +787,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 lastPdfViewerFocus = null;
             }
 
-            function openOngoingDeliveryModal() {
+            function openOngoingDeliveryModal(triggerEl) {
                 const modal = document.getElementById('ongoingDeliveryModal');
                 if (!modal) return;
                 lastOngoingDeliveryFocus = document.activeElement;
                 modal.style.display = 'flex';
                 modal.setAttribute('aria-hidden', 'false');
                 modal.removeAttribute('inert');
+                animateModalPanelFromTrigger(modal, modal.querySelector('.ongoing-delivery-panel'), triggerEl);
                 const closeBtn = modal.querySelector('.ongoing-delivery-close');
                 if (closeBtn) {
                     try { closeBtn.focus(); } catch (e) {}
@@ -818,12 +845,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     event.preventDefault();
                     const statusText = resolveStatusFromLink(link);
                     if (statusText === 'ONGOING DELIVERY') {
-                        openOngoingDeliveryModal();
+                        openOngoingDeliveryModal(link);
                         return;
                     }
                     const pdfUrl = link.getAttribute('data-pdf-url') || link.getAttribute('href') || '';
                     const pdfTitle = link.getAttribute('data-pdf-title') || (link.textContent || '').trim();
-                    if (pdfUrl) openPdfViewerModal(pdfUrl, pdfTitle);
+                    if (pdfUrl) openPdfViewerModal(pdfUrl, pdfTitle, link);
                     return;
                 }
 
@@ -977,6 +1004,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                                 $cellValue = formatDateCell($cellValue);
                                             }
                                             if ($colName === 'Sender Details') {
+                                                $cellValue = preg_replace('/\R?Department ID:\s*[^\r\n]+/i', '', (string)$cellValue);
                                                 $cellValue = preg_replace('/\R?Batch ID:\s*[A-Za-z0-9\-]+\s*/i', '', (string)$cellValue);
                                                 $cellValue = trim((string)$cellValue);
                                             }
@@ -1028,7 +1056,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                             <span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span>
                                             <div class="track-result"></div>
                                         <?php else: ?>
-                                            <button type="button" class="btn-scan" onclick="openScannerModal('<?= htmlspecialchars($row['Notice/Order Code'] ?? '', ENT_QUOTES) ?>')" style="display:inline-block;text-decoration:none;">Scan</button>
+                                            <button type="button" class="btn-scan" onclick="openScannerModal('<?= htmlspecialchars($row['Notice/Order Code'] ?? '', ENT_QUOTES) ?>', <?= (int)($row['id'] ?? 0) ?>)" style="display:inline-block;text-decoration:none;">Scan</button>
                                         <?php endif; ?>
                                     </td>
                                 <?php endif; ?>
@@ -1265,7 +1293,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         function openAddModal() {
             syncAddTransmittalField();
             syncAddParcelNoField();
-            document.getElementById('addModalOverlay').style.display = 'flex';
+            var overlay = document.getElementById('addModalOverlay');
+            if (!overlay) return;
+            overlay.style.display = 'flex';
+            animateModalPanelFromTrigger(overlay, overlay.querySelector('.edit-modal'), document.activeElement);
         }
         function closeAddModal() {
             document.getElementById('addModalOverlay').style.display = 'none';
@@ -1439,7 +1470,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         }
 
                         function openEditModal(rowData) {
-                            document.getElementById('editModalOverlay').style.display = 'flex';
+                            var overlay = document.getElementById('editModalOverlay');
+                            if (!overlay) return;
+                            overlay.style.display = 'flex';
+                            animateModalPanelFromTrigger(overlay, overlay.querySelector('.edit-modal'), document.activeElement);
                             // Fill form fields - both id and notice are kept for compatibility.
                             var rowId = parseInt(rowData.id, 10) || 0;
                             var noticeCode = (rowData['Notice/Order Code'] || '').trim();
@@ -1532,10 +1566,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                             alert(data.pdfWarning);
                                         }
                                         var focusNotice = (document.getElementById('editNoticeCodeDisplay').value || '').trim();
+                                        var focusRowId = parseInt((formData.get('original_id') || '0'), 10) || 0;
                                         var submittedTrackingNo = (formData.get('Tracking No.') || '').trim();
                                         closeEditModal();
                                         refreshHomeData({
                                             focusNotice: focusNotice,
+                                            focusRowId: focusRowId,
                                             immediateTrackNotices: (submittedTrackingNo !== '' ? [focusNotice] : [])
                                         });
                                     } else {
@@ -1552,17 +1588,23 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         // Expose PHP rows as JS array for modal
                         let mailRowIndexById = new Map();
                         let mailRowIndexByNotice = new Map();
+                        let mailRowIndexByTracking = new Map();
 
                         function rebuildMailRowIndexes(rowsOverride) {
                             const rows = Array.isArray(rowsOverride) ? rowsOverride : (Array.isArray(window.mailRows) ? window.mailRows : []);
                             mailRowIndexById = new Map();
                             mailRowIndexByNotice = new Map();
+                            mailRowIndexByTracking = new Map();
                             rows.forEach(function(r) {
                                 const id = parseInt(r && r.id, 10) || 0;
                                 if (id > 0) mailRowIndexById.set(id, r);
                                 const noticeCode = ((r && r['Notice/Order Code']) ? String(r['Notice/Order Code']) : '').trim();
                                 if (noticeCode !== '' && !mailRowIndexByNotice.has(noticeCode)) {
                                     mailRowIndexByNotice.set(noticeCode, r);
+                                }
+                                const trackingNo = ((r && r['Tracking No.']) ? String(r['Tracking No.']) : '').trim();
+                                if (trackingNo !== '' && trackingNo !== '0' && !mailRowIndexByTracking.has(trackingNo)) {
+                                    mailRowIndexByTracking.set(trackingNo, r);
                                 }
                             });
                             if (typeof updateTransmittalGrid === 'function') {
@@ -2261,6 +2303,27 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
         const statusSnapshotByNotice = new Map();
 
+        function getNotificationIdentityFromRow(row) {
+            const safeRow = row || {};
+            const rowId = parseInt(safeRow.id || safeRow['id'] || '0', 10) || 0;
+            const notice = ((safeRow['Notice/Order Code'] || '') + '').trim();
+            const trackingNo = ((safeRow['Tracking No.'] || '') + '').trim();
+            let key = '';
+            if (rowId > 0) {
+                key = 'id:' + String(rowId);
+            } else if (notice) {
+                key = 'notice:' + notice;
+            } else if (trackingNo && trackingNo !== '0') {
+                key = 'tracking:' + trackingNo;
+            }
+            return {
+                key: key,
+                rowId: rowId,
+                notice: notice,
+                trackingNo: trackingNo
+            };
+        }
+
         function cloneStatusSnapshot() {
             return new Map(statusSnapshotByNotice);
         }
@@ -2270,11 +2333,11 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             if (!Array.isArray(window.mailRows)) return;
 
             window.mailRows.forEach(function(row) {
-                const notice = ((row['Notice/Order Code'] || '') + '').trim();
-                if (!notice) return;
+                const identity = getNotificationIdentityFromRow(row);
+                if (!identity.key) return;
                 const status = ((row['Status'] || '') + '').trim().toUpperCase();
                 const eventDate = (formatDisplayDate(row['Date'] || '') || ((row['Date'] || '') + '').trim());
-                statusSnapshotByNotice.set(notice, {
+                statusSnapshotByNotice.set(identity.key, {
                     status: status,
                     eventDate: eventDate
                 });
@@ -2290,14 +2353,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const pendingBatchNotifications = new Map();
 
             window.mailRows.forEach(function(row) {
-                const notice = ((row['Notice/Order Code'] || '') + '').trim();
-                if (!notice) return;
+                const identity = getNotificationIdentityFromRow(row);
+                if (!identity.key) return;
                 const senderDetails = ((row['Sender Details'] || '') + '').trim();
                 // Prefer DOM batch metadata because full-refresh row rebuilding may strip
                 // "Batch ID: ..." text from sender details for display purposes.
                 let batchId = '';
                 try {
-                    const rowEl = document.querySelector('tr[data-notice="' + CSS.escape(notice) + '"]');
+                    let rowEl = null;
+                    if (identity.rowId > 0) {
+                        rowEl = document.querySelector('tr[data-id="' + String(identity.rowId) + '"]');
+                    }
+                    if (!rowEl && identity.notice) {
+                        rowEl = document.querySelector('tr[data-notice="' + CSS.escape(identity.notice) + '"]');
+                    }
                     batchId = rowEl ? (((rowEl.dataset.batchId || '') + '').trim()) : '';
                 } catch (e) {
                     batchId = '';
@@ -2309,7 +2378,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
                 const nextStatus = ((row['Status'] || '') + '').trim().toUpperCase();
                 const eventDate = (formatDisplayDate(row['Date'] || '') || ((row['Date'] || '') + '').trim());
-                const prevEntry = previousSnapshot.get(notice);
+                const prevEntry = previousSnapshot.get(identity.key);
                 const previousStatus = prevEntry ? (((prevEntry.status || '') + '').trim().toUpperCase()) : '';
 
                 if (prevEntry && previousStatus !== nextStatus) {
@@ -2320,15 +2389,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 batchId: batchId,
                                 nextStatus: nextStatus,
                                 eventDate: eventDate,
-                                notice: notice
+                                notice: identity.notice,
+                                trackingNo: identity.trackingNo,
+                                rowId: identity.rowId
                             });
                         }
                     } else {
-                        maybeNotifyStatusChange(notice, previousStatus, nextStatus, eventDate);
+                        maybeNotifyStatusChange(identity.notice, previousStatus, nextStatus, eventDate, {
+                            trackingNo: identity.trackingNo,
+                            rowId: identity.rowId
+                        });
                     }
                 }
 
-                statusSnapshotByNotice.set(notice, {
+                statusSnapshotByNotice.set(identity.key, {
                     status: nextStatus,
                     eventDate: eventDate
                 });
@@ -2338,6 +2412,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 maybeNotifyStatusChange(info.notice, '', info.nextStatus, info.eventDate, {
                     displayTrackingId: getBatchNoticeCodesLabel(info.batchId) || ('Batch ' + info.batchId),
                     noticeCode: info.notice,
+                    trackingNo: info.trackingNo,
+                    rowId: info.rowId,
                     dedupeKey: 'batch:' + info.batchId + '|status:' + info.nextStatus
                 });
             });
@@ -2350,7 +2426,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 return formatDisplayDate(value) || value;
             }
             if (colName === 'Sender Details') {
-                return value.replace(/\r?\n?Batch ID:\s*[A-Za-z0-9\-]+\s*/i, '').trim();
+                return value
+                    .replace(/\r?\n?Department ID:\s*[^\r\n]+/i, '')
+                    .replace(/\r?\n?Batch ID:\s*[A-Za-z0-9\-]+\s*/i, '')
+                    .trim();
             }
             return value;
         }
@@ -2551,7 +2630,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     button.style.textDecoration = 'none';
                     button.textContent = 'Scan';
                     button.addEventListener('click', function() {
-                        openScannerModal(rowNotice);
+                        openScannerModal(rowNotice, (safeRowObj && safeRowObj.id) ? safeRowObj.id : (tr.dataset.id || 0));
                     });
                     actionCell.appendChild(button);
                 }
@@ -2564,6 +2643,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const safeNotice = (noticeCode || '').trim();
             if (!safeNotice) return null;
             return document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
+        }
+
+        function findRowById(rowId) {
+            const safeId = parseInt(rowId || '0', 10) || 0;
+            if (safeId <= 0) return null;
+            return document.querySelector('tr[data-id="' + String(safeId) + '"]');
         }
 
         function getBatchAwareCell(row, colName) {
@@ -2606,6 +2691,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const suppressNotification = options.suppressNotification === true;
             const suppressStatsRefresh = options.suppressStatsRefresh === true;
             const resolvedNotice = ((row.dataset.notice || '').trim() || (noticeCode || '').trim());
+            const resolvedRowId = parseInt(row.dataset.id || '0', 10) || 0;
+            const resolvedTrackingNo = ((data && data.trackingNo) ? String(data.trackingNo) : ((row.dataset.trackingNo || '') + '')).trim();
 
             const dateCell = getBatchAwareCell(row, 'Date');
             const existingDateText = ((dateCell && dateCell.textContent) ? dateCell.textContent : '').trim();
@@ -2619,12 +2706,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 const statusClass = getStatusClass(data.status);
                 statusCell.innerHTML = `<span class="${statusClass}">${data.status || ''}</span>`;
                 if (!suppressNotification) {
-                    maybeNotifyStatusChange(resolvedNotice, previousStatus, nextStatus, nextDateText);
+                    maybeNotifyStatusChange(resolvedNotice, previousStatus, nextStatus, nextDateText, {
+                        trackingNo: resolvedTrackingNo,
+                        rowId: resolvedRowId
+                    });
                 }
-                statusSnapshotByNotice.set(resolvedNotice, {
-                    status: nextStatus,
-                    eventDate: nextDateText
-                });
+                const snapshotKey = (resolvedRowId > 0)
+                    ? ('id:' + String(resolvedRowId))
+                    : (resolvedNotice ? ('notice:' + resolvedNotice) : (resolvedTrackingNo && resolvedTrackingNo !== '0' ? ('tracking:' + resolvedTrackingNo) : ''));
+                if (snapshotKey) {
+                    statusSnapshotByNotice.set(snapshotKey, {
+                        status: nextStatus,
+                        eventDate: nextDateText
+                    });
+                }
             }
 
             if (dateCell) {
@@ -2686,6 +2781,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         function updateTrackingRowsByBatch(batchId, data) {
             const rows = document.querySelectorAll('tr[data-batch-id]');
             let notifyNotice = '';
+            let notifyTracking = '';
+            let notifyRowId = 0;
             let notifyDateText = '';
             let shouldNotifyBatch = false;
             const nextBatchStatus = ((data && data.status) ? data.status : '').trim().toUpperCase();
@@ -2697,6 +2794,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         const result = updateTrackingRow(notice, data, { suppressNotification: true, suppressStatsRefresh: true });
                         if (!notifyNotice) {
                             notifyNotice = notice;
+                        }
+                        if (!notifyTracking) {
+                            notifyTracking = ((data && data.trackingNo) ? String(data.trackingNo) : ((row.dataset.trackingNo || '') + '')).trim();
+                        }
+                        if (notifyRowId <= 0) {
+                            notifyRowId = parseInt(row.dataset.id || '0', 10) || 0;
                         }
                         if (!notifyDateText && result && result.nextDateText) {
                             notifyDateText = result.nextDateText;
@@ -2714,10 +2817,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             refreshStatisticsBar();
 
-            if (shouldNotifyBatch && notifyNotice) {
+            if (shouldNotifyBatch && (notifyNotice || notifyTracking || notifyRowId > 0)) {
                 maybeNotifyStatusChange(notifyNotice, '', nextBatchStatus, notifyDateText, {
                     displayTrackingId: getBatchNoticeCodesLabel(batchId) || ('Batch ' + batchId),
                     noticeCode: notifyNotice,
+                    trackingNo: notifyTracking,
+                    rowId: notifyRowId,
                     dedupeKey: 'batch:' + batchId + '|status:' + nextBatchStatus
                 });
             }
@@ -3798,28 +3903,35 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const data = event.data || {};
             if (data.type === 'scanner-success') {
                 closeScannerModal();
+                const scannerRowId = parseInt(data.rowId || '0', 10) || 0;
+                if (scannerRowId > 0) {
+                    sessionStorage.setItem('dhsud_focus_id', String(scannerRowId));
+                }
                 if ((data.noticeCode || '').trim() !== '') {
                     sessionStorage.setItem('dhsud_focus_notice', data.noticeCode.trim());
                 }
                 const scannerNotice = (data.noticeCode || '').trim();
                 // Trigger status fetch immediately for near real-time UI update.
-                const immediateTrack = scannerNotice !== ''
+                const immediateTrack = (scannerNotice !== '' || scannerRowId > 0)
                     ? runTrackingUpdate(scannerNotice, {
+                        rowId: scannerRowId,
                         silent: true,
                         force: true,
                         bypassCooldown: true
                     })
-                    : Promise.resolve({ ok: false, reason: 'missing-notice' });
+                    : Promise.resolve({ ok: false, reason: 'missing-target' });
 
                 refreshHomeData({
                     focusNotice: scannerNotice,
+                    focusRowId: scannerRowId,
                     immediateTrackNotices: (scannerNotice !== '' ? [scannerNotice] : [])
                 }).then(function() {
-                    if (scannerNotice !== '') {
+                    if (scannerNotice !== '' || scannerRowId > 0) {
                         immediateTrack.then(function(result) {
                             // Second pass after refresh catches late DB writes after scan.
                             if (!result || result.ok !== true) {
                                 runTrackingUpdate(scannerNotice, {
+                                    rowId: scannerRowId,
                                     silent: true,
                                     force: true,
                                     bypassCooldown: true
@@ -3833,9 +3945,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
         const receiptDownloadOnceKeys = new Set();
 
-        function maybeAutoDownloadReceipt(trackingNumber, statusValue) {
+        function maybeAutoDownloadReceipt(trackingNumber, statusValue, options = {}) {
             const safeTracking = ((trackingNumber || '') + '').trim();
             const status = ((statusValue || '') + '').trim().toUpperCase();
+            const safeRowId = parseInt(options.rowId || '0', 10) || 0;
+            const safeTransmittalId = ((options.transmittalId || '') + '').trim();
+            const safeDepartment = ((options.department || currentDeptKey || '') + '').trim();
             if (!safeTracking) return;
             if (status !== 'DELIVERED' && status !== 'RETURNED TO SENDER') return;
 
@@ -3843,21 +3958,29 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             if (receiptDownloadOnceKeys.has(key)) return;
             receiptDownloadOnceKeys.add(key);
 
-            fetch('../api/download-receipt.php?tracking=' + encodeURIComponent(safeTracking) + '&silent=1', {
+            const qs = new URLSearchParams();
+            qs.set('tracking', safeTracking);
+            qs.set('_dl', Date.now().toString());
+            if (safeRowId > 0) qs.set('row_id', String(safeRowId));
+            if (safeTransmittalId) qs.set('transmittal_id', safeTransmittalId);
+            if (safeDepartment) qs.set('dept', safeDepartment);
+
+            const directUrl = '../api/download-receipt.php?' + qs.toString();
+            fetch(directUrl, {
                 method: 'GET',
                 cache: 'no-store',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(function(resp) {
-                if (!resp.ok) {
-                    throw new Error('Silent receipt generation failed');
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
-                return resp.json();
             })
-            .catch(function(err) {
-                console.error(err);
-                receiptDownloadOnceKeys.delete(key);
-            });
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.arrayBuffer();
+                })
+                .catch(function(err) {
+                    console.error(err);
+                    receiptDownloadOnceKeys.delete(key);
+                });
         }
 
         function focusScannedRow() {
@@ -3908,8 +4031,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }
         }
         
-        async function submitPdfExportForNoticeCodes(codes, modalTitle, transmittalName) {
-            if (!Array.isArray(codes) || codes.length === 0) {
+        async function submitPdfExportForNoticeCodes(rowIds, modalTitle, transmittalName) {
+            if (!Array.isArray(rowIds) || rowIds.length === 0) {
                 alert("No rows available for export.");
                 return;
             }
@@ -3926,6 +4049,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             modal.style.display = 'flex';
             modal.setAttribute('aria-hidden', 'false');
             modal.removeAttribute('inert');
+            animateModalPanelFromTrigger(modal, modal.querySelector('.pdf-viewer-panel'), document.activeElement);
             const closeBtn = modal.querySelector('.pdf-viewer-close');
             if (closeBtn) {
                 try { closeBtn.focus(); } catch (e) {}
@@ -3933,7 +4057,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             try {
                 const formData = new URLSearchParams();
-                formData.set('notice_codes', JSON.stringify(codes));
+                formData.set('row_ids', JSON.stringify(rowIds));
                 formData.set('transmittal_name', (transmittalName || '').trim());
 
                 const response = await fetch("../api/jrs_tracking.php", {
@@ -3966,33 +4090,33 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }
         }
 
-        function collectNoticeCodesForTransmittal(transmittalId) {
+        function collectRowIdsForTransmittal(transmittalId) {
             const safeTid = ((transmittalId || '') + '').trim();
             if (!safeTid) return [];
             const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
             const seen = new Set();
-            const codes = [];
+            const rowIds = [];
             rows.forEach(function(row) {
                 const rowTid = ((row && row['Transmittal ID']) ? String(row['Transmittal ID']) : '').trim();
                 if (rowTid !== safeTid) return;
-                const notice = ((row && row['Notice/Order Code']) ? String(row['Notice/Order Code']) : '').trim();
-                if (!notice || seen.has(notice)) return;
-                seen.add(notice);
-                codes.push(notice);
+                const rowId = parseInt((row && row.id) || 0, 10) || 0;
+                if (rowId <= 0 || seen.has(rowId)) return;
+                seen.add(rowId);
+                rowIds.push(rowId);
             });
-            return codes;
+            return rowIds;
         }
 
         function exportTransmittalById(transmittalId) {
             const safeTid = ((transmittalId || '') + '').trim();
             if (!safeTid) return;
-            const codes = collectNoticeCodesForTransmittal(safeTid);
-            if (codes.length === 0) {
+            const rowIds = collectRowIdsForTransmittal(safeTid);
+            if (rowIds.length === 0) {
                 alert("No rows available for this transmittal.");
                 return;
             }
             const transmittalName = formatTransmittalDisplayName(safeTid);
-            submitPdfExportForNoticeCodes(codes, transmittalName + " Transmittal Export", transmittalName);
+            submitPdfExportForNoticeCodes(rowIds, transmittalName + " Transmittal Export", transmittalName);
         }
 
         function deleteTransmittalById(transmittalId) {
@@ -4086,20 +4210,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }
             const rowsToExport = selectedRows;
 
-            const codes = [];
+            const rowIds = [];
             const seen = new Set();
             rowsToExport.forEach(function(tr) {
-                const code = (tr.dataset.notice || '').trim();
-                if (!code || seen.has(code)) return;
-                seen.add(code);
-                codes.push(code);
+                const rowId = parseInt(tr.dataset.id || '0', 10) || 0;
+                if (rowId <= 0 || seen.has(rowId)) return;
+                seen.add(rowId);
+                rowIds.push(rowId);
             });
-            if (codes.length === 0) {
-                alert("Selected rows have no Notice/Order Code.");
+            if (rowIds.length === 0) {
+                alert("Selected rows have no valid ID.");
                 return;
             }
             const transmittalName = activeTid ? formatTransmittalDisplayName(activeTid) : "";
-            submitPdfExportForNoticeCodes(codes, "Exported PDF", transmittalName);
+            submitPdfExportForNoticeCodes(rowIds, "Exported PDF", transmittalName);
         }
 
         const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
@@ -4117,21 +4241,24 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
         function runTrackingUpdate(noticeCode, options = {}) {
             const safeNotice = (noticeCode || "").trim();
+            const optionRowId = parseInt(options.rowId || '0', 10) || 0;
             const silent = options.silent === true;
             const force = options.force === true;
             const bypassCooldown = options.bypassCooldown === true;
             const result = getTrackResultElementForNotice(safeNotice);
             const targetRow = findRowByNoticeCode(safeNotice);
-            const rowId = targetRow ? (parseInt(targetRow.dataset.id || '0', 10) || 0) : 0;
+            const mappedRow = (!targetRow && safeNotice !== '') ? (mailRowIndexByNotice.get(safeNotice) || null) : null;
+            const rowId = optionRowId > 0
+                ? optionRowId
+                : (targetRow ? (parseInt(targetRow.dataset.id || '0', 10) || 0) : ((mappedRow && mappedRow.id) ? (parseInt(mappedRow.id, 10) || 0) : 0));
 
-            if (!safeNotice) {
-                return Promise.resolve({ ok: false, reason: "missing-notice" });
+            if (rowId <= 0) {
+                return Promise.resolve({ ok: false, reason: "missing-row-id" });
             }
 
             if (result) result.innerHTML = "";
             const params = new URLSearchParams();
             params.set("row_id", String(rowId));
-            params.set("notice_code", safeNotice);
             params.set("csrf_token", CSRF_TOKEN);
             if (force) params.set("force", "1");
             if (bypassCooldown) params.set("bypass_cooldown", "1");
@@ -4161,9 +4288,15 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     updateTrackingRow(safeNotice, data);
                 }
 
-                const resolvedTrackingNo = ((data.trackingNo || (targetRow ? targetRow.dataset.trackingNo : '') || '') + '').trim();
+                const mappedById = mailRowIndexById.get(rowId) || null;
+                const resolvedTrackingNo = ((data.trackingNo || (targetRow ? targetRow.dataset.trackingNo : '') || (mappedById ? mappedById['Tracking No.'] : '') || '') + '').trim();
                 const resolvedStatus = ((data.status || '') + '').trim();
-                maybeAutoDownloadReceipt(resolvedTrackingNo, resolvedStatus);
+                const resolvedTransmittalId = ((data.transmittalId || (targetRow ? targetRow.dataset.transmittalId : '') || (mappedById ? mappedById['Transmittal ID'] : '') || '') + '').trim();
+                maybeAutoDownloadReceipt(resolvedTrackingNo, resolvedStatus, {
+                    rowId: rowId,
+                    transmittalId: resolvedTransmittalId,
+                    department: currentDeptKey
+                });
 
                 if (result && !silent) {
                     result.innerHTML = `<span style="color:green">Tracking updated successfully!</span>`;
@@ -4373,15 +4506,17 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
         function maybeNotifyStatusChange(noticeCode, previousStatus, nextStatus, eventDateText, options = {}) {
             const notice = (noticeCode || '').trim();
-            const displayTrackingId = ((options.displayTrackingId || '') + '').trim() || notice;
+            const trackingFallback = ((options.trackingNo || '') + '').trim();
+            const displayTrackingId = ((options.displayTrackingId || '') + '').trim() || trackingFallback || notice;
             const navigateNoticeCode = ((options.noticeCode || '') + '').trim() || notice;
+            let navigateRowId = parseInt(options.rowId || '0', 10) || 0;
             let dedupeKey = ((options.dedupeKey || '') + '').trim();
             const fallbackDepartment = normalizeDepartmentKey(options.department || currentDeptKey);
             const notificationDepartment = resolveNotificationDepartmentKey(navigateNoticeCode || notice, fallbackDepartment);
             const prev = ((previousStatus || '') + '').trim().toUpperCase();
             const next = ((nextStatus || '') + '').trim().toUpperCase();
             const eventDate = ((eventDateText || '') + '').trim();
-            if (!notice) return;
+            if (!navigateNoticeCode && !trackingFallback && navigateRowId <= 0) return;
             if (!isNotifiableStatus(next)) return;
             if (prev === next) return;
 
@@ -4389,8 +4524,18 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             // Avoid duplicate entries when the same status change is detected by both
             // immediate tracking update and subsequent delta/full refresh.
             if (!dedupeKey) {
-                const dedupeNotice = navigateNoticeCode || notice;
-                dedupeKey = 'notice:' + dedupeNotice + '|status:' + next + '|date:' + eventDate;
+                const dedupeIdentity = navigateNoticeCode
+                    ? ('notice:' + navigateNoticeCode)
+                    : (trackingFallback ? ('tracking:' + trackingFallback) : (navigateRowId > 0 ? ('id:' + String(navigateRowId)) : 'unknown'));
+                dedupeKey = dedupeIdentity + '|status:' + next + '|date:' + eventDate;
+            }
+            if (navigateRowId <= 0 && navigateNoticeCode && mailRowIndexByNotice && typeof mailRowIndexByNotice.get === 'function') {
+                const mappedRow = mailRowIndexByNotice.get(navigateNoticeCode) || null;
+                navigateRowId = (mappedRow && mappedRow.id) ? (parseInt(mappedRow.id, 10) || 0) : 0;
+            }
+            if (navigateRowId <= 0 && trackingFallback && mailRowIndexByTracking && typeof mailRowIndexByTracking.get === 'function') {
+                const mappedByTracking = mailRowIndexByTracking.get(trackingFallback) || null;
+                navigateRowId = (mappedByTracking && mappedByTracking.id) ? (parseInt(mappedByTracking.id, 10) || 0) : 0;
             }
 
             const notifications = readNotifications();
@@ -4398,6 +4543,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 id: Date.now() + Math.floor(Math.random() * 1000),
                 trackingId: displayTrackingId,
                 noticeCode: navigateNoticeCode,
+                trackingNo: trackingFallback,
+                rowId: navigateRowId,
                 status: next,
                 statusType: getNotificationStatusType(next),
                 eventDate: eventDate,
@@ -4519,12 +4666,25 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             if (targetId <= 0) return;
             const notifications = readNotifications();
             let noticeCode = '';
+            let rowId = 0;
             let statusType = '';
             let targetDeptKey = normalizeDepartmentKey(currentDeptKey);
             let changed = false;
             notifications.forEach(function(n) {
                 if ((parseInt(n.id, 10) || 0) === targetId) {
                     noticeCode = ((n.noticeCode || n.trackingId || '') + '').trim();
+                    rowId = parseInt(n.rowId || '0', 10) || 0;
+                    if (rowId <= 0 && noticeCode && mailRowIndexByNotice && typeof mailRowIndexByNotice.get === 'function') {
+                        const mappedRow = mailRowIndexByNotice.get(noticeCode) || null;
+                        rowId = (mappedRow && mappedRow.id) ? (parseInt(mappedRow.id, 10) || 0) : 0;
+                    }
+                    if (rowId <= 0) {
+                        const trackingCandidate = ((n.trackingNo || n.trackingId || '') + '').trim();
+                        if (trackingCandidate && mailRowIndexByTracking && typeof mailRowIndexByTracking.get === 'function') {
+                            const mappedByTracking = mailRowIndexByTracking.get(trackingCandidate) || null;
+                            rowId = (mappedByTracking && mappedByTracking.id) ? (parseInt(mappedByTracking.id, 10) || 0) : 0;
+                        }
+                    }
                     statusType = (n.statusType === 'returned' ? 'returned' : 'delivered');
                     targetDeptKey = resolveNotificationDepartmentKey(noticeCode, getNotificationDepartmentKey(n));
                     if (!n.read) {
@@ -4538,12 +4698,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 loadNotifications();
             }
 
-            if (noticeCode && targetDeptKey !== normalizeDepartmentKey(currentDeptKey)) {
+            if ((rowId > 0 || noticeCode) && targetDeptKey !== normalizeDepartmentKey(currentDeptKey)) {
                 closeNotifModal();
                 const targetUrl = new URL(window.location.href);
                 targetUrl.searchParams.set('dept', targetDeptKey);
-                targetUrl.searchParams.set('scanned_notice', noticeCode);
-                targetUrl.searchParams.delete('scanned_id');
+                if (rowId > 0) {
+                    targetUrl.searchParams.set('scanned_id', String(rowId));
+                } else {
+                    targetUrl.searchParams.delete('scanned_id');
+                }
+                if (noticeCode) {
+                    targetUrl.searchParams.set('scanned_notice', noticeCode);
+                } else {
+                    targetUrl.searchParams.delete('scanned_notice');
+                }
                 targetUrl.searchParams.delete('recovered');
                 targetUrl.searchParams.delete('recovered_transmittals');
                 window.location.assign(targetUrl.toString());
@@ -4577,16 +4745,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             closeNotifModal();
 
-            if (noticeCode) {
-                navigateToNoticeRow(noticeCode, statusType);
+            if (rowId > 0 || noticeCode) {
+                navigateToNoticeRow(noticeCode, statusType, rowId);
             }
         }
 
-        function navigateToNoticeRow(noticeCode, statusType) {
+        function navigateToNoticeRow(noticeCode, statusType, rowId) {
             const safeNotice = (noticeCode || '').trim();
-            if (!safeNotice) return;
+            const safeRowId = parseInt(rowId || '0', 10) || 0;
+            if (safeRowId <= 0 && !safeNotice) return;
 
-            const row = document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
+            let row = findRowById(safeRowId);
+            if (!row && safeNotice) {
+                row = findRowByNoticeCode(safeNotice);
+            }
             if (row) {
                 const batchId = ((row.dataset.batchId || '') + '').trim();
                 ensureRowVisibleForFocus(row);
@@ -4616,9 +4788,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }
 
             // If row is not currently in DOM, refresh then focus using existing flow.
-            sessionStorage.setItem('dhsud_focus_notice', safeNotice);
+            if (safeRowId > 0) {
+                sessionStorage.setItem('dhsud_focus_id', String(safeRowId));
+            }
+            if (safeNotice) {
+                sessionStorage.setItem('dhsud_focus_notice', safeNotice);
+            }
             if (typeof refreshHomeData === 'function') {
-                refreshHomeData({ focusNotice: safeNotice });
+                refreshHomeData({ focusNotice: safeNotice, focusRowId: safeRowId });
             }
         }
 
@@ -4664,13 +4841,33 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         function deleteNotification(notifId) {
             const targetId = parseInt(notifId, 10) || 0;
             if (targetId <= 0) return;
-            const notifications = readNotifications();
-            const nextNotifications = notifications.filter(function(n) {
-                return (parseInt(n.id, 10) || 0) !== targetId;
-            });
-            activeNotifActionId = 0;
-            writeNotifications(nextNotifications);
-            loadNotifications();
+            const removeFromStore = function() {
+                const notifications = readNotifications();
+                const nextNotifications = notifications.filter(function(n) {
+                    return (parseInt(n.id, 10) || 0) !== targetId;
+                });
+                activeNotifActionId = 0;
+                writeNotifications(nextNotifications);
+                loadNotifications();
+            };
+
+            const item = document.querySelector('.notif-item[data-notif-id="' + String(targetId) + '"]');
+            if (!item) {
+                removeFromStore();
+                return;
+            }
+            if (item.classList.contains('is-deleting')) return;
+
+            item.classList.add('is-deleting');
+            let settled = false;
+            const finalize = function() {
+                if (settled) return;
+                settled = true;
+                removeFromStore();
+            };
+
+            item.addEventListener('animationend', finalize, { once: true });
+            setTimeout(finalize, 320);
         }
 
         function escapeHtml(text) {

@@ -135,8 +135,8 @@ try {
     $hasRecords = $sampleCount && $sampleCount['count'] > 0;
     
     if ($hasRecords) {
-        $sampleRecord = $pdo->query("SELECT `Notice/Order Code` FROM mailtracking LIMIT 1")->fetch();
-        $testNoticeCode = $sampleRecord['Notice/Order Code'];
+        $sampleRecord = $pdo->query("SELECT `id` FROM mailtracking LIMIT 1")->fetch();
+        $testRowId = (int)($sampleRecord['id'] ?? 0);
         
         // Test each column for updateability
         foreach ($expectedColumns as $colName => $expectedType) {
@@ -163,12 +163,12 @@ try {
                 $testValue = generateTestValue($colInfo['type']);
                 
                 // Attempt UPDATE statement
-                $testSql = "UPDATE mailtracking SET `$colName` = :test_val WHERE `Notice/Order Code` = :notice_code LIMIT 1";
+                $testSql = "UPDATE mailtracking SET `$colName` = :test_val WHERE `id` = :row_id LIMIT 1";
                 $testStmt = $pdo->prepare($testSql);
                 
                 $testResult = $testStmt->execute([
                     ':test_val' => $testValue,
-                    ':notice_code' => $testNoticeCode
+                    ':row_id' => $testRowId
                 ]);
                 
                 $testCheck['tests'][] = [

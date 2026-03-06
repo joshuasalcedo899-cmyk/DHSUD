@@ -20,22 +20,25 @@ function sanitizePdfBaseName($value) {
     return $name;
 }
 
-if (!isset($_POST['notice_codes'])) {
+if (!isset($_POST['row_ids'])) {
     http_response_code(400);
     die("No records selected.");
 }
 
-$codes = json_decode($_POST['notice_codes'], true);
-if (!is_array($codes) || count($codes) === 0) {
+$rowIds = json_decode($_POST['row_ids'] ?? '[]', true);
+if (!is_array($rowIds) || count($rowIds) === 0) {
     http_response_code(400);
     die("Invalid data.");
 }
-
-// Fetch records
-$placeholders = implode(',', array_fill(0, count($codes), '?'));
-$sql = "SELECT * FROM mailtracking WHERE `Notice/Order Code` IN ($placeholders)";
+$rowIds = array_values(array_filter(array_map('intval', $rowIds), function($v) { return $v > 0; }));
+if (count($rowIds) === 0) {
+    http_response_code(400);
+    die("Invalid row IDs.");
+}
+$placeholders = implode(',', array_fill(0, count($rowIds), '?'));
+$sql = "SELECT * FROM mailtracking WHERE `id` IN ($placeholders)";
 $stmt = $pdo->prepare($sql);
-$stmt->execute($codes);
+$stmt->execute($rowIds);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if (!$rows) {
     http_response_code(404);

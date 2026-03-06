@@ -1,5 +1,6 @@
 <?php
     $noticeCode = $_GET['code'] ?? '';
+    $rowId = (int)($_GET['row_id'] ?? 0);
     $embedded = isset($_GET['embedded']) && $_GET['embedded'] === '1';
 ?>
 <!DOCTYPE html>
@@ -256,6 +257,7 @@
 
 // get Notice/Order Code from URL
 const noticeCode = "<?= htmlspecialchars($noticeCode) ?>";
+const rowId = <?= (int)$rowId ?>;
 const isEmbedded = <?= $embedded ? 'true' : 'false' ?>;
 const isInIframe = window.self !== window.top;
 
@@ -384,6 +386,12 @@ function onScanSuccess(decodedText) {
     document.getElementById("result").innerHTML =
         "Tracking Number: " + trackingNumber;
 
+    if ((parseInt(rowId, 10) || 0) <= 0) {
+        document.getElementById("result").innerHTML = "Invalid row id.";
+        isProcessing = false;
+        return;
+    }
+
 
     fetch("api/get-tracking.php", {
         method: "POST",
@@ -393,7 +401,7 @@ function onScanSuccess(decodedText) {
         },
         body:
             "tracking=" + encodeURIComponent(trackingNumber) +
-            "&codes[]=" + encodeURIComponent(noticeCode)
+            "&ids[]=" + encodeURIComponent(String(rowId))
     })
     .then(async (res) => {
         if (!res.ok || res.redirected) {
@@ -406,19 +414,20 @@ function onScanSuccess(decodedText) {
             window.parent.postMessage({
                 type: "scanner-success",
                 noticeCode: noticeCode,
+                rowId: rowId,
                 trackingNumber: trackingNumber
             }, window.location.origin);
             return;
         }
 
         // Only generate PDF for final statuses.
-        const shouldDownloadPdf = await shouldGeneratePdfByStatus(noticeCode);
+        const shouldDownloadPdf = await shouldGeneratePdfByStatus(rowId);
         if (shouldDownloadPdf) {
             await generateReceiptPDF(trackingNumber);
         }
 
         // return to table
-        window.location.href = "pages/Home_Page.php?updated=1&scanned_notice=" + encodeURIComponent(noticeCode);
+        window.location.href = "pages/Home_Page.php?updated=1&scanned_id=" + encodeURIComponent(String(rowId));
     })
     .catch((error) => {
         console.error("Tracking update failed:", error);
@@ -441,8 +450,8 @@ function flashEffect() {
     });
 }
 
-async function shouldGeneratePdfByStatus(noticeCode) {
-    if (!noticeCode) return false;
+async function shouldGeneratePdfByStatus(rowId) {
+    if ((parseInt(rowId, 10) || 0) <= 0) return false;
     try {
         const response = await fetch("api/remarks.php", {
             method: "POST",
@@ -450,7 +459,7 @@ async function shouldGeneratePdfByStatus(noticeCode) {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "X-Requested-With": "XMLHttpRequest"
             },
-            body: "notice_code=" + encodeURIComponent(noticeCode)
+            body: "row_id=" + encodeURIComponent(String(rowId))
         });
 
         if (!response.ok) return false;
@@ -467,25 +476,30 @@ async function shouldGeneratePdfByStatus(noticeCode) {
 
 async function generateReceiptPDF(trackingNumber) {
     if (!trackingNumber) return;
-
-    // Avoid indefinite waiting; still attempt generation.
     const timeoutMs = 90000;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
+    const params = new URLSearchParams();
+    params.set("tracking", trackingNumber);
+    if ((parseInt(rowId, 10) || 0) > 0) {
+        params.set("row_id", String(rowId));
+    }
+    params.set("_dl", String(Date.now()));
+
     try {
-        const response = await fetch(`api/download-receipt.php?tracking=${encodeURIComponent(trackingNumber)}`, {
+        const response = await fetch("api/download-receipt.php?" + params.toString(), {
             method: "GET",
             cache: "no-store",
-            signal: controller.signal
+            signal: controller.signal,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
         });
-
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error("HTTP " + response.status);
         }
-
-        // Consume body so request fully completes server-side.
-        await response.blob();
+        await response.arrayBuffer();
     } catch (error) {
         console.error("PDF generation failed:", error);
     } finally {

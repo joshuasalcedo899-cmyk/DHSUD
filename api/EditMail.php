@@ -50,12 +50,24 @@ function detectSenderTag($senderDetails, $noticeCode = '') {
         return 'HREDRD-' . strtoupper(trim((string)$m[1]));
     }
 
-    $noticeText = trim((string)$noticeCode);
-    if (preg_match('/^([A-Z]+)-/i', $noticeText, $m)) {
-        return 'HREDRD-' . strtoupper(trim((string)$m[1]));
+    if (preg_match('/Department ID:\s*([^\r\n]+)/i', $senderText, $m)) {
+        $resolved = trim((string)($m[1] ?? ''));
+        if ($resolved !== '') return $resolved;
     }
 
-    return 'HREDRD-EMES';
+    foreach (['emes', 'prls', 'afd', 'phsd', 'elupd', 'ord'] as $deptKey) {
+        $configuredTag = getDepartmentSenderTag($deptKey);
+        if ($configuredTag !== '' && stripos($senderText, $configuredTag) !== false) {
+            return $configuredTag;
+        }
+    }
+
+    $noticeText = trim((string)$noticeCode);
+    if (preg_match('/^([A-Z]+)-/i', $noticeText, $m)) {
+        return getDepartmentSenderTag(strtolower(trim((string)$m[1])));
+    }
+
+    return getDepartmentSenderTag('emes');
 }
 
 function buildDefaultSenderDetails($dateReleasedValue, $batchId = '', $senderTag = 'HREDRD-EMES') {
@@ -67,10 +79,11 @@ function buildDefaultSenderDetails($dateReleasedValue, $batchId = '', $senderTag
 
     $normalizedSenderTag = strtoupper(trim((string)$senderTag));
     if ($normalizedSenderTag === '') {
-        $normalizedSenderTag = 'HREDRD-EMES';
+        $normalizedSenderTag = getDepartmentSenderTag('emes');
     }
 
-    $sender = "Department of Human Settlements and Urban Development Region 4A\n" . $normalizedSenderTag . "\n0935 542 1538";
+    $senderContactNo = getSenderContactNumber('', $normalizedSenderTag);
+    $sender = "Department of Human Settlements and Urban Development Region 4A\n" . $normalizedSenderTag . "\n" . $senderContactNo;
     if ($dateText !== '') {
         $sender .= "\n\n(" . $dateText . ")";
     }
@@ -80,7 +93,170 @@ function buildDefaultSenderDetails($dateReleasedValue, $batchId = '', $senderTag
     return $sender;
 }
 
-function generateProofPdfForTracking($trackingNo, &$error = null) {
+function sanitizeTransmittalFolderName($value) {
+    $name = trim((string)$value);
+    if ($name === '') return 'UNASSIGNED';
+    $name = preg_replace('/[\\\\\/:*?"<>|]+/', '_', $name);
+    $name = preg_replace('/\s+/', ' ', $name);
+    $name = trim($name, " .\t\n\r\0\x0B");
+    return ($name !== '' ? $name : 'UNASSIGNED');
+}
+
+function extractDepartmentCodeFromSender($senderText) {
+    $raw = strtoupper(trim((string)$senderText));
+    if ($raw === '') return 'UNASSIGNED';
+
+    if (preg_match('/\bHREDRD[-\s]*([A-Z0-9]+)\b/', $raw, $m)) {
+        $dept = trim((string)($m[1] ?? ''));
+        if ($dept !== '') return $dept;
+    }
+
+    $known = ['EMES', 'PRLS', 'AFD', 'PHSD', 'ELUPD', 'ORD'];
+    foreach ($known as $code) {
+        if (strpos($raw, $code) !== false) return $code;
+    }
+
+    return 'UNASSIGNED';
+}
+
+function resolveArchiveTargetsForTracking($pdo, $trackingNo, $rowId = 0) {
+    $targets = [];
+
+    $addTarget = function($transmittalRaw, $senderRaw) use (&$targets) {
+        $tid = trim((string)$transmittalRaw);
+        $dept = extractDepartmentCodeFromSender($senderRaw);
+        if ($tid === '') $tid = 'UNASSIGNED';
+        if ($dept === '') $dept = 'UNASSIGNED';
+        $key = $dept . '|' . $tid;
+        $targets[$key] = [
+            'department' => $dept,
+            'transmittal' => $tid
+        ];
+    };
+
+    if ($rowId > 0) {
+        try {
+            $stmt = $pdo->prepare("SELECT `Transmittal ID`, `Sender Details` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
+            $stmt->execute([':row_id' => $rowId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (is_array($row) && !empty($row)) {
+                $addTarget($row['Transmittal ID'] ?? '', $row['Sender Details'] ?? '');
+            }
+        } catch (Throwable $e) {}
+    }
+
+    if (empty($targets)) {
+        try {
+            $stmt = $pdo->prepare("SELECT DISTINCT `Transmittal ID`, `Sender Details` FROM mailtracking WHERE `Tracking No.` = :tracking");
+            $stmt->execute([':tracking' => $trackingNo]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $addTarget($row['Transmittal ID'] ?? '', $row['Sender Details'] ?? '');
+            }
+        } catch (Throwable $e) {}
+    }
+
+    if (empty($targets)) {
+        $targets['UNASSIGNED|UNASSIGNED'] = [
+            'department' => 'UNASSIGNED',
+            'transmittal' => 'UNASSIGNED'
+        ];
+    }
+
+    return array_values($targets);
+}
+
+function resolveDesktopDownloadedPdfRoot() {
+    $ensureWritable = function($dirPath) {
+        $dir = rtrim((string)$dirPath, '\\/');
+        if ($dir === '') return false;
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+        if (!is_dir($dir)) return false;
+        $probe = $dir . DIRECTORY_SEPARATOR . '.write_test_' . uniqid('', true) . '.tmp';
+        $ok = (@file_put_contents($probe, 'ok') !== false);
+        if ($ok && file_exists($probe)) {
+            @unlink($probe);
+        }
+        return $ok;
+    };
+
+    $overrideRoot = trim((string)getenv('DHSUD_PDF_ROOT'));
+    if ($overrideRoot !== '') {
+        $overrideTarget = rtrim($overrideRoot, '\\/') . DIRECTORY_SEPARATOR . 'Downloaded_PDFs';
+        if ($ensureWritable($overrideTarget)) return $overrideTarget;
+    }
+
+    $desktopCandidates = [];
+    $oneDrive = trim((string)getenv('OneDrive'));
+    if ($oneDrive !== '') $desktopCandidates[] = rtrim($oneDrive, '\\/') . DIRECTORY_SEPARATOR . 'Desktop';
+    $oneDriveConsumer = trim((string)getenv('OneDriveConsumer'));
+    if ($oneDriveConsumer !== '') $desktopCandidates[] = rtrim($oneDriveConsumer, '\\/') . DIRECTORY_SEPARATOR . 'Desktop';
+    $oneDriveCommercial = trim((string)getenv('OneDriveCommercial'));
+    if ($oneDriveCommercial !== '') $desktopCandidates[] = rtrim($oneDriveCommercial, '\\/') . DIRECTORY_SEPARATOR . 'Desktop';
+
+    $userProfile = trim((string)getenv('USERPROFILE'));
+    if ($userProfile !== '') $desktopCandidates[] = rtrim($userProfile, '\\/') . DIRECTORY_SEPARATOR . 'Desktop';
+
+    $homeDrive = trim((string)getenv('HOMEDRIVE'));
+    $homePath = trim((string)getenv('HOMEPATH'));
+    if ($homeDrive !== '' && $homePath !== '') {
+        $desktopCandidates[] = rtrim($homeDrive . $homePath, '\\/') . DIRECTORY_SEPARATOR . 'Desktop';
+    }
+
+    $home = trim((string)getenv('HOME'));
+    if ($home !== '') $desktopCandidates[] = rtrim($home, '\\/') . DIRECTORY_SEPARATOR . 'Desktop';
+
+    $publicDir = trim((string)getenv('PUBLIC'));
+    if ($publicDir !== '') $desktopCandidates[] = rtrim($publicDir, '\\/') . DIRECTORY_SEPARATOR . 'Desktop';
+
+    $desktopCandidates[] = 'C:\\Users\\Public\\Desktop';
+
+    $seen = [];
+    foreach ($desktopCandidates as $desktopDirRaw) {
+        $desktopDir = rtrim((string)$desktopDirRaw, '\\/');
+        if ($desktopDir === '') continue;
+        $key = strtolower($desktopDir);
+        if (isset($seen[$key])) continue;
+        $seen[$key] = true;
+
+        $target = $desktopDir . DIRECTORY_SEPARATOR . 'Downloaded_PDFs';
+        if ($ensureWritable($target)) return $target;
+    }
+
+    $fallbackCandidates = [
+        __DIR__ . '/../JRS_PDFs/Downloaded_PDFs',
+        __DIR__ . '/../Downloaded_PDFs'
+    ];
+    foreach ($fallbackCandidates as $fallback) {
+        if ($ensureWritable($fallback)) return $fallback;
+    }
+
+    return __DIR__ . '/../JRS_PDFs/Downloaded_PDFs';
+}
+
+function archiveProofPdfByTransmittalFolders($pdo, $trackingNo, $pdfFile, $archiveRoot, $rowId = 0) {
+    $targets = resolveArchiveTargetsForTracking($pdo, $trackingNo, (int)$rowId);
+    $base = rtrim((string)$archiveRoot, '\\/');
+    if (!is_dir($base)) {
+        @mkdir($base, 0777, true);
+    }
+    $fileName = 'proof_' . $trackingNo . '.pdf';
+    foreach ((array)$targets as $target) {
+        $deptRaw = is_array($target) ? ($target['department'] ?? '') : '';
+        $tidRaw = is_array($target) ? ($target['transmittal'] ?? '') : '';
+        $deptFolder = sanitizeTransmittalFolderName($deptRaw);
+        $transmittalFolder = sanitizeTransmittalFolderName($tidRaw);
+        $dir = $base . DIRECTORY_SEPARATOR . $deptFolder . DIRECTORY_SEPARATOR . $transmittalFolder;
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+        $dest = $dir . DIRECTORY_SEPARATOR . $fileName;
+        @copy($pdfFile, $dest);
+    }
+}
+
+function generateProofPdfForTracking($trackingNo, &$error = null, $rowId = 0) {
     $trackingNo = trim((string)$trackingNo);
     if ($trackingNo === '' || $trackingNo === '0') {
         $error = 'Invalid tracking number';
@@ -198,6 +374,12 @@ function generateProofPdfForTracking($trackingNo, &$error = null) {
         }
     }
 
+    try {
+        global $pdo;
+        $archiveRoot = resolveDesktopDownloadedPdfRoot();
+        archiveProofPdfByTransmittalFolders($pdo, $trackingNo, $pdfFile, $archiveRoot, (int)$rowId);
+    } catch (Throwable $e) {}
+
     return true;
 }
 
@@ -301,14 +483,9 @@ try {
     
     if ($noticeCodePostKey !== null) {
         $newNotice = trim($_POST[$noticeCodePostKey] ?? '');
-        
-        if ($newNotice === '') {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Notice/Order Code cannot be empty']);
-            exit;
-        }
-        
-        if ($newNotice !== $originalNotice) {
+
+        // Notice/Order Code is optional in Edit; only update when a non-empty value is provided.
+        if ($newNotice !== '' && $newNotice !== $originalNotice) {
             // Primary key changed - need UPDATE with new key
             $updates[] = "`Notice/Order Code` = :new_notice";
             $params[':new_notice'] = $newNotice;
@@ -529,7 +706,7 @@ try {
 
             if ($shouldGeneratePdf) {
                 $pdfError = null;
-                $pdfGenerated = generateProofPdfForTracking($trackingClean, $pdfError);
+                $pdfGenerated = generateProofPdfForTracking($trackingClean, $pdfError, $originalId);
                 if (!$pdfGenerated) {
                     $pdfWarning = 'Tracking saved, but PDF was not generated. ' . (string)$pdfError;
                     error_log($pdfWarning);

@@ -2,12 +2,12 @@
 require_once __DIR__ . '/../config.php';
 
 $departmentConfig = [
-    'emes' => ['code' => 'EMES', 'sender' => 'HREDRD-EMES'],
-    'prls' => ['code' => 'PRLS', 'sender' => 'HREDRD-PRLS'],
-    'afd' => ['code' => 'AFD', 'sender' => 'HREDRD-AFD'],
-    'phsd' => ['code' => 'PHSD', 'sender' => 'HREDRD-PHSD'],
-    'elupd' => ['code' => 'ELUPD', 'sender' => 'HREDRD-ELUPD'],
-    'ord' => ['code' => 'ORD', 'sender' => 'HREDRD-ORD'],
+    'emes' => ['code' => 'EMES', 'sender' => getDepartmentSenderTag('emes')],
+    'prls' => ['code' => 'PRLS', 'sender' => getDepartmentSenderTag('prls')],
+    'afd' => ['code' => 'AFD', 'sender' => getDepartmentSenderTag('afd')],
+    'phsd' => ['code' => 'PHSD', 'sender' => getDepartmentSenderTag('phsd')],
+    'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
+    'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
 ];
 $currentDept = strtolower(trim((string)($_GET['dept'] ?? 'emes')));
 if (!isset($departmentConfig[$currentDept])) {

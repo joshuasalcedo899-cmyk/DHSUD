@@ -169,26 +169,20 @@ function buildResponse($base, $savedRow, $extra = []) {
 }
 
 $rowId = (int)($_POST['row_id'] ?? 0);
-$noticeCode = isset($_POST['notice_code']) ? trim($_POST['notice_code']) : '';
 $force = isset($_POST['force']) && (string)$_POST['force'] === '1';
 $bypassCooldown = isset($_POST['bypass_cooldown']) && (string)$_POST['bypass_cooldown'] === '1';
 
-if ($rowId <= 0 && $noticeCode === '') {
-    echo json_encode(['error' => 'No row id or notice/order code provided']);
+if ($rowId <= 0) {
+    echo json_encode(['error' => 'No row id provided']);
     exit;
 }
 
-if ($rowId > 0) {
-    $stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details`, `Status`, `Date released to AFD`, `Parcel No.` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
-    $stmt->execute([':row_id' => $rowId]);
-} else {
-    $stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details`, `Status`, `Date released to AFD`, `Parcel No.` FROM mailtracking WHERE `Notice/Order Code` = :notice LIMIT 1");
-    $stmt->execute([':notice' => $noticeCode]);
-}
+$stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details`, `Status`, `Date released to AFD`, `Parcel No.` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
+$stmt->execute([':row_id' => $rowId]);
 
 $selectedRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 $rowId = (int)($selectedRow['id'] ?? 0);
-$noticeCode = trim((string)($selectedRow['Notice/Order Code'] ?? $noticeCode));
+$noticeCode = trim((string)($selectedRow['Notice/Order Code'] ?? ''));
 $trackingNo = trim((string)($selectedRow['Tracking No.'] ?? ''));
 $batchId = extractBatchIdFromSenderDetails($selectedRow['Sender Details'] ?? '');
 $currentStatus = trim((string)($selectedRow['Status'] ?? ''));
