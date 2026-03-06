@@ -105,6 +105,60 @@ function generateProofPdfForTracking($trackingNo, &$error = null) {
 
     $pdfFile = rtrim($outputDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'proof_' . $trackingNo . '.pdf';
 
+    $generateViaBrowserCli = function($url, $pdfFile, &$fallbackError = null) {
+        $browserCandidates = [
+            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        ];
+
+        $browserExe = null;
+        foreach ($browserCandidates as $candidate) {
+            if (is_string($candidate) && $candidate !== '' && file_exists($candidate)) {
+                $browserExe = $candidate;
+                break;
+            }
+        }
+        if ($browserExe === null) {
+            $fallbackError = 'No supported browser executable found for fallback PDF generation.';
+            return false;
+        }
+
+        $tmpUserData = rtrim(sys_get_temp_dir(), '\\/') . DIRECTORY_SEPARATOR . 'dhsud_pdf_' . uniqid('', true);
+        @mkdir($tmpUserData, 0777, true);
+
+        $argSets = [
+            '--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=18000',
+            '--headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=18000',
+        ];
+
+        $lastOutput = [];
+        $lastCode = 1;
+        foreach ($argSets as $extraArgs) {
+            $cmd = escapeshellarg($browserExe)
+                . ' ' . $extraArgs
+                . ' --user-data-dir=' . escapeshellarg($tmpUserData)
+                . ' --print-to-pdf=' . escapeshellarg($pdfFile)
+                . ' ' . escapeshellarg($url)
+                . ' 2>&1';
+
+            $output = [];
+            $code = 1;
+            exec($cmd, $output, $code);
+            clearstatcache(true, $pdfFile);
+            if ($code === 0 && file_exists($pdfFile) && filesize($pdfFile) > 0) {
+                return true;
+            }
+
+            $lastOutput = $output;
+            $lastCode = $code;
+        }
+
+        $fallbackError = 'Browser fallback failed (code ' . $lastCode . '): ' . implode("\n", $lastOutput);
+        return false;
+    };
+
     $nodeCandidates = [
         getenv('NODE_PATH') ?: null,
         'C:\\Program Files\\nodejs\\node.exe',
@@ -133,8 +187,15 @@ function generateProofPdfForTracking($trackingNo, &$error = null) {
     exec($command, $output, $returnCode);
 
     if ($returnCode !== 0 || !file_exists($pdfFile)) {
-        $error = 'PDF generation failed (code ' . $returnCode . '): ' . implode("\n", $output);
-        return false;
+        $fallbackError = null;
+        if (!$generateViaBrowserCli($url, $pdfFile, $fallbackError)) {
+            $details = implode("\n", $output);
+            if ($fallbackError) {
+                $details .= ($details !== '' ? "\n" : '') . 'Fallback: ' . $fallbackError;
+            }
+            $error = 'PDF generation failed (code ' . $returnCode . '): ' . $details;
+            return false;
+        }
     }
 
     return true;

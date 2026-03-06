@@ -23,6 +23,60 @@ if (!$tracking) {
     endWithError('No tracking number provided', $silent);
 }
 
+function generatePdfViaBrowserCli($url, $pdfFile, &$error = null) {
+    $browserCandidates = [
+        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    ];
+
+    $browserExe = null;
+    foreach ($browserCandidates as $candidate) {
+        if (is_string($candidate) && $candidate !== '' && file_exists($candidate)) {
+            $browserExe = $candidate;
+            break;
+        }
+    }
+    if ($browserExe === null) {
+        $error = 'No supported browser executable found for fallback PDF generation.';
+        return false;
+    }
+
+    $tmpUserData = rtrim(sys_get_temp_dir(), '\\/') . DIRECTORY_SEPARATOR . 'dhsud_pdf_' . uniqid('', true);
+    @mkdir($tmpUserData, 0777, true);
+
+    $argSets = [
+        '--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=18000',
+        '--headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=18000',
+    ];
+
+    $lastOutput = [];
+    $lastCode = 1;
+    foreach ($argSets as $extraArgs) {
+        $cmd = escapeshellarg($browserExe)
+            . ' ' . $extraArgs
+            . ' --user-data-dir=' . escapeshellarg($tmpUserData)
+            . ' --print-to-pdf=' . escapeshellarg($pdfFile)
+            . ' ' . escapeshellarg($url)
+            . ' 2>&1';
+
+        $output = [];
+        $code = 1;
+        exec($cmd, $output, $code);
+        clearstatcache(true, $pdfFile);
+        if ($code === 0 && file_exists($pdfFile) && filesize($pdfFile) > 0) {
+            return true;
+        }
+
+        $lastOutput = $output;
+        $lastCode = $code;
+    }
+
+    $error = 'Browser fallback failed (code ' . $lastCode . '): ' . implode("\n", $lastOutput);
+    return false;
+}
+
 $url = "https://jrs-express.com/track?or=" . urlencode($tracking);
 $nodeScript = realpath(__DIR__ . "/script/savepdf.js");
 
@@ -64,7 +118,14 @@ $command = escapeshellarg($nodeExecutable) . " " . escapeshellarg($nodeScript) .
 exec($command, $output, $return_var);
 
 if ($return_var !== 0 || !file_exists($pdfFile)) {
-    endWithError("Error generating PDF (return code: $return_var)", $silent, $output);
+    $fallbackError = null;
+    if (!generatePdfViaBrowserCli($url, $pdfFile, $fallbackError)) {
+        $fullOutput = $output;
+        if ($fallbackError) {
+            $fullOutput[] = 'Fallback: ' . $fallbackError;
+        }
+        endWithError("Error generating PDF (return code: $return_var)", $silent, $fullOutput);
+    }
 }
 
 if ($silent) {

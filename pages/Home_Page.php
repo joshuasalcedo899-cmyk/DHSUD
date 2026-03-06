@@ -418,7 +418,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             <div id="addPairRows" class="add-pairs-grid">
                                 <div class="add-pair-row">
                                     <div>
-                                        <label>Code*</label>
+                                        <label>Code</label>
                                         <input type="text" name="noticeCodes[]" placeholder="Notice/Order Code">
                                     </div>
                                     <button type="button" class="pair-row-btn" title="Add row">+</button>
@@ -442,7 +442,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                     row.style.marginBottom = '4px';
                                     row.innerHTML = `
                                         <label for="addNoticeCode_${idx}" style="flex:0 0 90px;"></label>
-                                        <input type="text" name="notice_Code[]" id="addNoticeCode_${idx}" required style="flex:1;" />
+                                        <input type="text" name="notice_Code[]" id="addNoticeCode_${idx}" style="flex:1;" />
                                         <button type="button" class="remove-notice-btn">
                                             <img src="../assets/Minus_Icon.svg" alt="Remove" >
                                         </button>
@@ -465,8 +465,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             });
                             </script>
                         <div>
-                            <label for="addDateAfd">Date Released to AFD*</label>
-                            <input type="date" name="dateReleased" id="addDateAfd" required>
+                            <label for="addDateAfd">Date Released to AFD</label>
+                            <input type="date" name="dateReleased" id="addDateAfd">
                         </div>
                         <div>
                             <label for="addParcelNo">Parcel No.</label>
@@ -1300,9 +1300,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             var row = document.createElement('div');
             row.className = 'add-pair-row';
             row.innerHTML =
-                '<div><label>Code*</label><input type="text" name="noticeCodes[]" placeholder="Notice/Order Code" required></div>' +
+                '<div><label>Code</label><input type="text" name="noticeCodes[]" placeholder="Notice/Order Code"></div>' +
                 '<button type="button" class="pair-row-btn" title="Add row">+</button>' +
-                '<div><label>Parcel Details</label><textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details" required></textarea></div>';
+                '<div><label>Parcel Details</label><textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details"></textarea></div>';
             rowsWrap.appendChild(row);
             var inputs = row.querySelectorAll('input, textarea');
             if (inputs[0]) inputs[0].value = noticeValue;
@@ -1315,7 +1315,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             if (!rowsWrap) return;
             var rows = rowsWrap.querySelectorAll('.add-pair-row');
             if (rows.length <= 1) {
-                alert('At least one Notice/Order Code + Parcel Details pair is required.');
+                alert('At least one Notice/Order Code + Parcel Details pair is needed.');
                 return;
             }
             var row = btn.closest('.add-pair-row');
@@ -1356,23 +1356,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     var formData = new FormData(addForm);
                     formData.set('csrf_token', CSRF_TOKEN);
 
-                    var noticeCodes = formData.getAll('noticeCodes[]').map(function(v){ return (v || '').trim(); });
-                    var parcelDetails = formData.getAll('parcelDetailsList[]').map(function(v){ return (v || '').trim(); });
-                    if (!noticeCodes.length) {
-                        alert('Please add at least one Notice/Order Code.');
-                        return;
-                    }
-                    for (var i = 0; i < noticeCodes.length; i++) {
-                        if (!noticeCodes[i]) {
-                            alert('Notice/Order Code is required for pair #' + (i + 1) + '.');
-                            return;
-                        }
-                        if (!parcelDetails[i]) {
-                            alert('Parcel Details is required for pair #' + (i + 1) + '.');
-                            return;
-                        }
-                    }
-                    
                     // Debug: Log form data
                     console.log('Form Data being sent:');
                     for (let [key, value] of formData.entries()) {
@@ -4445,10 +4428,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             const btnRect = notifBtn.getBoundingClientRect();
             const modalWidth = Math.min(420, Math.max(260, window.innerWidth - 16));
-            let left = btnRect.left;
+            let left = btnRect.right - modalWidth;
             left = Math.max(8, Math.min(left, window.innerWidth - modalWidth - 8));
 
-            const top = Math.max(8, btnRect.bottom + 8);
+            const top = Math.max(8, btnRect.bottom + 3);
             const maxHeight = Math.max(220, window.innerHeight - top - 10);
             const btnCenterX = btnRect.left + (btnRect.width / 2);
             const arrowLeft = Math.max(18, Math.min(modalWidth - 18, btnCenterX - left));
@@ -4842,7 +4825,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     openNotifModal();
                 });
             }
-
             window.addEventListener('resize', function() {
                 const overlay = document.getElementById('notifModalOverlay');
                 if (overlay && overlay.classList.contains('show')) {
