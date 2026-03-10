@@ -32,8 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'phsd' => ['code' => 'PHSD', 'sender' => getDepartmentSenderTag('phsd')],
         'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
         'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
+        'hoa' => ['code' => 'HOA', 'sender' => getDepartmentSenderTag('hoa')],
     ];
-    $currentDept = strtolower(trim((string)($_POST['department_id'] ?? $_POST['dept'] ?? 'emes')));
+    $currentDept = normalizeDepartmentKey($_POST['department_id'] ?? $_POST['dept'] ?? 'emes');
     if (!isset($departmentConfig[$currentDept])) {
         $currentDept = 'emes';
     }
@@ -117,16 +118,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             $parcelScopeTransmittalId = ($transmittalId !== '' ? $transmittalId : '');
+            $departmentScope = buildMailtrackingDepartmentScope($currentDept);
             $maxParcelStmt = $pdo->prepare(
                 'SELECT COALESCE(MAX(`Parcel No.`), 0)
                  FROM mailtracking
                  WHERE `Transmittal ID` = :transmittal_id
-                   AND UPPER(COALESCE(`Sender Details`, \'\')) LIKE :dept_sender'
+                   AND ' . $departmentScope['sql']
             );
-            $maxParcelStmt->execute([
-                ':transmittal_id' => $parcelScopeTransmittalId,
-                ':dept_sender' => '%' . strtoupper($currentDeptSenderTag) . '%'
-            ]);
+            $parcelParams = $departmentScope['params'];
+            $parcelParams[':transmittal_id'] = $parcelScopeTransmittalId;
+            $maxParcelStmt->execute($parcelParams);
             $maxParcelNo = (int)$maxParcelStmt->fetchColumn();
             if ($maxParcelNo < 0) {
                 $maxParcelNo = 0;
@@ -135,13 +136,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $formattedParcelNo = sprintf("%03d", $parcelNo);
             $baseFileName = $currentDeptCode . "-" . $newFormatDate . "-" . $formattedParcelNo;
 
+            $insertColumns = [
+                '`Notice/Order Code`',
+                '`Date released to AFD`',
+                '`Parcel No.`',
+                '`Recipient Details`',
+                '`Parcel Details`',
+                '`Sender Details`',
+                '`File Name (PDF)`',
+                '`Tracking No.`',
+            ];
+            $insertValues = [
+                ':notice_code',
+                ':date_released',
+                ':parcel_no',
+                ':recipient_details',
+                ':parcel_details',
+                ':sender_details',
+                ':file_name',
+                ':tracking_no',
+            ];
+            if (mailtrackingHasDepartmentKey()) {
+                $insertColumns[] = '`department_key`';
+                $insertValues[] = ':department_key';
+            }
+            $insertColumns[] = '`Transmittal ID`';
+            $insertValues[] = ':transmittal_id';
+
             $sql = 'INSERT INTO mailtracking 
-                    (`Notice/Order Code`, `Date released to AFD`, `Parcel No.`, `Recipient Details`, 
-                     `Parcel Details`, `Sender Details`, `File Name (PDF)`, `Tracking No.`, `Transmittal ID`) 
-                    VALUES (:notice_code, :date_released, :parcel_no, :recipient_details, 
-                            :parcel_details, :sender_details, :file_name, :tracking_no, :transmittal_id)';
+                    (' . implode(', ', $insertColumns) . ') 
+                    VALUES (' . implode(', ', $insertValues) . ')';
             $stmt = $pdo->prepare($sql);
             $inserted = 0;
+            $insertedIds = [];
             foreach ($pairs as $index => $pair) {
                 $senderDetails = $senderDetailsBase;
                 if ($customSenderDetails !== '') {
@@ -151,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $senderDetails .= "\nBatch ID: " . $batchId;
                 }
 
-                $stmt->execute([
+                $insertParams = [
                     ':notice_code' => $pair['notice'],
                     ':date_released' => $dateReleased,
                     ':parcel_no' => $parcelNo,
@@ -161,7 +188,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':file_name' => $baseFileName,
                     ':tracking_no' => $trackingNo,
                     ':transmittal_id' => ($transmittalId !== '' ? $transmittalId : '')
-                ]);
+                ];
+                if (mailtrackingHasDepartmentKey()) {
+                    $insertParams[':department_key'] = $currentDept;
+                }
+                $stmt->execute($insertParams);
+                $newId = (int)$pdo->lastInsertId();
+                if ($newId > 0) {
+                    $insertedIds[] = $newId;
+                }
                 $inserted++;
             }
             $pdo->commit();
@@ -198,6 +233,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'message' => $message,
             'messageType' => $messageType,
             'parcelNo' => (int)($parcelNo ?? 0),
+            'insertedIds' => array_values(array_map('intval', $insertedIds ?? [])),
+            'firstId' => (int)(($insertedIds[0] ?? 0)),
             'insertedNotices' => $insertedNotices,
             'firstNotice' => $insertedNotices[0] ?? ''
         ]);

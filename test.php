@@ -14,13 +14,32 @@
 
 
     <style>
-        body{
-            font-family: Arial;
-            text-align:center;
-            background:#f2f2f2;
-            margin:0;
-            padding:12px;
+        :root{
+            --scanner-bg: #eef3fb;
+            --scanner-panel: rgba(255, 255, 255, 0.94);
+            --scanner-panel-border: rgba(148, 163, 184, 0.24);
+            --scanner-ink: #0f172a;
+            --scanner-subtle: #64748b;
+            --scanner-accent: #22336A;
+            --scanner-accent-soft: rgba(34, 51, 106, 0.12);
+            --scanner-line: #dbe4f0;
+            --scanner-success: #166534;
+            --scanner-success-bg: #dcfce7;
+            --scanner-warning-bg: #fff7ed;
+            --scanner-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+        }
+        *{
             box-sizing:border-box;
+        }
+        body{
+            font-family: Inter, Arial, Helvetica, sans-serif;
+            text-align:center;
+            background:
+                radial-gradient(circle at top, rgba(59, 130, 246, 0.10), transparent 28%),
+                linear-gradient(180deg, #f8fbff 0%, var(--scanner-bg) 100%);
+            margin:0;
+            padding:18px;
+            color:var(--scanner-ink);
         }
         body:not(.is-embedded){
             min-height:100vh;
@@ -33,14 +52,28 @@
             min-height:0;
             display:block;
             text-align:left;
-            padding:8px;
+            padding:14px;
         }
         .scanner-shell{
-            width:min(700px, 100%);
+            width:min(760px, 100%);
             margin:0 auto;
             display:flex;
             flex-direction:column;
-            gap:10px;
+            gap:12px;
+            padding:16px;
+            border-radius:18px;
+            border:1px solid var(--scanner-panel-border);
+            background:var(--scanner-panel);
+            box-shadow:0 18px 40px rgba(15, 23, 42, 0.10);
+        }
+        .scanner-topbar{
+            text-align:left;
+        }
+        .scanner-title{
+            margin:0;
+            font-size:1.1rem;
+            font-weight:800;
+            color:var(--scanner-ink);
         }
         #cameraSection,
         #usbSection{
@@ -48,6 +81,13 @@
             display:flex;
             flex-direction:column;
             align-items:center;
+        }
+        .scanner-stage{
+            width:100%;
+            padding:14px;
+            border-radius:16px;
+            border:1px solid var(--scanner-line);
+            background:#f8fafc;
         }
         .reader{
             width:100%;
@@ -57,18 +97,19 @@
         #preview{
             width:100%;
             aspect-ratio:1 / 1;
-            border-radius:8px;
+            border-radius:18px;
             background:#000;
             display:block;
             object-fit:cover;
             min-height:220px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .usb-reference-image{
             width:100%;
             aspect-ratio:1 / 1;
             display:block;
             object-fit:cover;
-            border-radius:8px;
+            border-radius:18px;
             background:#111827;
             min-height:220px;
         }
@@ -84,11 +125,11 @@
             position: relative;
             width: min(360px, 100%);
             aspect-ratio: 1 / 1;
-            border: 4px solid #fff;
-            border-radius: 8px;
+            border: 8px solid rgba(255,255,255,0.9);
+            border-radius: 24px;
             overflow: hidden;
             background: #000;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.16);
         }
         .qa-info .scan-qa .scan-animation {
             width: 100%;
@@ -130,68 +171,124 @@
         }
         .scan-mode-controls{
             width:100%;
-            margin:10px auto 0;
+            margin:0;
             display:flex;
             gap:8px;
             align-items:center;
             flex-wrap:wrap;
+            padding:14px 16px;
+            border-radius:16px;
+            border:1px solid var(--scanner-line);
+            background:rgba(248,250,252,0.9);
         }
         .scan-mode-controls label{
-            font-size:14px;
-            color:#1f2937;
+            font-size:0.86rem;
+            color:var(--scanner-subtle);
             white-space:nowrap;
-            font-weight:600;
+            font-weight:700;
         }
         #scanModeSelect{
             flex:1 1 240px;
             min-width:0;
-            padding:8px;
+            padding:11px 12px;
         }
         #cameraSelect{
-            padding:8px;
+            padding:11px 12px;
             flex:1 1 240px;
             min-width:0;
         }
+        #scanModeSelect,
+        #cameraSelect{
+            border:1px solid #cbd5e1;
+            border-radius:12px;
+            background:#fff;
+            color:var(--scanner-ink);
+            font:inherit;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+        }
         .camera-controls{
             width:100%;
-            margin:12px auto 0;
+            margin:14px auto 0;
             display:flex;
             gap:8px;
             align-items:center;
             flex-wrap:wrap;
             justify-content:center;
+            padding:14px 16px;
+            border-radius:16px;
+            border:1px solid var(--scanner-line);
+            background:rgba(248,250,252,0.9);
         }
         .camera-controls label{
-            font-size:14px;
-            color:#1f2937;
+            font-size:0.86rem;
+            color:var(--scanner-subtle);
             white-space:nowrap;
+            font-weight:700;
         }
         #refreshCamerasBtn{
-            border:1px solid #cbd5e1;
+            border:1px solid rgba(148, 163, 184, 0.3);
             background:#fff;
-            color:#22336A;
-            padding:8px 10px;
-            border-radius:6px;
+            color:var(--scanner-accent);
+            padding:11px 14px;
+            border-radius:12px;
             cursor:pointer;
-            font-weight:600;
+            font-weight:700;
+            box-shadow:0 8px 18px rgba(15, 23, 42, 0.06);
+            transition:background-color 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
         }
         #refreshCamerasBtn:hover{
-            background:#f8fafc;
+            background:#eff6ff;
+            border-color:rgba(37, 99, 235, 0.28);
+            transform:translateY(-1px);
+            box-shadow:0 12px 22px rgba(37, 99, 235, 0.10);
         }
         .hidden-mode{
             display:none !important;
         }
         .result{
-            margin-top:8px;
-            font-size:18px;
-            color:green;
-            font-weight:bold;
-            min-height:24px;
+            margin:0;
+            min-height:52px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
             text-align:center;
+            padding:14px 16px;
+            border-radius:16px;
+            border:1px solid rgba(187, 247, 208, 0.85);
+            background:linear-gradient(180deg, var(--scanner-success-bg), #f0fdf4);
+            color:var(--scanner-success);
+            font-size:0.98rem;
+            font-weight:800;
+            line-height:1.4;
+        }
+        .result.is-waiting{
+            border-color: rgba(191, 219, 254, 0.95);
+            background: linear-gradient(180deg, #eff6ff, #f8fbff);
+            color: #1d4ed8;
+        }
+        .result.is-error{
+            border-color: rgba(252, 165, 165, 0.95);
+            background: linear-gradient(180deg, #fef2f2, #fff5f5);
+            color: #b91c1c;
+        }
+        .result.is-success{
+            border-color: rgba(187, 247, 208, 0.85);
+            background: linear-gradient(180deg, var(--scanner-success-bg), #f0fdf4);
+            color: var(--scanner-success);
         }
         @media (max-width: 640px){
             body{
+                padding:10px;
+            }
+            body.is-embedded{
                 padding:8px;
+            }
+            .scanner-shell{
+                padding:12px;
+                border-radius:16px;
+            }
+            .scanner-stage{
+                padding:12px;
             }
             .scan-mode-controls label,
             .camera-controls label{
@@ -203,12 +300,20 @@
             #refreshCamerasBtn{
                 width:100%;
             }
+            .result{
+                min-height:60px;
+                font-size:0.92rem;
+            }
         }
     </style>
 </head>
 <body class="<?= $embedded ? 'is-embedded' : '' ?>">
 
 <div class="scanner-shell">
+
+<div class="scanner-topbar">
+    <h1 class="scanner-title">QR Scanner</h1>
+</div>
 
 <div class="scan-mode-controls">
     <label for="scanModeSelect">Scanner Mode:</label>
@@ -218,7 +323,7 @@
     </select>
 </div>
 
-<div id="cameraSection">
+<div id="cameraSection" class="scanner-stage">
     <div class="reader polydev-qrcode-animate">
         <div class="qa-info">
             <div class="scan-qa" id="scanFrame">
@@ -234,7 +339,7 @@
     </div>
 </div>
 
-<div id="usbSection">
+<div id="usbSection" class="scanner-stage">
     <div class="reader polydev-qrcode-animate">
         <div class="qa-info">
             <div class="scan-qa" id="usbScanFrame">
@@ -246,7 +351,7 @@
 </div>
 
 
-<div class="result" id="result">Waiting for scan...</div>
+<div class="result is-waiting" id="result">Ready to scan.</div>
 </div>
 
     
@@ -298,6 +403,20 @@ function extractTrackingNumber(decodedText) {
 
 function normalizeScanText(value) {
     return ((value || "") + "").trim();
+}
+
+function setResultState(kind, message) {
+    const resultEl = document.getElementById("result");
+    if (!resultEl) return;
+    resultEl.classList.remove("is-waiting", "is-error", "is-success");
+    if (kind === "error") {
+        resultEl.classList.add("is-error");
+    } else if (kind === "success") {
+        resultEl.classList.add("is-success");
+    } else {
+        resultEl.classList.add("is-waiting");
+    }
+    resultEl.textContent = message;
 }
 
 function clearUsbCaptureState() {
@@ -383,11 +502,10 @@ function onScanSuccess(decodedText) {
     const trackingNumber = extractTrackingNumber(decodedText);
 
 
-    document.getElementById("result").innerHTML =
-        "Tracking Number: " + trackingNumber;
+    setResultState("waiting", "Tracking found: " + trackingNumber);
 
     if ((parseInt(rowId, 10) || 0) <= 0) {
-        document.getElementById("result").innerHTML = "Invalid row id.";
+        setResultState("error", "Unable to attach the scan to a valid row.");
         isProcessing = false;
         return;
     }
@@ -407,7 +525,7 @@ function onScanSuccess(decodedText) {
         if (!res.ok || res.redirected) {
             throw new Error("Failed to save tracking number.");
         }
-        document.getElementById("result").innerHTML = "Tracking number saved.";
+        setResultState("success", "Tracking number saved successfully.");
 
         if ((isEmbedded || isInIframe) && window.parent && window.parent !== window) {
             await stopCurrentStream();
@@ -431,7 +549,7 @@ function onScanSuccess(decodedText) {
     })
     .catch((error) => {
         console.error("Tracking update failed:", error);
-        document.getElementById("result").innerHTML = "Failed to process scanned QR.";
+        setResultState("error", "Failed to process the scanned QR code.");
         isProcessing = false;
     });
 }
@@ -614,7 +732,7 @@ async function refreshAvailableDevices(keepSelection = true, silentNoCamera = fa
         cameraDevices = [];
         cameraSelect.innerHTML = "";
         if (!silentNoCamera && currentScanMode === "camera") {
-            document.getElementById("result").innerHTML = "No camera device found. Switch Scanner Mode to USB Barcode Scanner.";
+            setResultState("error", "No camera device found.");
         }
         return null;
     }
@@ -653,7 +771,7 @@ async function applyScanMode(mode, updateResult = true) {
         await stopCurrentStream();
         isProcessing = false;
         if (updateResult) {
-            document.getElementById("result").innerHTML = "Waiting for scan...";
+            setResultState("waiting", "USB scanner ready.");
         }
         focusUsbCaptureSurface();
         return true;
@@ -666,7 +784,7 @@ async function applyScanMode(mode, updateResult = true) {
 
     await startScanner(defaultDeviceId);
     if (updateResult) {
-        document.getElementById("result").innerHTML = "Waiting for scan...";
+        setResultState("waiting", "Camera ready.");
     }
     return true;
 }
@@ -678,7 +796,7 @@ async function initScanner() {
     const refreshCamerasBtn = document.getElementById("refreshCamerasBtn");
 
     if (!window.ZXing || !ZXing.BrowserMultiFormatReader) {
-        document.getElementById("result").innerHTML = "ZXing library failed to load.";
+        setResultState("error", "Scanner library failed to load.");
         return;
     }
 
@@ -705,11 +823,11 @@ async function initScanner() {
             const nextDeviceId = await refreshAvailableDevices(true);
             if (nextDeviceId) {
                 await startScanner(nextDeviceId);
-                resultEl.innerHTML = "Waiting for scan...";
+                setResultState("waiting", "Camera refreshed.");
             }
         } catch (e) {
             console.error(e);
-            resultEl.innerHTML = "Unable to refresh camera devices.";
+            setResultState("error", "Unable to refresh camera devices.");
         }
     });
 
@@ -741,7 +859,7 @@ window.addEventListener("beforeunload", function() {
 
 initScanner().catch((e) => {
     console.error(e);
-    document.getElementById("result").innerHTML = "Unable to initialize camera scanner.";
+    setResultState("error", "Unable to initialize the camera scanner.");
 });
 </script>
 

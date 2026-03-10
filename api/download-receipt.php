@@ -91,6 +91,13 @@ function sanitizeTransmittalFolderName($value) {
     return ($name !== '' ? $name : 'UNASSIGNED');
 }
 
+function sanitizeDepartmentFolderName($value) {
+    $name = strtoupper(trim((string)$value));
+    if ($name === '') return 'UNASSIGNED';
+    $name = preg_replace('/[^A-Z0-9_-]+/', '_', $name);
+    return ($name !== '' ? $name : 'UNASSIGNED');
+}
+
 function extractDepartmentCodeFromSender($senderText) {
     $raw = strtoupper(trim((string)$senderText));
     if ($raw === '') return 'UNASSIGNED';
@@ -109,6 +116,11 @@ function extractDepartmentCodeFromSender($senderText) {
 }
 
 function normalizeDepartmentCode($rawValue) {
+    $normalizedKey = normalizeDepartmentKey($rawValue);
+    if ($normalizedKey !== 'emes' || strtolower(trim((string)$rawValue)) === 'emes') {
+        return getDepartmentCodeFromKey($normalizedKey);
+    }
+
     $txt = strtoupper(trim((string)$rawValue));
     if ($txt === '') return '';
 
@@ -132,10 +144,14 @@ function normalizeDepartmentCode($rawValue) {
 function resolveArchiveTargetsForTracking($pdo, $trackingNo, $rowId = 0, $explicitTransmittalId = '', $forcedDepartment = '') {
     $targets = [];
     $forcedDeptCode = normalizeDepartmentCode($forcedDepartment);
+    $hasDepartmentKey = mailtrackingHasDepartmentKey();
 
-    $addTarget = function($transmittalRaw, $senderRaw) use (&$targets, $forcedDeptCode) {
+    $addTarget = function($transmittalRaw, $senderRaw, $departmentKeyRaw = '') use (&$targets, $forcedDeptCode) {
         $tid = trim((string)$transmittalRaw);
-        $dept = $forcedDeptCode !== '' ? $forcedDeptCode : extractDepartmentCodeFromSender($senderRaw);
+        $dept = $forcedDeptCode !== '' ? $forcedDeptCode : normalizeDepartmentCode($departmentKeyRaw);
+        if ($dept === '') {
+            $dept = extractDepartmentCodeFromSender($senderRaw);
+        }
         if ($tid === '') $tid = 'UNASSIGNED';
         if ($dept === '') $dept = 'UNASSIGNED';
         $key = $dept . '|' . $tid;
@@ -147,21 +163,27 @@ function resolveArchiveTargetsForTracking($pdo, $trackingNo, $rowId = 0, $explic
 
     if ($rowId > 0) {
         try {
-            $stmt = $pdo->prepare("SELECT `Transmittal ID`, `Sender Details` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
+            $selectSql = $hasDepartmentKey
+                ? "SELECT `Transmittal ID`, `Sender Details`, `department_key` FROM mailtracking WHERE `id` = :row_id LIMIT 1"
+                : "SELECT `Transmittal ID`, `Sender Details` FROM mailtracking WHERE `id` = :row_id LIMIT 1";
+            $stmt = $pdo->prepare($selectSql);
             $stmt->execute([':row_id' => $rowId]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (is_array($row) && !empty($row)) {
-                $addTarget($row['Transmittal ID'] ?? '', $row['Sender Details'] ?? '');
+                $addTarget($row['Transmittal ID'] ?? '', $row['Sender Details'] ?? '', $row['department_key'] ?? '');
             }
         } catch (Throwable $e) {}
     }
 
     if (empty($targets)) {
         try {
-            $stmt = $pdo->prepare("SELECT DISTINCT `Transmittal ID`, `Sender Details` FROM mailtracking WHERE `Tracking No.` = :tracking");
+            $selectSql = $hasDepartmentKey
+                ? "SELECT DISTINCT `Transmittal ID`, `Sender Details`, `department_key` FROM mailtracking WHERE `Tracking No.` = :tracking"
+                : "SELECT DISTINCT `Transmittal ID`, `Sender Details` FROM mailtracking WHERE `Tracking No.` = :tracking";
+            $stmt = $pdo->prepare($selectSql);
             $stmt->execute([':tracking' => $trackingNo]);
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $addTarget($row['Transmittal ID'] ?? '', $row['Sender Details'] ?? '');
+                $addTarget($row['Transmittal ID'] ?? '', $row['Sender Details'] ?? '', $row['department_key'] ?? '');
             }
         } catch (Throwable $e) {}
     }
@@ -213,6 +235,11 @@ function resolveDesktopDownloadedPdfRoot() {
         return $ok;
     };
 
+    $configuredDesktopRoot = trim((string)getConfiguredDesktopPdfRoot());
+    if ($configuredDesktopRoot !== '') {
+        if ($ensureWritable($configuredDesktopRoot)) return $configuredDesktopRoot;
+    }
+
     $overrideRoot = trim((string)getenv('DHSUD_PDF_ROOT'));
     if ($overrideRoot !== '') {
         $overrideTarget = rtrim($overrideRoot, '\\/') . DIRECTORY_SEPARATOR . 'Downloaded_PDFs';
@@ -257,21 +284,23 @@ function resolveDesktopDownloadedPdfRoot() {
     }
 
     $fallbackCandidates = [
-        __DIR__ . '/../JRS_PDFs/Downloaded_PDFs',
         __DIR__ . '/../Downloaded_PDFs'
     ];
     foreach ($fallbackCandidates as $fallback) {
         if ($ensureWritable($fallback)) return $fallback;
     }
 
-    return __DIR__ . '/../JRS_PDFs/Downloaded_PDFs';
+    return __DIR__ . '/../Downloaded_PDFs';
 }
 
 function archivePdfByTransmittalFolders($pdfFile, $trackingNo, $archiveRoot, $archiveTargets) {
     if (!file_exists($pdfFile)) return;
     $base = rtrim((string)$archiveRoot, '\\/');
     if (!is_dir($base)) {
-        @mkdir($base, 0777, true);
+        if (!@mkdir($base, 0777, true) && !is_dir($base)) {
+            error_log('Failed to create archive root: ' . $base);
+            return;
+        }
     }
     $fileName = 'proof_' . $trackingNo . '.pdf';
     foreach ((array)$archiveTargets as $target) {
@@ -281,10 +310,18 @@ function archivePdfByTransmittalFolders($pdfFile, $trackingNo, $archiveRoot, $ar
         $transmittalFolder = sanitizeTransmittalFolderName($tidRaw);
         $dir = $base . DIRECTORY_SEPARATOR . $deptFolder . DIRECTORY_SEPARATOR . $transmittalFolder;
         if (!is_dir($dir)) {
-            @mkdir($dir, 0777, true);
+            if (!@mkdir($dir, 0777, true) && !is_dir($dir)) {
+                error_log('Failed to create archive directory: ' . $dir);
+                continue;
+            }
         }
         $dest = $dir . DIRECTORY_SEPARATOR . $fileName;
-        @copy($pdfFile, $dest);
+        if (!@copy($pdfFile, $dest)) {
+            $pdfBytes = @file_get_contents($pdfFile);
+            if ($pdfBytes === false || @file_put_contents($dest, $pdfBytes) === false) {
+                error_log('Failed to archive PDF to: ' . $dest);
+            }
+        }
     }
 }
 
@@ -295,7 +332,11 @@ if ($nodeScript === false) {
     endWithError("savepdf.js not found at " . __DIR__ . "/script/savepdf.js", $silent);
 }
 
-$outputDir = __DIR__ . "/../JRS_PDFs";
+$archiveTargets = resolveArchiveTargetsForTracking($pdo, $tracking, $rowId, $transmittalId, $departmentHint);
+$primaryDepartmentFolder = sanitizeDepartmentFolderName(((is_array($archiveTargets[0] ?? null) ? ($archiveTargets[0]['department'] ?? '') : '')));
+$primaryTransmittalFolder = sanitizeTransmittalFolderName(((is_array($archiveTargets[0] ?? null) ? ($archiveTargets[0]['transmittal'] ?? '') : '')));
+
+$outputDir = __DIR__ . "/../JRS_PDFs/" . $primaryDepartmentFolder . "/" . $primaryTransmittalFolder;
 if (!is_dir($outputDir)) {
     mkdir($outputDir, 0777, true);
 }
@@ -339,7 +380,6 @@ if ($return_var !== 0 || !file_exists($pdfFile)) {
     }
 }
 
-$archiveTargets = resolveArchiveTargetsForTracking($pdo, $tracking, $rowId, $transmittalId, $departmentHint);
 $archiveRoot = resolveDesktopDownloadedPdfRoot();
 archivePdfByTransmittalFolders($pdfFile, $tracking, $archiveRoot, $archiveTargets);
 

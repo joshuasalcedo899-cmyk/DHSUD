@@ -51,6 +51,7 @@ try {
         $hasOriginalMailId = in_array('original_mail_id', $archiveCols, true);
         $hasDeletedAt = in_array('deleted_at', $archiveCols, true);
         $hasTransmittalId = in_array('Transmittal ID', $archiveCols, true);
+        $hasArchiveDepartmentKey = in_array('department_key', $archiveCols, true);
 
         $insertCols = [
             'Notice/Order Code',
@@ -67,6 +68,9 @@ try {
             'Date',
             'Evaluator',
         ];
+        if ($hasArchiveDepartmentKey) {
+            $insertCols[] = 'department_key';
+        }
         if (!$hasTransmittalId) {
             $insertCols = array_values(array_filter($insertCols, function ($c) {
                 return $c !== 'Transmittal ID';

@@ -54,6 +54,11 @@ try {
     $recoveredTransmittalIds = [];
 
     $detectDeptKeyFromRow = function (array $row) {
+        $storedDeptKey = normalizeDepartmentKey($row['department_key'] ?? '');
+        if ($storedDeptKey !== 'emes' || strtolower(trim((string)($row['department_key'] ?? ''))) === 'emes') {
+            return $storedDeptKey;
+        }
+
         $noticeText = trim((string)($row['Notice/Order Code'] ?? ''));
         if ($noticeText !== '' && preg_match('/^([A-Z]+)-/i', $noticeText, $m)) {
             $code = strtoupper(trim((string)$m[1]));
@@ -72,6 +77,7 @@ try {
             'PHSD' => 'phsd',
             'ELUPD' => 'elupd',
             'ORD' => 'ord',
+            'HOA' => 'hoa',
         ];
         return $deptMap[$code] ?? 'emes';
     };
@@ -103,6 +109,7 @@ try {
             'Sender Details',
             'File Name (PDF)',
             'Tracking No.',
+            'department_key',
             'Status',
             'Transmittal Remarks/Received By',
             'Date',
@@ -128,6 +135,8 @@ try {
                 $params[$p] = $hasOriginalMailId ? (int)$row['original_mail_id'] : (int)$row['id'];
             } elseif ($c === 'Transmittal ID') {
                 $params[$p] = $rowTransmittalId;
+            } elseif ($c === 'department_key') {
+                $params[$p] = $detectDeptKeyFromRow($row);
             } else {
                 $params[$p] = $row[$c] ?? null;
             }

@@ -12,35 +12,43 @@ if (!isLoggedIn()) {
     exit;
 }
 
+function resolveDepartmentScope($deptKeyRaw) {
+    $deptKey = normalizeDepartmentKey($deptKeyRaw);
+    $deptMap = [
+        'emes' => ['code' => 'EMES', 'sender' => getDepartmentSenderTag('emes')],
+        'prls' => ['code' => 'PRLS', 'sender' => getDepartmentSenderTag('prls')],
+        'afd' => ['code' => 'AFD', 'sender' => getDepartmentSenderTag('afd')],
+        'phsd' => ['code' => 'PHSD', 'sender' => getDepartmentSenderTag('phsd')],
+        'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
+        'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
+        'hoa' => ['code' => 'HOA', 'sender' => getDepartmentSenderTag('hoa')],
+    ];
+    return $deptMap[$deptKey];
+}
+
 try {
+    $deptScope = resolveDepartmentScope($_GET['dept'] ?? 'emes');
+    $scope = buildMailtrackingDepartmentScope($_GET['dept'] ?? 'emes');
+    $hasUpdatedAt = mailtrackingHasUpdatedAt();
+    $latestUpdateSql = $hasUpdatedAt
+        ? 'COALESCE(UNIX_TIMESTAMP(MAX(`updated_at`)), 0)'
+        : '0';
+
     $sql = "SELECT
                 COUNT(*) AS row_count,
                 COALESCE(MAX(`id`), 0) AS max_id,
-                COALESCE(SUM(CRC32(CONCAT_WS('|',
-                    `id`,
-                    `Notice/Order Code`,
-                    `Date released to AFD`,
-                    `Parcel No.`,
-                    `Recipient Details`,
-                    `Parcel Details`,
-                    `Sender Details`,
-                    `File Name (PDF)`,
-                    `Tracking No.`,
-                    `Status`,
-                    `Transmittal ID`,
-                    `Transmittal Remarks/Received By`,
-                    `Date`,
-                    `Evaluator`
-                ))), 0) AS checksum
-            FROM `mailtracking`";
+                {$latestUpdateSql} AS latest_update_ts
+            FROM `mailtracking`
+            WHERE {$scope['sql']}";
 
-    $stmt = $pdo->query($sql);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($scope['params']);
     $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
     $rowCount = (string)($row['row_count'] ?? '0');
     $maxId = (string)($row['max_id'] ?? '0');
-    $checksum = (string)($row['checksum'] ?? '0');
-    $version = $rowCount . ':' . $maxId . ':' . $checksum;
+    $latestUpdateTs = (string)($row['latest_update_ts'] ?? '0');
+    $version = $rowCount . ':' . $maxId . ':' . $latestUpdateTs;
 
     echo json_encode([
         'success' => true,

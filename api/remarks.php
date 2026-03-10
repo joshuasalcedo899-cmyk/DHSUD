@@ -53,7 +53,23 @@ function parseDateToTimestamp($value) {
     return ($ts === false) ? null : $ts;
 }
 
-function detectDepartmentCode($noticeCode, $senderDetails) {
+function detectDepartmentCode($noticeCode, $senderDetails, $departmentKey = '') {
+    $normalizedDeptKey = normalizeDepartmentKey($departmentKey);
+    if ($normalizedDeptKey !== '') {
+        $map = [
+            'emes' => 'EMES',
+            'prls' => 'PRLS',
+            'afd' => 'AFD',
+            'phsd' => 'PHSD',
+            'elupd' => 'ELUPD',
+            'ord' => 'ORD',
+            'hoa' => 'HOA',
+        ];
+        if (isset($map[$normalizedDeptKey])) {
+            return $map[$normalizedDeptKey];
+        }
+    }
+
     $noticeText = trim((string)$noticeCode);
     if ($noticeText !== '' && preg_match('/^([A-Z]+)-/i', $noticeText, $m)) {
         return strtoupper(trim((string)$m[1]));
@@ -177,7 +193,19 @@ if ($rowId <= 0) {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT `id`, `Notice/Order Code`, `Tracking No.`, `Sender Details`, `Status`, `Date released to AFD`, `Parcel No.` FROM mailtracking WHERE `id` = :row_id LIMIT 1");
+$selectColumns = [
+    '`id`',
+    '`Notice/Order Code`',
+    '`Tracking No.`',
+    '`Sender Details`',
+    '`Status`',
+    '`Date released to AFD`',
+    '`Parcel No.`',
+];
+if (mailtrackingHasDepartmentKey()) {
+    $selectColumns[] = '`department_key`';
+}
+$stmt = $pdo->prepare('SELECT ' . implode(', ', $selectColumns) . ' FROM mailtracking WHERE `id` = :row_id LIMIT 1');
 $stmt->execute([':row_id' => $rowId]);
 
 $selectedRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -383,7 +411,7 @@ if ($statusText === 'DELIVERED' && $receiver !== '') {
 
 // Keep File Name (PDF) in sync for final statuses so UI can show it immediately.
 if (($statusText === 'DELIVERED' || $statusText === 'RETURNED TO SENDER') && $trackingNo !== '' && $trackingNo !== '0') {
-    $deptCode = detectDepartmentCode($selectedRow['Notice/Order Code'] ?? '', $selectedRow['Sender Details'] ?? '');
+    $deptCode = detectDepartmentCode($selectedRow['Notice/Order Code'] ?? '', $selectedRow['Sender Details'] ?? '', $selectedRow['department_key'] ?? '');
     $proofFileName = buildDefaultPdfFileName($selectedRow['Date released to AFD'] ?? '', $selectedRow['Parcel No.'] ?? 0, $deptCode);
     if ($isBatch) {
         $fileStmt = $pdo->prepare("UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `Sender Details` LIKE :batchLike");

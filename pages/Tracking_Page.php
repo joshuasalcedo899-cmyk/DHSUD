@@ -8,27 +8,20 @@ $departmentConfig = [
     'phsd' => ['code' => 'PHSD', 'sender' => getDepartmentSenderTag('phsd')],
     'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
     'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
+    'hoa' => ['code' => 'HOA', 'sender' => getDepartmentSenderTag('hoa')],
 ];
-$currentDept = strtolower(trim((string)($_GET['dept'] ?? 'emes')));
-if (!isset($departmentConfig[$currentDept])) {
-    $currentDept = 'emes';
-}
+$currentDept = normalizeDepartmentKey($_GET['dept'] ?? 'emes');
 $currentDeptCode = $departmentConfig[$currentDept]['code'];
 $currentDeptSenderTag = $departmentConfig[$currentDept]['sender'];
 
 try {
-    $deptPrefix = strtoupper($currentDeptCode) . '-%';
-    $deptSenderPattern = '%' . strtoupper($currentDeptSenderTag) . '%';
+    $departmentScope = buildMailtrackingDepartmentScope($currentDept);
     $rowsStmt = $pdo->prepare(
         'SELECT * FROM mailtracking
-         WHERE UPPER(COALESCE(`Notice/Order Code`, \'\')) LIKE :dept_prefix
-            OR UPPER(COALESCE(`Sender Details`, \'\')) LIKE :dept_sender
+         WHERE ' . $departmentScope['sql'] . '
          ORDER BY `Sender Details` ASC, `id` ASC'
     );
-    $rowsStmt->execute([
-        ':dept_prefix' => $deptPrefix,
-        ':dept_sender' => $deptSenderPattern,
-    ]);
+    $rowsStmt->execute($departmentScope['params']);
     $rows = $rowsStmt->fetchAll();
 } catch (Exception $e) {
     $rows = [];
@@ -101,6 +94,23 @@ function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
     $formattedDate = date('ymd', $ts);
     $formattedParcelNo = sprintf('%03d', (int)$parcelNoValue);
     return strtoupper($currentDeptCode) . '-' . $formattedDate . '-' . $formattedParcelNo;
+}
+
+function sanitizeTransmittalFolderName($value) {
+    $name = trim((string)$value);
+    if ($name === '') return 'UNASSIGNED';
+    $name = preg_replace('/[\\\\\/:*?"<>|]+/', '_', $name);
+    $name = preg_replace('/\s+/', ' ', $name);
+    $name = trim($name, " .\t\n\r\0\x0B");
+    return ($name !== '' ? $name : 'UNASSIGNED');
+}
+
+function buildMainPdfHref($trackingValue, $transmittalIdValue) {
+    global $currentDeptCode;
+    $tracking = trim((string)$trackingValue);
+    if ($tracking === '') return '';
+    $transmittalFolder = sanitizeTransmittalFolderName($transmittalIdValue ?? '');
+    return '../JRS_PDFs/' . rawurlencode($currentDeptCode) . '/' . rawurlencode($transmittalFolder) . '/' . rawurlencode('proof_' . $tracking . '.pdf');
 }
 
 function extractBatchIdFromSenderDetails($senderDetails) {
@@ -341,6 +351,7 @@ rsort($years);
             <a href="Tracking_Page.php?dept=phsd" class="home-sidebar-link dept-phsd<?= $currentDept === 'phsd' ? ' is-active' : '' ?>" data-dept="phsd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>PHSD</span></a>
             <a href="Tracking_Page.php?dept=elupd" class="home-sidebar-link dept-elupd<?= $currentDept === 'elupd' ? ' is-active' : '' ?>" data-dept="elupd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ELUPD</span></a>
             <a href="Tracking_Page.php?dept=ord" class="home-sidebar-link dept-ord<?= $currentDept === 'ord' ? ' is-active' : '' ?>" data-dept="ord"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ORD</span></a>
+            <a href="Tracking_Page.php?dept=hoa" class="home-sidebar-link dept-hoa<?= $currentDept === 'hoa' ? ' is-active' : '' ?>" data-dept="hoa"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>HOA</span></a>
         </nav>
     </aside>
 
@@ -475,7 +486,7 @@ rsort($years);
                                                 $defaultPdfName = buildDefaultPdfFileName($row['Date released to AFD'] ?? '', $row['Parcel No.'] ?? 0);
                                                 $resolvedPdfName = $fileName !== '' ? basename($fileName) : $defaultPdfName;
                                                 $proofAssetName = $trackingNo !== '' ? ('proof_' . $trackingNo . '.pdf') : '';
-                                                $fileHref = $proofAssetName !== '' ? '../JRS_PDFs/' . rawurlencode($proofAssetName) : '';
+                                                $fileHref = buildMainPdfHref($trackingNo, $row['Transmittal ID'] ?? '');
                                                 ?>
                                                 <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell">
                                                     <?php if ($fileHref !== '' && $resolvedPdfName !== ''): ?>

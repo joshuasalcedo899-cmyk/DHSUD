@@ -39,6 +39,7 @@ CREATE TABLE `archive` (
   `File Name (PDF)` varchar(100) NOT NULL,
   `Tracking No.` varchar(50) NOT NULL,
   `Status` varchar(100) NOT NULL,
+  `department_key` varchar(20) NOT NULL DEFAULT '',
   `Transmittal ID` varchar(40) NOT NULL DEFAULT '',
   `Transmittal Remarks/Received By` varchar(100) NOT NULL,
   `Date` date NOT NULL,
@@ -72,10 +73,12 @@ CREATE TABLE `mailtracking` (
   `File Name (PDF)` varchar(100) NOT NULL,
   `Tracking No.` varchar(50) NOT NULL,
   `Status` varchar(100) NOT NULL,
+  `department_key` varchar(20) NOT NULL DEFAULT '',
   `Transmittal ID` varchar(40) NOT NULL DEFAULT '',
   `Transmittal Remarks/Received By` varchar(100) NOT NULL,
   `Date` date NOT NULL,
-  `Evaluator` varchar(100) NOT NULL
+  `Evaluator` varchar(100) NOT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -177,13 +180,22 @@ INSERT INTO `users` (`id`, `username`, `email`, `password`, `created_at`, `updat
 --
 ALTER TABLE `archive`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_archive_original_mail_id` (`original_mail_id`);
+  ADD KEY `idx_archive_original_mail_id` (`original_mail_id`),
+  ADD KEY `idx_archive_department_key` (`department_key`);
 
 --
 -- Indexes for table `mailtracking`
 --
 ALTER TABLE `mailtracking`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_mailtracking_department_key` (`department_key`),
+  ADD KEY `idx_mailtracking_tracking_no` (`Tracking No.`),
+  ADD KEY `idx_mailtracking_transmittal_id` (`Transmittal ID`),
+  ADD KEY `idx_mailtracking_status` (`Status`),
+  ADD KEY `idx_mailtracking_date_released` (`Date released to AFD`),
+  ADD KEY `idx_mailtracking_updated_at` (`updated_at`),
+  ADD KEY `idx_mailtracking_sender_id` (`Sender Details`, `id`),
+  ADD KEY `idx_mailtracking_transmittal_parcel` (`Transmittal ID`, `Parcel No.`);
 
 --
 -- Indexes for table `users`

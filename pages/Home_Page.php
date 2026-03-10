@@ -12,11 +12,9 @@ $departmentConfig = [
     'phsd' => ['code' => 'PHSD', 'sender' => getDepartmentSenderTag('phsd')],
     'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
     'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
+    'hoa' => ['code' => 'HOA CDD', 'sender' => getDepartmentSenderTag('hoa')],
 ];
-$currentDept = strtolower(trim((string)($_GET['dept'] ?? 'emes')));
-if (!isset($departmentConfig[$currentDept])) {
-    $currentDept = 'emes';
-}
+$currentDept = normalizeDepartmentKey($_GET['dept'] ?? 'emes');
 $currentDeptCode = $departmentConfig[$currentDept]['code'];
 $currentDeptSenderTag = $departmentConfig[$currentDept]['sender'];
 $currentDeptContactNo = getSenderContactNumber($currentDept, $currentDeptSenderTag);
@@ -65,20 +63,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['row_id']) && isset($
 
 // Fetch all rows to display
 try {
+    $departmentScope = buildMailtrackingDepartmentScope($currentDept);
     // Keep rows from the same batch adjacent so merged-cell rendering stays coherent,
     // including records recovered from archive.
-    $deptPrefix = strtoupper($currentDeptCode) . '-%';
-    $deptSenderPattern = '%' . strtoupper($currentDeptSenderTag) . '%';
     $rowsStmt = $pdo->prepare(
         'SELECT * FROM mailtracking
-         WHERE UPPER(COALESCE(`Notice/Order Code`, \'\')) LIKE :dept_prefix
-            OR UPPER(COALESCE(`Sender Details`, \'\')) LIKE :dept_sender
+         WHERE ' . $departmentScope['sql'] . '
          ORDER BY `Sender Details` ASC, `id` ASC'
     );
-    $rowsStmt->execute([
-        ':dept_prefix' => $deptPrefix,
-        ':dept_sender' => $deptSenderPattern,
-    ]);
+    $rowsStmt->execute($departmentScope['params']);
     $rows = $rowsStmt->fetchAll();
 } catch (Exception $e) {
     $rows = [];
@@ -155,6 +148,15 @@ function formatDateCell($value) {
     return date('F-d-Y', $ts);
 }
 
+function sanitizeTransmittalFolderName($value) {
+    $name = trim((string)$value);
+    if ($name === '') return 'UNASSIGNED';
+    $name = preg_replace('/[\\\\\/:*?"<>|]+/', '_', $name);
+    $name = preg_replace('/\s+/', ' ', $name);
+    $name = trim($name, " .\t\n\r\0\x0B");
+    return ($name !== '' ? $name : 'UNASSIGNED');
+}
+
 function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
     global $currentDeptCode;
     $text = trim((string)$dateReleasedValue);
@@ -164,6 +166,14 @@ function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue) {
     $formattedDate = date('ymd', $ts);
     $formattedParcelNo = sprintf('%03d', (int)$parcelNoValue);
     return strtoupper($currentDeptCode) . '-' . $formattedDate . '-' . $formattedParcelNo;
+}
+
+function buildMainPdfHref($trackingValue, $transmittalIdValue) {
+    global $currentDeptCode;
+    $tracking = trim((string)$trackingValue);
+    if ($tracking === '') return '';
+    $transmittalFolder = sanitizeTransmittalFolderName($transmittalIdValue ?? '');
+    return '../JRS_PDFs/' . rawurlencode($currentDeptCode) . '/' . rawurlencode($transmittalFolder) . '/' . rawurlencode('proof_' . $tracking . '.pdf');
 }
 
 function normalizedCellValueForMerge($row, $colName) {
@@ -343,6 +353,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             <a href="Home_Page.php?dept=phsd" class="home-sidebar-link dept-phsd<?= $currentDept === 'phsd' ? ' is-active' : '' ?>" data-dept="phsd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>PHSD</strong><small>Mail Tracking Records</small></span></a>
             <a href="Home_Page.php?dept=elupd" class="home-sidebar-link dept-elupd<?= $currentDept === 'elupd' ? ' is-active' : '' ?>" data-dept="elupd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>ELUPD</strong><small>Mail Tracking Records</small></span></a>
             <a href="Home_Page.php?dept=ord" class="home-sidebar-link dept-ord<?= $currentDept === 'ord' ? ' is-active' : '' ?>" data-dept="ord"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>ORD</strong><small>Mail Tracking Records</small></span></a>
+            <a href="Home_Page.php?dept=hoa" class="home-sidebar-link dept-hoa<?= $currentDept === 'hoa' ? ' is-active' : '' ?>" data-dept="hoa"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>HOA CDD</strong><small>Mail Tracking Records</small></span></a>
         </nav>
 
         <a href="logout.php" class="home-sidebar-logout">
@@ -416,11 +427,11 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                         <label>Code</label>
                                         <input type="text" name="noticeCodes[]" placeholder="Notice/Order Code">
                                     </div>
-                                    <button type="button" class="pair-row-btn" title="Add row">+</button>
                                     <div>
                                         <label>Parcel Details</label>
                                         <textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details"></textarea>
                                     </div>
+                                    <button type="button" class="pair-row-btn" title="Add row">+</button>
                                 </div>
                             </div>
                         </div>
@@ -1016,7 +1027,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                                 $defaultPdfName = buildDefaultPdfFileName($row['Date released to AFD'] ?? '', $row['Parcel No.'] ?? 0);
                                                 $resolvedPdfName = $fileName !== '' ? basename($fileName) : $defaultPdfName;
                                                 $proofAssetName = $trackingValue !== '' ? ('proof_' . $trackingValue . '.pdf') : '';
-                                                $fileHref = $proofAssetName !== '' ? '../JRS_PDFs/' . rawurlencode($proofAssetName) : '';
+                                                $fileHref = buildMainPdfHref($trackingValue, $row['Transmittal ID'] ?? '');
                                                 $linkLabel = $resolvedPdfName;
                                             ?>
                                             <td data-col="<?= htmlspecialchars($colName) ?>" class="pdf-link-cell<?= $spanToBatchEndClass ?>"<?= $rowspanAttr ?>>
@@ -1077,13 +1088,18 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
             </button>
         </div>
-        <div id="scannerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10000;justify-content:center;align-items:center;">
-            <div class="modal-panel" style="background:#fff;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.28);">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                    <h2 style="margin:0;color:#22336A;font-size:1.1rem;">Scan QR Code</h2>
-                    <button type="button" onclick="closeScannerModal()" style="border:none;background:#f3f4f6;color:#22336A;font-weight:700;border-radius:6px;padding:6px 10px;cursor:pointer;">Close</button>
+        <div id="scannerModal" class="scanner-modal" style="display:none;">
+            <div class="modal-panel scanner-modal-panel">
+                <div class="scanner-modal-head">
+                    <div class="scanner-modal-title-wrap">
+                        <span class="scanner-modal-kicker">Scanner</span>
+                        <h2 class="scanner-modal-title">Scan QR Code</h2>
+                    </div>
+                    <button type="button" class="scanner-modal-close" onclick="closeScannerModal()">Close</button>
                 </div>
-                <iframe id="scannerFrame" src="about:blank" title="QR Scanner" allow="camera" style="width:100%;border:1px solid #d1d5db;border-radius:8px;"></iframe>
+                <div class="scanner-modal-frame-shell">
+                    <iframe id="scannerFrame" src="about:blank" title="QR Scanner" allow="camera" class="scanner-modal-frame"></iframe>
+                </div>
             </div>
         </div>
         <div id="notifModalOverlay" class="notif-modal-overlay">
@@ -1293,10 +1309,17 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         function openAddModal() {
             syncAddTransmittalField();
             syncAddParcelNoField();
+            hideRowMenuDropdown();
             var overlay = document.getElementById('addModalOverlay');
             if (!overlay) return;
             overlay.style.display = 'flex';
             animateModalPanelFromTrigger(overlay, overlay.querySelector('.edit-modal'), document.activeElement);
+            setTimeout(function() {
+                var firstInput = overlay.querySelector('input:not([type="hidden"]):not([readonly]), textarea:not([readonly]), select');
+                if (firstInput) {
+                    try { firstInput.focus(); } catch (e) {}
+                }
+            }, 20);
         }
         function closeAddModal() {
             document.getElementById('addModalOverlay').style.display = 'none';
@@ -1333,8 +1356,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             row.className = 'add-pair-row';
             row.innerHTML =
                 '<div><label>Code</label><input type="text" name="noticeCodes[]" placeholder="Notice/Order Code"></div>' +
-                '<button type="button" class="pair-row-btn" title="Add row">+</button>' +
-                '<div><label>Parcel Details</label><textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details"></textarea></div>';
+                '<div><label>Parcel Details</label><textarea name="parcelDetailsList[]" rows="1" placeholder="Parcel Details"></textarea></div>' +
+                '<button type="button" class="pair-row-btn" title="Add row">+</button>';
             rowsWrap.appendChild(row);
             var inputs = row.querySelectorAll('input, textarea');
             if (inputs[0]) inputs[0].value = noticeValue;
@@ -1409,11 +1432,22 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             clearAddForm();
                             closeAddModal();
                             const firstAddedNotice = (data.firstNotice || '').trim();
+                            const firstAddedRowId = parseInt(data.firstId || '0', 10) || 0;
                             const addedTrackingNo = ((formData.get('trackingNo') || formData.get('Tracking No.') || '') + '').trim();
-                            const immediateTrackNotices = addedTrackingNo !== '' ? (data.insertedNotices || []) : [];
+                            const immediateTrackItems = addedTrackingNo !== ''
+                                ? ((Array.isArray(data.insertedIds) ? data.insertedIds : []).map(function(id, index) {
+                                    return {
+                                        rowId: parseInt(id || '0', 10) || 0,
+                                        noticeCode: ((Array.isArray(data.insertedNotices) ? data.insertedNotices[index] : '') || '').trim()
+                                    };
+                                }).filter(function(item) {
+                                    return item.rowId > 0 || item.noticeCode !== '';
+                                }))
+                                : [];
                             refreshHomeData({
                                 focusNotice: firstAddedNotice,
-                                immediateTrackNotices: immediateTrackNotices
+                                focusRowId: firstAddedRowId,
+                                immediateTrackItems: immediateTrackItems
                             });
                         } else {
                             alert(data.message || 'Failed to add record.');
@@ -1470,6 +1504,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         }
 
                         function openEditModal(rowData) {
+                            hideRowMenuDropdown();
                             var overlay = document.getElementById('editModalOverlay');
                             if (!overlay) return;
                             overlay.style.display = 'flex';
@@ -1497,6 +1532,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             if (editDate) editDate.value = rowData['Date'] || '';
                             var editEvaluator = document.getElementById('editEvaluator');
                             if (editEvaluator) editEvaluator.value = rowData['Evaluator'] || '';
+                            setTimeout(function() {
+                                var firstInput = overlay.querySelector('input:not([type="hidden"]):not([readonly]):not([disabled]), textarea:not([readonly]):not([disabled]), select:not([disabled])');
+                                if (firstInput) {
+                                    try { firstInput.focus(); } catch (e) {}
+                                }
+                            }, 20);
                             console.log('Modal opened for Notice Code: "' + noticeCode + '"');
                         }
 
@@ -1537,6 +1578,270 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             if (row) openEditModal(row);
                         }
 
+                        const INLINE_EDITABLE_COLUMNS = new Set([
+                            'Notice/Order Code',
+                            'Date released to AFD',
+                            'Parcel No.',
+                            'Recipient Details',
+                            'Parcel Details',
+                            'Tracking No.',
+                            'Status',
+                            'Transmittal Remarks/Received By',
+                            'Date',
+                            'Evaluator'
+                        ]);
+                        const INLINE_TEXTAREA_COLUMNS = new Set([
+                            'Recipient Details',
+                            'Parcel Details',
+                            'Transmittal Remarks/Received By'
+                        ]);
+                        const inlineEditState = {
+                            cell: null,
+                            rowId: 0,
+                            column: '',
+                            originalValue: '',
+                            saving: false
+                        };
+
+                        function getInlineEditableColumn(cell) {
+                            if (!cell) return '';
+                            if (cell.classList.contains('notice-code-cell')) return 'Notice/Order Code';
+                            return (cell.getAttribute('data-col') || '').trim();
+                        }
+
+                        function isInlineEditableCell(cell) {
+                            var colName = getInlineEditableColumn(cell);
+                            if (!colName || !INLINE_EDITABLE_COLUMNS.has(colName)) return false;
+                            if (cell.classList.contains('action-cell') || cell.classList.contains('pdf-link-cell')) return false;
+                            return true;
+                        }
+
+                        function annotateInlineEditableCells(scope) {
+                            var root = scope || document;
+                            if (!root || !root.querySelectorAll) return;
+                            root.querySelectorAll('.admin-table-container td.notice-code-cell, .admin-table-container td[data-col]').forEach(function(cell) {
+                                if (isInlineEditableCell(cell)) {
+                                    cell.classList.add('is-inline-editable');
+                                    if (!cell.getAttribute('title')) {
+                                        cell.setAttribute('title', 'Double-click to edit');
+                                    }
+                                } else {
+                                    cell.classList.remove('is-inline-editable');
+                                    if (cell.getAttribute('title') === 'Double-click to edit') {
+                                        cell.removeAttribute('title');
+                                    }
+                                }
+                            });
+                        }
+
+                        function getRowDataForInlineEdit(rowId) {
+                            var safeRowId = parseInt(rowId, 10) || 0;
+                            if (safeRowId <= 0) return null;
+                            if (Array.isArray(window.mailRows)) {
+                                var cached = window.mailRows.find(function(r) {
+                                    return (parseInt(r.id, 10) || 0) === safeRowId;
+                                });
+                                if (cached) return cached;
+                            }
+                            return getRowDataFromTable(safeRowId);
+                        }
+
+                        function normalizeInlineCellValue(columnName, rowData) {
+                            var safeRow = rowData || {};
+                            if (columnName === 'Notice/Order Code') return ((safeRow['Notice/Order Code'] || '') + '').trim();
+                            if (columnName === 'Date released to AFD' || columnName === 'Date') {
+                                return normalizeDateForInput(safeRow[columnName] || '');
+                            }
+                            return ((safeRow[columnName] || '') + '');
+                        }
+
+                        function createInlineEditor(columnName, currentValue) {
+                            var editor;
+                            if (columnName === 'Status') {
+                                editor = document.createElement('select');
+                                ['', 'DELIVERED', 'RETURNED TO SENDER', 'ONGOING DELIVERY', 'PERSONALLY RECEIVED'].forEach(function(optionValue) {
+                                    var option = document.createElement('option');
+                                    option.value = optionValue;
+                                    option.textContent = optionValue || 'Select status';
+                                    editor.appendChild(option);
+                                });
+                                editor.value = currentValue;
+                            } else if (INLINE_TEXTAREA_COLUMNS.has(columnName)) {
+                                editor = document.createElement('textarea');
+                                editor.rows = 3;
+                                editor.value = currentValue;
+                            } else {
+                                editor = document.createElement('input');
+                                if (columnName === 'Date released to AFD' || columnName === 'Date') {
+                                    editor.type = 'date';
+                                } else if (columnName === 'Parcel No.') {
+                                    editor.type = 'number';
+                                    editor.step = '1';
+                                    editor.min = '0';
+                                } else {
+                                    editor.type = 'text';
+                                }
+                                editor.value = currentValue;
+                            }
+                            editor.className = 'inline-cell-editor';
+                            editor.setAttribute('data-inline-editor', '1');
+                            return editor;
+                        }
+
+                        function cancelInlineCellEdit(options) {
+                            var opts = options || {};
+                            if (!inlineEditState.cell) return;
+                            var activeCell = inlineEditState.cell;
+                            activeCell.classList.remove('is-inline-editing', 'is-inline-saving');
+                            inlineEditState.cell = null;
+                            inlineEditState.rowId = 0;
+                            inlineEditState.column = '';
+                            inlineEditState.originalValue = '';
+                            inlineEditState.saving = false;
+                            if (!opts.keepFocus) {
+                                try { activeCell.blur(); } catch (e) {}
+                            }
+                        }
+
+                        function beginInlineCellEdit(cell) {
+                            if (!cell || !isInlineEditableCell(cell)) return;
+                            if (inlineEditState.saving) return;
+                            if (inlineEditState.cell && inlineEditState.cell !== cell) {
+                                cancelInlineCellEdit({ keepFocus: true });
+                            }
+
+                            var row = cell.closest('tr[data-id]');
+                            if (!row) return;
+                            var rowId = parseInt(row.getAttribute('data-id') || '0', 10) || 0;
+                            if (rowId <= 0) return;
+                            var columnName = getInlineEditableColumn(cell);
+                            if (!columnName) return;
+                            var rowData = getRowDataForInlineEdit(rowId);
+                            if (!rowData) return;
+                            var currentValue = normalizeInlineCellValue(columnName, rowData);
+                            var editor = createInlineEditor(columnName, currentValue);
+
+                            inlineEditState.cell = cell;
+                            inlineEditState.rowId = rowId;
+                            inlineEditState.column = columnName;
+                            inlineEditState.originalValue = currentValue;
+                            inlineEditState.saving = false;
+
+                            cell.classList.add('is-inline-editing');
+                            cell.innerHTML = '';
+                            cell.appendChild(editor);
+
+                            editor.addEventListener('keydown', function(e) {
+                                if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    cancelInlineCellEdit();
+                                    refreshHomeData({ focusRowId: rowId });
+                                    return;
+                                }
+                                if (e.key === 'Enter' && (editor.tagName !== 'TEXTAREA' || e.ctrlKey || e.metaKey)) {
+                                    e.preventDefault();
+                                    saveInlineCellEdit();
+                                }
+                            });
+                            editor.addEventListener('blur', function() {
+                                setTimeout(function() {
+                                    if (inlineEditState.cell === cell && !inlineEditState.saving) {
+                                        saveInlineCellEdit();
+                                    }
+                                }, 0);
+                            });
+                            if (editor.tagName === 'SELECT') {
+                                editor.addEventListener('change', function() {
+                                    saveInlineCellEdit();
+                                });
+                            }
+
+                            setTimeout(function() {
+                                try {
+                                    editor.focus();
+                                    if (typeof editor.select === 'function' && editor.tagName !== 'SELECT') editor.select();
+                                } catch (e) {}
+                            }, 0);
+                        }
+
+                        function saveInlineCellEdit() {
+                            if (!inlineEditState.cell || inlineEditState.saving) return;
+                            var cell = inlineEditState.cell;
+                            var rowId = inlineEditState.rowId;
+                            var columnName = inlineEditState.column;
+                            var editor = cell.querySelector('[data-inline-editor="1"]');
+                            if (!editor) {
+                                cancelInlineCellEdit();
+                                refreshHomeData({ focusRowId: rowId });
+                                return;
+                            }
+
+                            var nextValue = ((editor.value || '') + '').trim();
+                            var originalValue = ((inlineEditState.originalValue || '') + '').trim();
+                            if (nextValue === originalValue) {
+                                cancelInlineCellEdit();
+                                refreshHomeData({ focusRowId: rowId });
+                                return;
+                            }
+
+                            inlineEditState.saving = true;
+                            cell.classList.add('is-inline-saving');
+                            editor.disabled = true;
+
+                            var rowData = getRowDataForInlineEdit(rowId) || {};
+                            var noticeCode = ((rowData['Notice/Order Code'] || '') + '').trim();
+                            var formData = new FormData();
+                            formData.set('csrf_token', CSRF_TOKEN);
+                            formData.set('original_id', String(rowId));
+                            formData.set('original_notice_code', noticeCode);
+                            formData.set(columnName, nextValue);
+
+                            fetch('../api/EditMail.php', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-Token': CSRF_TOKEN
+                                },
+                                body: formData
+                            })
+                            .then(function(resp) { return resp.json(); })
+                            .then(function(data) {
+                                if (!data || !data.success) {
+                                    throw new Error((data && data.message) ? data.message : 'Failed to save changes.');
+                                }
+                                if (data.pdfWarning) {
+                                    alert(data.pdfWarning);
+                                }
+                                var immediateTrackItems = [];
+                                if (columnName === 'Tracking No.' && nextValue !== '' && nextValue !== '0') {
+                                    immediateTrackItems.push({
+                                        noticeCode: noticeCode,
+                                        rowId: rowId
+                                    });
+                                }
+                                cancelInlineCellEdit({ keepFocus: true });
+                                refreshHomeData({
+                                    focusRowId: rowId,
+                                    focusNotice: (columnName === 'Notice/Order Code' ? nextValue : noticeCode),
+                                    immediateTrackItems: immediateTrackItems
+                                });
+                            })
+                            .catch(function(err) {
+                                cancelInlineCellEdit({ keepFocus: true });
+                                refreshHomeData({ focusRowId: rowId, focusNotice: noticeCode });
+                                alert(err && err.message ? err.message : 'Failed to save changes.');
+                            });
+                        }
+
+                        function handleTableCellDoubleClick(event) {
+                            var target = event.target;
+                            if (!target) return;
+                            if (target.closest('button, input, textarea, select, a, label')) return;
+
+                            var cell = target.closest('td');
+                            if (!isInlineEditableCell(cell)) return;
+                            beginInlineCellEdit(cell);
+                        }
+
                         // Save handler (AJAX)
                         document.addEventListener('DOMContentLoaded', function() {
                             document.getElementById('editForm').addEventListener('submit', function(e) {
@@ -1572,7 +1877,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                         refreshHomeData({
                                             focusNotice: focusNotice,
                                             focusRowId: focusRowId,
-                                            immediateTrackNotices: (submittedTrackingNo !== '' ? [focusNotice] : [])
+                                            immediateTrackItems: (submittedTrackingNo !== '' ? [{
+                                                noticeCode: focusNotice,
+                                                rowId: focusRowId
+                                            }] : [])
                                         });
                                     } else {
                                         alert(data.message || 'Failed to save changes.');
@@ -1675,6 +1983,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const focusNotice = (options.focusNotice || '').trim();
             const focusRowId = parseInt(options.focusRowId || 0, 10) || 0;
             const immediateTrackNotices = Array.isArray(options.immediateTrackNotices) ? options.immediateTrackNotices : [];
+            const immediateTrackItems = Array.isArray(options.immediateTrackItems) ? options.immediateTrackItems : [];
             const previousStatusSnapshot = cloneStatusSnapshot();
             const url = new URL(window.location.href);
             url.searchParams.set('_ts', Date.now().toString());
@@ -1689,6 +1998,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     const nextArea = doc.querySelector('.admin-table-container .table-scroll-area');
                     if (currentArea && nextArea) {
                         currentArea.innerHTML = nextArea.innerHTML;
+                        annotateInlineEditableCells(currentArea);
                     }
 
                     const currentStats = document.querySelector('.statistics-bar');
@@ -1722,6 +2032,15 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     autoTrackEligibleRows();
                     immediateTrackNotices.forEach(function(notice) {
                         triggerImmediateTrackingOnce(notice);
+                    });
+                    immediateTrackItems.forEach(function(item) {
+                        const safeItem = (item && typeof item === 'object') ? item : {};
+                        runTrackingUpdate((safeItem.noticeCode || '').trim(), {
+                            rowId: parseInt(safeItem.rowId || '0', 10) || 0,
+                            silent: true,
+                            force: true,
+                            bypassCooldown: true
+                        });
                     });
 
                     if (focusRowId > 0) {
@@ -1979,40 +2298,89 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         function applyDeltaRefreshPayload(payload, previousStatusSnapshot) {
             if (!payload || payload.success !== true || !Array.isArray(payload.rows)) return false;
             const currentRows = Array.isArray(window.mailRows) ? window.mailRows : [];
-            const nextRows = payload.rows;
-            if (!areRowsSameOrder(currentRows, nextRows)) return false;
-
             const safeDeltaCols = new Set(['Status', 'Date', 'Transmittal Remarks/Received By', 'File Name (PDF)']);
-            for (let i = 0; i < nextRows.length; i++) {
-                const before = currentRows[i] || {};
-                const after = nextRows[i] || {};
-                const changedCols = [];
+            let nextRows = currentRows.slice();
 
-                if ((((before['Notice/Order Code'] || '') + '').trim()) !== (((after['Notice/Order Code'] || '') + '').trim())) {
-                    return false;
-                }
-
-                tableDataColumns.forEach(function(col) {
-                    const a = ((before[col] || '') + '').trim();
-                    const b = ((after[col] || '') + '').trim();
-                    if (a !== b) changedCols.push(col);
+            if ((payload.mode || 'full') === 'patch') {
+                const currentIndexById = new Map();
+                currentRows.forEach(function(row, index) {
+                    const rowId = parseInt(row && row.id, 10) || 0;
+                    if (rowId > 0) currentIndexById.set(rowId, index);
                 });
 
-                if (changedCols.length === 0) continue;
-                if (changedCols.some(function(col) { return !safeDeltaCols.has(col); })) {
-                    return false;
-                }
+                for (let i = 0; i < payload.rows.length; i++) {
+                    const after = payload.rows[i] || {};
+                    const rowId = parseInt(after.id, 10) || 0;
+                    const rowIndex = currentIndexById.get(rowId);
+                    if (!rowId || typeof rowIndex === 'undefined') return false;
 
-                const notice = ((after['Notice/Order Code'] || '') + '').trim();
-                if (!notice) return false;
-                updateTrackingRow(notice, {
-                    status: ((after['Status'] || '') + '').trim(),
-                    date: ((after['Date'] || '') + '').trim(),
-                    dateDisplay: formatDisplayDate(after['Date'] || ''),
-                    transmittalRemarks: ((after['Transmittal Remarks/Received By'] || '') + '').trim(),
-                    fileNamePdf: ((after['File Name (PDF)'] || '') + '').trim(),
-                    trackingNo: ((after['Tracking No.'] || '') + '').trim()
-                }, { suppressNotification: true });
+                    const before = currentRows[rowIndex] || {};
+                    const changedCols = [];
+                    if ((((before['Notice/Order Code'] || '') + '').trim()) !== (((after['Notice/Order Code'] || '') + '').trim())) {
+                        return false;
+                    }
+
+                    tableDataColumns.forEach(function(col) {
+                        const a = ((before[col] || '') + '').trim();
+                        const b = ((after[col] || '') + '').trim();
+                        if (a !== b) changedCols.push(col);
+                    });
+
+                    if (changedCols.length === 0) {
+                        nextRows[rowIndex] = Object.assign({}, before, after);
+                        continue;
+                    }
+                    if (changedCols.some(function(col) { return !safeDeltaCols.has(col); })) {
+                        return false;
+                    }
+
+                    const notice = ((after['Notice/Order Code'] || '') + '').trim();
+                    const rowIdForUpdate = parseInt(after.id, 10) || 0;
+                    updateTrackingRow(notice, {
+                        status: ((after['Status'] || '') + '').trim(),
+                        date: ((after['Date'] || '') + '').trim(),
+                        dateDisplay: formatDisplayDate(after['Date'] || ''),
+                        transmittalRemarks: ((after['Transmittal Remarks/Received By'] || '') + '').trim(),
+                        fileNamePdf: ((after['File Name (PDF)'] || '') + '').trim(),
+                        trackingNo: ((after['Tracking No.'] || '') + '').trim()
+                    }, { suppressNotification: true, rowId: rowIdForUpdate });
+                    nextRows[rowIndex] = Object.assign({}, before, after);
+                }
+            } else {
+                nextRows = payload.rows;
+                if (!areRowsSameOrder(currentRows, nextRows)) return false;
+
+                for (let i = 0; i < nextRows.length; i++) {
+                    const before = currentRows[i] || {};
+                    const after = nextRows[i] || {};
+                    const changedCols = [];
+
+                    if ((((before['Notice/Order Code'] || '') + '').trim()) !== (((after['Notice/Order Code'] || '') + '').trim())) {
+                        return false;
+                    }
+
+                    tableDataColumns.forEach(function(col) {
+                        const a = ((before[col] || '') + '').trim();
+                        const b = ((after[col] || '') + '').trim();
+                        if (a !== b) changedCols.push(col);
+                    });
+
+                    if (changedCols.length === 0) continue;
+                    if (changedCols.some(function(col) { return !safeDeltaCols.has(col); })) {
+                        return false;
+                    }
+
+                    const notice = ((after['Notice/Order Code'] || '') + '').trim();
+                    const rowIdForUpdate = parseInt(after.id, 10) || 0;
+                    updateTrackingRow(notice, {
+                        status: ((after['Status'] || '') + '').trim(),
+                        date: ((after['Date'] || '') + '').trim(),
+                        dateDisplay: formatDisplayDate(after['Date'] || ''),
+                        transmittalRemarks: ((after['Transmittal Remarks/Received By'] || '') + '').trim(),
+                        fileNamePdf: ((after['File Name (PDF)'] || '') + '').trim(),
+                        trackingNo: ((after['Tracking No.'] || '') + '').trim()
+                    }, { suppressNotification: true, rowId: rowIdForUpdate });
+                }
             }
 
             window.mailRows = nextRows;
@@ -2024,8 +2392,15 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             return true;
         }
 
-        function fetchHomeDeltaPayload() {
-            return fetch('../api/home-delta.php?_ts=' + Date.now(), {
+        function fetchHomeDeltaPayload(options = {}) {
+            const url = new URL('../api/home-delta.php', window.location.href);
+            url.searchParams.set('dept', currentDeptKey);
+            url.searchParams.set('_ts', String(Date.now()));
+            const previousVersion = ((options.previousVersion || '') + '').trim();
+            if (previousVersion) {
+                url.searchParams.set('previous_version', previousVersion);
+            }
+            return fetch(url.toString(), {
                 method: 'GET',
                 cache: 'no-store',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -2046,9 +2421,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const focusNotice = (options.focusNotice || '').trim();
             const focusRowId = parseInt(options.focusRowId || 0, 10) || 0;
             const immediateTrackNotices = Array.isArray(options.immediateTrackNotices) ? options.immediateTrackNotices : [];
+            const immediateTrackItems = Array.isArray(options.immediateTrackItems) ? options.immediateTrackItems : [];
             const previousStatusSnapshot = cloneStatusSnapshot();
 
-            return fetchHomeDeltaPayload()
+            return fetchHomeDeltaPayload({ previousVersion: options.previousVersion || '' })
                 .then(function(deltaPayload) {
                     const deltaApplied = applyDeltaRefreshPayload(deltaPayload, previousStatusSnapshot);
                     if (!deltaApplied) {
@@ -2059,6 +2435,15 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     autoTrackEligibleRows();
                     immediateTrackNotices.forEach(function(notice) {
                         triggerImmediateTrackingOnce(notice);
+                    });
+                    immediateTrackItems.forEach(function(item) {
+                        const safeItem = (item && typeof item === 'object') ? item : {};
+                        runTrackingUpdate((safeItem.noticeCode || '').trim(), {
+                            rowId: parseInt(safeItem.rowId || '0', 10) || 0,
+                            silent: true,
+                            force: true,
+                            bypassCooldown: true
+                        });
                     });
 
                     if (focusRowId > 0) {
@@ -2146,7 +2531,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         }
 
         function fetchHomeDataVersion() {
-            const url = '../api/home-version.php?_ts=' + Date.now();
+            const url = '../api/home-version.php?dept=' + encodeURIComponent(currentDeptKey) + '&_ts=' + Date.now();
             return fetch(url, {
                 method: 'GET',
                 cache: 'no-store',
@@ -2174,14 +2559,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 smartPollingState.lastKnownVersion = currentVersion;
 
                 if (!previousVersion) {
-                    return { changed: true, version: currentVersion };
+                    return { changed: true, version: currentVersion, previousVersion: '' };
                 }
 
                 if (previousVersion !== currentVersion) {
                     smartPollingState.burstUntilAt = Date.now() + SMART_POLLING.burstWindowMs;
                 }
 
-                return { changed: previousVersion !== currentVersion, version: currentVersion };
+                return { changed: previousVersion !== currentVersion, version: currentVersion, previousVersion: previousVersion };
             });
         }
 
@@ -2211,7 +2596,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         autoTrackEligibleRows();
                         return true;
                     }
-                    return refreshHomeData({ knownVersion: result.version });
+                    return refreshHomeData({ knownVersion: result.version, previousVersion: result.previousVersion || '' });
                 })
                 .then(function(success) {
                     if (success) {
@@ -2299,6 +2684,24 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const tracking = ((trackingNo || '') + '').trim();
             if (!tracking || tracking === '0') return '';
             return `proof_${tracking}.pdf`;
+        }
+
+        function sanitizeTransmittalFolderNameJs(value) {
+            const text = ((value || '') + '').trim();
+            if (!text) return 'UNASSIGNED';
+            const cleaned = text.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim().replace(/[.\s]+$/g, '');
+            return cleaned || 'UNASSIGNED';
+        }
+
+        function buildMainPdfUrl(trackingNo, transmittalId) {
+            const proofAssetName = buildProofPdfAssetNameFromTracking(trackingNo);
+            if (!proofAssetName) return '';
+            return '../JRS_PDFs/'
+                + encodeURIComponent(currentDeptCode)
+                + '/'
+                + encodeURIComponent(sanitizeTransmittalFolderNameJs(transmittalId))
+                + '/'
+                + encodeURIComponent(proofAssetName);
         }
 
         const statusSnapshotByNotice = new Map();
@@ -2553,7 +2956,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         const fileName = (text || defaultPdfName).trim();
                         if (fileName !== '' && proofAssetName !== '') {
                             const link = document.createElement('a');
-                            const pdfUrl = '../JRS_PDFs/' + encodeURIComponent(proofAssetName);
+                            const pdfUrl = buildMainPdfUrl(trackingValue, safeRowObj['Transmittal ID'] || '');
                             link.className = 'pdf-link-in-cell';
                             link.href = pdfUrl;
                             link.setAttribute('data-pdf-url', pdfUrl);
@@ -2645,6 +3048,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             return document.querySelector('tr[data-notice="' + CSS.escape(safeNotice) + '"]');
         }
 
+        function findRowByTrackingNo(trackingNo) {
+            const safeTracking = (trackingNo || '').trim();
+            if (!safeTracking) return null;
+            return document.querySelector('tr[data-tracking-no="' + CSS.escape(safeTracking) + '"]');
+        }
+
         function findRowById(rowId) {
             const safeId = parseInt(rowId || '0', 10) || 0;
             if (safeId <= 0) return null;
@@ -2686,7 +3095,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         }
 
         function updateTrackingRow(noticeCode, data, options = {}) {
-            const row = findRowByNoticeCode(noticeCode);
+            const optionRowId = parseInt(options.rowId || '0', 10) || 0;
+            const row = findRowByNoticeCode(noticeCode)
+                || findRowById(optionRowId)
+                || (((data && data.trackingNo) ? findRowByTrackingNo(data.trackingNo) : null));
             if (!row) return null;
             const suppressNotification = options.suppressNotification === true;
             const suppressStatsRefresh = options.suppressStatsRefresh === true;
@@ -2739,7 +3151,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 const fileName = (((data.fileNamePdf || '') + '').trim() || defaultPdfName);
                 fileCell.innerHTML = '';
                 if (fileName !== '' && proofAssetName !== '') {
-                    const pdfUrl = '../JRS_PDFs/' + encodeURIComponent(proofAssetName);
+                    const pdfUrl = buildMainPdfUrl(trackingNo, row.dataset.transmittalId || '');
                     const link = document.createElement('a');
                     link.href = pdfUrl;
                     link.className = 'pdf-link-in-cell';
@@ -3678,6 +4090,11 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             scheduleFilterTableRows(0);
         }
         document.addEventListener('DOMContentLoaded', function() {
+            annotateInlineEditableCells(document);
+            var tableScrollArea = document.querySelector('.admin-table-container .table-scroll-area');
+            if (tableScrollArea) {
+                tableScrollArea.addEventListener('dblclick', handleTableCellDoubleClick);
+            }
             document.addEventListener('click', function(e) {
                 var dropdown = document.getElementById('rowMenuDropdown');
                 if (!dropdown) return;
@@ -4232,8 +4649,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         const immediateTrackLastRunAtByKey = new Map();
         let autoTrackInProgress = false;
 
-        function getTrackResultElementForNotice(noticeCode) {
-            const row = findRowByNoticeCode(noticeCode);
+        function findRowById(rowId) {
+            const safeRowId = parseInt(rowId || '0', 10) || 0;
+            if (safeRowId <= 0) return null;
+            return document.querySelector('tr[data-id="' + String(safeRowId) + '"]');
+        }
+
+        function getTrackResultElement(noticeCode, rowId) {
+            const row = findRowByNoticeCode(noticeCode) || findRowById(rowId);
             if (!row) return null;
             const actionCell = row.lastElementChild;
             return actionCell ? actionCell.querySelector(".track-result") : null;
@@ -4245,8 +4668,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const silent = options.silent === true;
             const force = options.force === true;
             const bypassCooldown = options.bypassCooldown === true;
-            const result = getTrackResultElementForNotice(safeNotice);
-            const targetRow = findRowByNoticeCode(safeNotice);
+            const result = getTrackResultElement(safeNotice, optionRowId);
+            const targetRow = findRowByNoticeCode(safeNotice) || findRowById(optionRowId);
             const mappedRow = (!targetRow && safeNotice !== '') ? (mailRowIndexByNotice.get(safeNotice) || null) : null;
             const rowId = optionRowId > 0
                 ? optionRowId
@@ -4285,7 +4708,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 if ((data.batchId || '').trim() !== '') {
                     updateTrackingRowsByBatch(data.batchId, data);
                 } else {
-                    updateTrackingRow(safeNotice, data);
+                    updateTrackingRow(safeNotice, data, { rowId: rowId });
                 }
 
                 const mappedById = mailRowIndexById.get(rowId) || null;
@@ -4347,22 +4770,24 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             rows.forEach(function(row) {
                 const noticeCode = (row.dataset.notice || '').trim();
+                const rowId = parseInt(row.dataset.id || '0', 10) || 0;
                 const batchId = (row.dataset.batchId || '').trim();
                 const trackingNo = (row.dataset.trackingNo || '').trim();
                 const statusCell = row.querySelector('td[data-col="Status"]');
                 const statusText = ((statusCell && statusCell.textContent) ? statusCell.textContent : '').trim().toUpperCase();
 
-                if (!noticeCode || !trackingNo || trackingNo === '0') return;
+                if (rowId <= 0 || !trackingNo || trackingNo === '0') return;
                 if (statusText !== 'ONGOING DELIVERY') return;
 
                 if (batchId) {
                     if (seenBatchIds.has(batchId)) return;
                     seenBatchIds.add(batchId);
-                    items.push({ key: 'batch:' + batchId, noticeCode: noticeCode });
+                    items.push({ key: 'batch:' + batchId, noticeCode: noticeCode, rowId: rowId });
                     return;
                 }
 
-                items.push({ key: 'notice:' + noticeCode, noticeCode: noticeCode });
+                const itemKey = noticeCode ? ('notice:' + noticeCode) : ('row:' + String(rowId));
+                items.push({ key: itemKey, noticeCode: noticeCode, rowId: rowId });
             });
 
             return items;
@@ -4385,7 +4810,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             items.reduce(function(chain, item) {
                 return chain.then(function() {
-                    return runTrackingUpdate(item.noticeCode, { silent: true }).finally(function() {
+                    return runTrackingUpdate(item.noticeCode, { silent: true, rowId: item.rowId }).finally(function() {
                         autoTrackLastRunByKey.set(item.key, Date.now());
                     });
                 }).then(function() {
@@ -4401,7 +4826,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const button = evt.target.closest(".btn-track");
             if (!button) return;
             const noticeCode = (button.dataset.notice || "").trim();
-            runTrackingUpdate(noticeCode, { silent: false });
+            const row = button.closest('tr[data-id]');
+            const rowId = row ? (parseInt(row.dataset.id || '0', 10) || 0) : 0;
+            runTrackingUpdate(noticeCode, { silent: false, rowId: rowId });
         });
 
         const NOTIFICATION_STORAGE_KEY = 'dhsud_status_notifications_v1';
@@ -4423,7 +4850,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             AFD: 'afd',
             PHSD: 'phsd',
             ELUPD: 'elupd',
-            ORD: 'ord'
+            ORD: 'ord',
+            HOA: 'hoa'
         });
 
         const DEPT_KEY_TO_CODE = Object.freeze({
@@ -4432,7 +4860,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             afd: 'AFD',
             phsd: 'PHSD',
             elupd: 'ELUPD',
-            ord: 'ORD'
+            ord: 'ORD',
+            hoa: 'HOA'
         });
 
         function normalizeDepartmentKey(rawValue) {
