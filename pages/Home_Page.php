@@ -361,56 +361,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             <span>Logout</span>
         </a>
     </aside>
-        <!-- Edit Modal (hidden by default) -->
-        <div id="editModalOverlay" class="edit-modal-overlay" style="display:none;">
-            <div class="edit-modal edit-modal-scrollable" id="editModal">
-<button class="modal-close" onclick="closeEditModal()" title="Close">&times;</button>
-                <h2>EDIT MAIL RECORD</h2>
-                <form id="editForm" autocomplete="off">
-                    <input type="hidden" name="original_id" id="editRowId">
-                    <input type="hidden" name="original_notice_code" id="editNoticeCode">
-                    <div style="display:contents">
-                        <div>
-                            <label for="editNoticeCodeDisplay">Notice/Order Code</label>
-                            <input type="text" name="Notice/Order Code" id="editNoticeCodeDisplay" style="background:#f7f8fa;" />
-                        </div>
-                        <div>
-                            <label for="editDateAfd">Date Released to AFD*</label>
-                            <input type="date" name="Date released to AFD" id="editDateAfd" required>
-                        </div>
-                        <div>
-                            <label for="editParcelNo">Parcel No.</label>
-                            <input type="number" name="Parcel No." id="editParcelNo">
-                        </div>
-                        <div>
-                            <label for="editTrackingNo">Tracking No.</label>
-                            <input type="text" name="Tracking No." id="editTrackingNo">
-                        </div>
-                        <div style="grid-column:1/span 2;">
-                            <label for="editRecipient">Recipient Details</label>
-                            <textarea name="Recipient Details" row="5" id="editRecipient"></textarea>
-                        </div>
-                        <div style="grid-column:1/span 2;">
-                            <labelwhite for="editParcelDetails">Parcel Details</label>
-                            <textarea name="Parcel Details" row="5" id="editParcelDetails"></textarea>
-                        </div>
-                        <div style="grid-column:1/span 2;">
-                            <label for="editSender">Sender Details</label>
-                            <textarea name="Sender Details" row="5" id="editSender"></textarea>
-                        </div>
-                        <div style="grid-column:1/span 2;">
-                            <label for="editFileName">File Name (PDF)</label>
-                            <input type="text" name="File Name (PDF)" id="editFileName">
-                        </div>
-                        
-                    </div>
-                    <div class="modal-actions">
-                        <button type="submit" class="modal-btn save">Save</button>
-                        <button type="button" class="modal-btn cancel" onclick="clearEditForm()">Clear Form</button>
-                    </div>
-                </form>
-            </div>
-        </div>
         <div id="addModalOverlay" class="edit-modal-overlay" style="display:none;">
             <div class="edit-modal add-modal-scrollable" id="addModal">
 <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
@@ -891,17 +841,23 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         </div>
 
         <div class="table-scroll-area">
-            <div class="tracking-table-container">
-                <div class="transmittal-table-headbar" id="transmittalTableHeadbar">
-                    <div class="transmittal-table-headbar-left">
-                        <button type="button" class="transmittal-head-export-btn" onclick="exportSelectedToPDF()" aria-label="Export selected rows">
-                            <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
-                        </button>
-                    </div>
-                    <div class="transmittal-table-headbar-title" id="transmittalTableBarTitle"></div>
-                    <div class="transmittal-table-headbar-right">
-                        <button type="button" class="transmittal-head-nav-btn" id="transmittalPrevBtn" aria-label="Previous transmittal" title="Previous transmittal">
-                            <span class="transmittal-head-nav-icon" aria-hidden="true">&#8249;</span>
+                <div class="tracking-table-container">
+                    <div class="transmittal-table-headbar" id="transmittalTableHeadbar">
+                        <div class="transmittal-table-headbar-left">
+                            <div class="export-dropdown">
+                                <button type="button" class="transmittal-head-export-btn" id="exportDropdownBtn" aria-label="Export options" title="Export options">
+                                    <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
+                                </button>
+                                <div class="export-dropdown-menu" id="exportDropdownMenu" role="menu" aria-label="Export options">
+                                    <button type="button" class="export-dropdown-item" onclick="handleExportOption('pdf')" role="menuitem">Export Transmittal (PDF)</button>
+                                    <button type="button" class="export-dropdown-item" onclick="handleExportOption('excel')" role="menuitem">Export as Excel</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="transmittal-table-headbar-title" id="transmittalTableBarTitle"></div>
+                        <div class="transmittal-table-headbar-right">
+                            <button type="button" class="transmittal-head-nav-btn" id="transmittalPrevBtn" aria-label="Previous transmittal" title="Previous transmittal">
+                                <span class="transmittal-head-nav-icon" aria-hidden="true">&#8249;</span>
                         </button>
                         <button type="button" class="transmittal-head-nav-btn" id="transmittalNextBtn" aria-label="Next transmittal" title="Next transmittal">
                             <span class="transmittal-head-nav-icon" aria-hidden="true">&#8250;</span>
@@ -1063,11 +1019,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                                 <img src="../assets/Batch_Icon.svg" alt="Batch" class="batch-icon">
                                             </button>
                                         <?php endif; ?>
-                                        <?php if (!empty($rowTrackingNo) && $rowTrackingNo !== '0'): ?>
+                                        <?php if (!empty($rowTrackingNo) && $rowTrackingNo !== '0' && strtoupper(trim($row['Status'] ?? '')) === 'ONGOING DELIVERY'): ?>
                                             <span style="font-size:0.72rem;color:#22336A;font-weight:700;">Auto Tracking</span>
                                             <div class="track-result"></div>
-                                        <?php else: ?>
+                                        <?php elseif (empty($rowTrackingNo) || $rowTrackingNo === '0'): ?>
                                             <button type="button" class="btn-scan" onclick="openScannerModal('<?= htmlspecialchars($row['Notice/Order Code'] ?? '', ENT_QUOTES) ?>', <?= (int)($row['id'] ?? 0) ?>)" style="display:inline-block;text-decoration:none;">Scan</button>
+                                        <?php else: ?>
+                                            <span class="tracking-present-note">Tracking recorded</span>
                                         <?php endif; ?>
                                     </td>
                                 <?php endif; ?>
@@ -1081,9 +1039,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             </div>
         </div>
         <div id="rowMenuDropdown" class="row-menu-dropdown" style="display:none; position:fixed; left:0; top:0; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
-            <button class="row-menu-item" onclick="editRowFromMenu()" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
-                <img src="../assets/Edit_Icon.svg" alt="Edit" style="width:20px;height:20px;"> Edit
-            </button>
             <button class="row-menu-item" onclick="deleteRecordFromMenu()" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
                 <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
             </button>
@@ -1111,6 +1066,26 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 <div class="notif-modal-content" id="notifModalContent">
                     <!-- Notifications will be dynamically inserted here -->
                     <div class="notif-empty">No notifications</div>
+                </div>
+            </div>
+        </div>
+        <div id="excelPreviewModal" class="excel-preview-modal" aria-hidden="true" role="dialog" aria-modal="true">
+            <div class="excel-preview-panel">
+                <div class="excel-preview-head">
+                    <h3 id="excelPreviewTitle" class="excel-preview-title">Excel Export Preview</h3>
+                    <div class="excel-preview-actions">
+                        <a id="excelPreviewDownloadBtn" class="excel-preview-download" onclick="confirmExcelExport()">Save Excel</a>
+                    </div>
+                    <button type="button" class="excel-preview-close" onclick="closeExcelPreview()" aria-label="Close">
+                        <img class="exit-modal" src="../assets/icon.svg" alt="">
+                    </button>
+                </div>
+                <div class="excel-preview-meta" id="excelPreviewMeta"></div>
+                <div class="excel-preview-table-wrap">
+                    <table class="excel-preview-table">
+                        <thead id="excelPreviewHead"></thead>
+                        <tbody id="excelPreviewBody"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1225,13 +1200,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
                 dropdown.style.left = left + 'px';
                 dropdown.style.top = top + 'px';
-            }
-            function editRowFromMenu() {
-                var rowId = currentRowMenuId;
-                hideRowMenuDropdown();
-                if (rowId > 0) {
-                    editRow(rowId);
-                }
             }
             function deleteRecordFromMenu() {
                 var rowId = currentRowMenuId;
@@ -1503,81 +1471,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             return row;
                         }
 
-                        function openEditModal(rowData) {
-                            hideRowMenuDropdown();
-                            var overlay = document.getElementById('editModalOverlay');
-                            if (!overlay) return;
-                            overlay.style.display = 'flex';
-                            animateModalPanelFromTrigger(overlay, overlay.querySelector('.edit-modal'), document.activeElement);
-                            // Fill form fields - both id and notice are kept for compatibility.
-                            var rowId = parseInt(rowData.id, 10) || 0;
-                            var noticeCode = (rowData['Notice/Order Code'] || '').trim();
-                            document.getElementById('editRowId').value = String(rowId);
-                            document.getElementById('editNoticeCode').value = noticeCode;
-                            document.getElementById('editNoticeCodeDisplay').value = noticeCode;
-                            document.getElementById('editDateAfd').value = normalizeDateForInput(rowData['Date released to AFD'] || '');
-                            document.getElementById('editParcelNo').value = rowData['Parcel No.'] || '';
-                            document.getElementById('editRecipient').value = rowData['Recipient Details'] || '';
-                            document.getElementById('editParcelDetails').value = rowData['Parcel Details'] || '';
-                            document.getElementById('editSender').value = rowData['Sender Details'] || '';
-                            var editFileName = document.getElementById('editFileName');
-                            if (editFileName) editFileName.value = rowData['File Name (PDF)'] || '';
-                            var editTrackingNo = document.getElementById('editTrackingNo');
-                            if (editTrackingNo) editTrackingNo.value = rowData['Tracking No.'] || '';
-                            var editStatus = document.getElementById('editStatus');
-                            if (editStatus) editStatus.value = rowData['Status'] || '';
-                            var editTransmittal = document.getElementById('editTransmittal');
-                            if (editTransmittal) editTransmittal.value = rowData['Transmittal Remarks/Received By'] || '';
-                            var editDate = document.getElementById('editDate');
-                            if (editDate) editDate.value = rowData['Date'] || '';
-                            var editEvaluator = document.getElementById('editEvaluator');
-                            if (editEvaluator) editEvaluator.value = rowData['Evaluator'] || '';
-                            setTimeout(function() {
-                                var firstInput = overlay.querySelector('input:not([type="hidden"]):not([readonly]):not([disabled]), textarea:not([readonly]):not([disabled]), select:not([disabled])');
-                                if (firstInput) {
-                                    try { firstInput.focus(); } catch (e) {}
-                                }
-                            }, 20);
-                            console.log('Modal opened for Notice Code: "' + noticeCode + '"');
-                        }
-
-                        function closeEditModal() {
-                            document.getElementById('editModalOverlay').style.display = 'none';
-                        }
-
-                        // Close modal when clicking outside
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const overlay = document.getElementById('editModalOverlay');
-                            overlay.addEventListener('click', function(e) {
-                                if (e.target === overlay) {
-                                    closeEditModal();
-                                }
-                            });
-                        });
-
-                        // Clear form fields
-                        function clearEditForm() {
-                            var form = document.getElementById('editForm');
-                            form.reset();
-                            // Also clear disabled display field
-                            document.getElementById('editNoticeCodeDisplay').value = '';
-                        }
-
-                        // Attach to edit icon
-                        function editRow(rowId) {
-                            var safeRowId = parseInt(rowId, 10) || 0;
-                            if (safeRowId <= 0) return;
-                            // Prefer rowspan-safe cached rows.
-                            var row = null;
-                            if (Array.isArray(window.mailRows)) {
-                                row = window.mailRows.find(function(r) {
-                                    return (parseInt(r.id, 10) || 0) === safeRowId;
-                                });
-                            }
-                            if (!row) row = getRowDataFromTable(safeRowId);
-                            if (row) openEditModal(row);
-                        }
-
                         const INLINE_EDITABLE_COLUMNS = new Set([
                             'Notice/Order Code',
                             'Date released to AFD',
@@ -1600,6 +1493,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             rowId: 0,
                             column: '',
                             originalValue: '',
+                            originalHtml: '',
                             saving: false
                         };
 
@@ -1655,6 +1549,116 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             return ((safeRow[columnName] || '') + '');
                         }
 
+                        function normalizeInlineCompareValue(columnName, value) {
+                            var v = ((value || '') + '').trim();
+                            if (columnName === 'Status') return v.toUpperCase();
+                            return v;
+                        }
+
+                        function formatInlineDateDisplay(value) {
+                            var v = (value || '').trim();
+                            if (!v) return '';
+                            var parsed = new Date(v);
+                            if (isNaN(parsed.getTime())) return v;
+                            var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                            var month = months[parsed.getMonth()] || '';
+                            var day = String(parsed.getDate()).padStart(2, '0');
+                            var year = parsed.getFullYear();
+                            return month + '-' + day + '-' + year;
+                        }
+
+                        function updateInlineCellDisplay(cell, rowId, columnName, nextValue, originalHtml) {
+                            var row = findRowById(rowId);
+                            var displayValue = (columnName === 'Date released to AFD' || columnName === 'Date')
+                                ? formatInlineDateDisplay(nextValue)
+                                : nextValue;
+
+                            if (columnName === 'Notice/Order Code') {
+                                if (row) {
+                                    row.dataset.notice = nextValue;
+                                    var cb = row.querySelector('.row-checkbox');
+                                    if (cb) cb.setAttribute('data-notice', nextValue);
+                                }
+                                if (typeof originalHtml === 'string' && originalHtml !== '') {
+                                    cell.innerHTML = originalHtml;
+                                }
+                                var noticeSpan = cell.querySelector('.notice-code-cell > div > span');
+                                if (noticeSpan) {
+                                    noticeSpan.textContent = nextValue;
+                                } else {
+                                    cell.textContent = nextValue;
+                                }
+                                return;
+                            }
+
+                            cell.textContent = displayValue;
+                            if (cell.hasAttribute('data-search-raw-text')) {
+                                cell.setAttribute('data-search-raw-text', displayValue);
+                            }
+
+                            if (row && columnName === 'Tracking No.') {
+                                row.dataset.trackingNo = nextValue;
+                            }
+                        }
+
+                        function updateRowCache(rowId, columnName, nextValue, originalNotice, originalTracking) {
+                            if (!Array.isArray(window.mailRows)) return;
+                            var rowObj = window.mailRows.find(function(r) {
+                                return (parseInt(r && r.id, 10) || 0) === rowId;
+                            });
+                            if (!rowObj) return;
+                            rowObj[columnName] = nextValue;
+                            if (columnName === 'Notice/Order Code' && originalNotice && originalNotice !== nextValue) {
+                                mailRowIndexByNotice.delete(originalNotice);
+                                mailRowIndexByNotice.set(nextValue, rowObj);
+                            }
+                            if (columnName === 'Tracking No.') {
+                                if (originalTracking) mailRowIndexByTracking.delete(originalTracking);
+                                if (nextValue && nextValue !== '0') {
+                                    mailRowIndexByTracking.set(nextValue, rowObj);
+                                }
+                            }
+                        }
+
+                        function updateActionCellForRow(row) {
+                            if (!row) return;
+                            var actionCell = row.querySelector('td.action-cell');
+                            if (!actionCell) return;
+                            var trackingNo = (row.dataset.trackingNo || '').trim();
+                            var noticeCode = (row.dataset.notice || '').trim();
+                            var statusCell = row.querySelector('td[data-col="Status"]');
+                            var statusText = ((statusCell && statusCell.textContent) ? statusCell.textContent : '').trim().toUpperCase();
+                            actionCell.innerHTML = '';
+
+                            if (trackingNo !== '' && trackingNo !== '0' && statusText === 'ONGOING DELIVERY') {
+                                var label = document.createElement('span');
+                                label.style.fontSize = '0.72rem';
+                                label.style.color = '#22336A';
+                                label.style.fontWeight = '700';
+                                label.textContent = 'Auto Tracking';
+                                actionCell.appendChild(label);
+                                var result = document.createElement('div');
+                                result.className = 'track-result';
+                                actionCell.appendChild(result);
+                            } else if (trackingNo === '' || trackingNo === '0') {
+                                var button = document.createElement('button');
+                                button.type = 'button';
+                                button.className = 'btn-scan';
+                                button.style.display = 'inline-block';
+                                button.style.textDecoration = 'none';
+                                button.textContent = 'Scan';
+                                button.addEventListener('click', function() {
+                                    openScannerModal(noticeCode, parseInt(row.dataset.id || '0', 10) || 0);
+                                });
+                                actionCell.appendChild(button);
+                            } else {
+                                var note = document.createElement('span');
+                                note.className = 'tracking-present-note';
+                                note.textContent = 'Tracking recorded';
+                                actionCell.appendChild(note);
+                            }
+                        }
+
                         function createInlineEditor(columnName, currentValue) {
                             var editor;
                             if (columnName === 'Status') {
@@ -1693,10 +1697,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             if (!inlineEditState.cell) return;
                             var activeCell = inlineEditState.cell;
                             activeCell.classList.remove('is-inline-editing', 'is-inline-saving');
+                            if (!opts.skipRestore && typeof inlineEditState.originalHtml === 'string') {
+                                activeCell.innerHTML = inlineEditState.originalHtml;
+                            }
                             inlineEditState.cell = null;
                             inlineEditState.rowId = 0;
                             inlineEditState.column = '';
                             inlineEditState.originalValue = '';
+                            inlineEditState.originalHtml = '';
                             inlineEditState.saving = false;
                             if (!opts.keepFocus) {
                                 try { activeCell.blur(); } catch (e) {}
@@ -1725,6 +1733,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             inlineEditState.rowId = rowId;
                             inlineEditState.column = columnName;
                             inlineEditState.originalValue = currentValue;
+                            inlineEditState.originalHtml = cell.innerHTML;
                             inlineEditState.saving = false;
 
                             cell.classList.add('is-inline-editing');
@@ -1735,7 +1744,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 if (e.key === 'Escape') {
                                     e.preventDefault();
                                     cancelInlineCellEdit();
-                                    refreshHomeData({ focusRowId: rowId });
                                     return;
                                 }
                                 if (e.key === 'Enter' && (editor.tagName !== 'TEXTAREA' || e.ctrlKey || e.metaKey)) {
@@ -1772,15 +1780,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             var editor = cell.querySelector('[data-inline-editor="1"]');
                             if (!editor) {
                                 cancelInlineCellEdit();
-                                refreshHomeData({ focusRowId: rowId });
                                 return;
                             }
 
                             var nextValue = ((editor.value || '') + '').trim();
                             var originalValue = ((inlineEditState.originalValue || '') + '').trim();
-                            if (nextValue === originalValue) {
+                            if (normalizeInlineCompareValue(columnName, nextValue) === normalizeInlineCompareValue(columnName, originalValue)) {
                                 cancelInlineCellEdit();
-                                refreshHomeData({ focusRowId: rowId });
                                 return;
                             }
 
@@ -1790,6 +1796,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
                             var rowData = getRowDataForInlineEdit(rowId) || {};
                             var noticeCode = ((rowData['Notice/Order Code'] || '') + '').trim();
+                            var originalTracking = ((rowData['Tracking No.'] || '') + '').trim();
                             var formData = new FormData();
                             formData.set('csrf_token', CSRF_TOKEN);
                             formData.set('original_id', String(rowId));
@@ -1811,23 +1818,23 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 if (data.pdfWarning) {
                                     alert(data.pdfWarning);
                                 }
-                                var immediateTrackItems = [];
-                                if (columnName === 'Tracking No.' && nextValue !== '' && nextValue !== '0') {
-                                    immediateTrackItems.push({
-                                        noticeCode: noticeCode,
-                                        rowId: rowId
-                                    });
+                                var originalHtml = inlineEditState.originalHtml;
+                                cancelInlineCellEdit({ keepFocus: true, skipRestore: true });
+                                updateInlineCellDisplay(cell, rowId, columnName, nextValue, originalHtml);
+                                updateRowCache(rowId, columnName, nextValue, noticeCode, originalTracking);
+                                if (columnName === 'Notice/Order Code') {
+                                    noticeCode = nextValue;
                                 }
-                                cancelInlineCellEdit({ keepFocus: true });
-                                refreshHomeData({
-                                    focusRowId: rowId,
-                                    focusNotice: (columnName === 'Notice/Order Code' ? nextValue : noticeCode),
-                                    immediateTrackItems: immediateTrackItems
-                                });
+                                if (columnName === 'Tracking No.' || columnName === 'Status') {
+                                    updateActionCellForRow(findRowById(rowId));
+                                    refreshAutoTrackBadges();
+                                }
+                                if (columnName === 'Tracking No.' && nextValue !== '' && nextValue !== '0') {
+                                    runTrackingUpdate(noticeCode, { silent: true, rowId: rowId, force: true, bypassCooldown: true });
+                                }
                             })
                             .catch(function(err) {
                                 cancelInlineCellEdit({ keepFocus: true });
-                                refreshHomeData({ focusRowId: rowId, focusNotice: noticeCode });
                                 alert(err && err.message ? err.message : 'Failed to save changes.');
                             });
                         }
@@ -3012,9 +3019,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             if (actionCell.getAttribute('data-temp-action') === '1') {
                 const rowTracking = ((safeRowObj['Tracking No.'] || safeRowObj['Tracking No'] || tr.dataset.trackingNo || '') + '').trim();
                 const rowNotice = ((safeRowObj['Notice/Order Code'] || tr.dataset.notice || '') + '').trim();
+                const rowStatus = ((safeRowObj['Status'] || '') + '').trim().toUpperCase();
                 actionCell.innerHTML = '';
 
-                if (rowTracking !== '' && rowTracking !== '0') {
+                if (rowTracking !== '' && rowTracking !== '0' && rowStatus === 'ONGOING DELIVERY') {
                     const label = document.createElement('span');
                     label.style.fontSize = '0.72rem';
                     label.style.color = '#22336A';
@@ -3025,7 +3033,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     const result = document.createElement('div');
                     result.className = 'track-result';
                     actionCell.appendChild(result);
-                } else {
+                } else if (rowTracking === '' || rowTracking === '0') {
                     const button = document.createElement('button');
                     button.type = 'button';
                     button.className = 'btn-scan';
@@ -3036,6 +3044,11 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         openScannerModal(rowNotice, (safeRowObj && safeRowObj.id) ? safeRowObj.id : (tr.dataset.id || 0));
                     });
                     actionCell.appendChild(button);
+                } else {
+                    const note = document.createElement('span');
+                    note.className = 'tracking-present-note';
+                    note.textContent = 'Tracking recorded';
+                    actionCell.appendChild(note);
                 }
             }
 
@@ -3808,6 +3821,17 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     exportTransmittalById(tid);
                 });
 
+                const exportExcelBtn = document.createElement('button');
+                exportExcelBtn.type = 'button';
+                exportExcelBtn.className = 'transmittal-tile-menu-item';
+                exportExcelBtn.innerHTML = '<img src="../assets/export.svg" alt="" class="transmittal-tile-menu-icon" aria-hidden="true"><span>Export as Excel</span>';
+                exportExcelBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeTransmittalTileMenus();
+                    exportTransmittalToExcel(tid);
+                });
+
                 const deleteBtn = document.createElement('button');
                 deleteBtn.type = 'button';
                 deleteBtn.className = 'transmittal-tile-menu-item transmittal-tile-menu-item-danger';
@@ -3820,6 +3844,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 });
 
                 menu.appendChild(exportBtn);
+                menu.appendChild(exportExcelBtn);
                 menu.appendChild(deleteBtn);
 
                 tileWrap.appendChild(tile);
@@ -4536,6 +4561,26 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             submitPdfExportForNoticeCodes(rowIds, transmittalName + " Transmittal Export", transmittalName);
         }
 
+        function exportTransmittalToExcel(transmittalId) {
+            const safeTid = ((transmittalId || '') + '').trim();
+            if (!safeTid) return;
+            const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
+            const rowsForTid = rows.filter(function(r) {
+                const rowTid = ((r && r['Transmittal ID']) ? String(r['Transmittal ID']) : '').trim();
+                return rowTid === safeTid;
+            });
+            if (rowsForTid.length === 0) {
+                alert("No rows available for this transmittal.");
+                return;
+            }
+            const headers = ['Notice/Order Code'].concat(tableDataColumns || []);
+            const transmittalName = formatTransmittalDisplayName(safeTid);
+            const safeName = transmittalName.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+            const filename = (safeName || 'transmittal') + "_export.xls";
+            const dataRows = rowsForTid.map(function(r) { return headers.map(function(h){ return (r && r[h]) || ''; }); });
+            openExcelPreview("Excel Export Preview", headers, dataRows, filename);
+        }
+
         function deleteTransmittalById(transmittalId) {
             const safeTid = ((transmittalId || '') + '').trim();
             if (!safeTid) return;
@@ -4643,11 +4688,215 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             submitPdfExportForNoticeCodes(rowIds, "Exported PDF", transmittalName);
         }
 
+        function escapeTsvValue(val) {
+            const safe = (val || '').replace(/\s+/g, ' ').trim();
+            if (/[\t\n\r"]/.test(safe)) {
+                return '"' + safe.replace(/"/g, '""') + '"';
+            }
+            return safe;
+        }
+
+        let excelPreviewState = null;
+
+        function openExcelPreview(title, headers, rows, filename) {
+            const modal = document.getElementById('excelPreviewModal');
+            const tableHead = document.getElementById('excelPreviewHead');
+            const tableBody = document.getElementById('excelPreviewBody');
+            const meta = document.getElementById('excelPreviewMeta');
+            if (!modal || !tableHead || !tableBody || !meta) return;
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+            const headRow = document.createElement('tr');
+            headers.forEach(function(h) {
+                const th = document.createElement('th');
+                th.textContent = h;
+                headRow.appendChild(th);
+            });
+            tableHead.appendChild(headRow);
+
+            tableBody.innerHTML = '';
+            for (let i = 0; i < rows.length; i++) {
+                const tr = document.createElement('tr');
+                rows[i].forEach(function(cell) {
+                    const td = document.createElement('td');
+                    td.textContent = (cell || '').toString();
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            }
+
+            meta.textContent = rows.length + ' row(s) will be exported as Excel.';
+            excelPreviewState = { headers, rows, filename };
+            const titleEl = document.getElementById('excelPreviewTitle');
+            if (titleEl) titleEl.textContent = title || 'Excel Export Preview';
+            const dlBtn = document.getElementById('excelPreviewDownloadBtn');
+            if (dlBtn) {
+                dlBtn.textContent = 'Save Excel';
+                dlBtn.setAttribute('aria-disabled', 'false');
+            }
+            modal.style.display = 'flex';
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeExcelPreview() {
+            const modal = document.getElementById('excelPreviewModal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden', 'true');
+            }
+            const dlBtn = document.getElementById('excelPreviewDownloadBtn');
+            if (dlBtn) {
+                dlBtn.setAttribute('aria-disabled', 'true');
+            }
+        }
+
+        function confirmExcelExport() {
+            if (!excelPreviewState) {
+                closeExcelPreview();
+                return;
+            }
+            const headers = excelPreviewState.headers || [];
+            const rows = excelPreviewState.rows || [];
+            const lines = [];
+            lines.push(headers.map(escapeTsvValue).join('\t'));
+            rows.forEach(function(r) { lines.push(r.map(escapeTsvValue).join('\t')); });
+            const blob = new Blob([lines.join('\r\n')], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const safeName = (excelPreviewState.filename || 'export').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = (safeName || 'export') + '.xls';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function() { try { URL.revokeObjectURL(url); } catch(e) {} }, 2000);
+            excelPreviewState = null;
+            closeExcelPreview();
+        }
+
+        function exportSelectedToExcel() {
+            const activeTid = (activeTransmittalId || '').trim();
+            const rows = Array.from(document.querySelectorAll('tr[data-notice]'));
+            const contextRows = rows.filter(function(tr) {
+                if (!activeTid) return true;
+                const rowId = parseInt(tr.dataset.id || '0', 10) || 0;
+                const notice = (tr.dataset.notice || '').trim();
+                const rowObj = (mailRowIndexById.get(rowId) || mailRowIndexByNotice.get(notice) || null);
+                const rowTid = ((rowObj && rowObj['Transmittal ID']) ? String(rowObj['Transmittal ID']) : (tr.dataset.transmittalId || '')).trim();
+                return rowTid === activeTid;
+            });
+
+            if (contextRows.length === 0) {
+                alert("No rows available for export.");
+                return;
+            }
+
+            const selectedRows = contextRows.filter(function(tr) {
+                const cb = tr.querySelector('.row-checkbox');
+                return !!(cb && cb.checked);
+            });
+
+            if (selectedRows.length === 0) {
+                alert("Please check at least one checkbox before exporting.");
+                return;
+            }
+
+            const table = document.querySelector('.listview-table');
+            if (!table) {
+                alert("Export failed: table not found.");
+                return;
+            }
+
+            const headerCells = Array.from(table.querySelectorAll('thead th')).slice(1, -1); // skip checkbox + action
+            const headers = headerCells.map(function(th) { return (th.textContent || '').trim(); });
+
+            const dataRows = selectedRows.map(function(tr) {
+                const cells = Array.from(tr.querySelectorAll('td')).slice(1, -1); // skip checkbox + action
+                return cells.map(function(td) { return (td.innerText || td.textContent || ''); });
+            });
+
+            const transmittalName = activeTid ? formatTransmittalDisplayName(activeTid) : "mail-tracking";
+            const safeName = transmittalName.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+            const filename = (safeName || 'mail-tracking') + "_export.xls";
+            openExcelPreview("Excel Export Preview", headers, dataRows, filename);
+        }
+
+        function handleExportOption(type) {
+            closeExportDropdown();
+            if (type === 'pdf') {
+                exportSelectedToPDF();
+            } else if (type === 'excel') {
+                exportSelectedToExcel();
+            }
+        }
+
+        function toggleExportDropdown(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('exportDropdownMenu');
+            if (!menu) return;
+            const isOpen = menu.classList.contains('is-open');
+            closeExportDropdown();
+            if (!isOpen) {
+                menu.classList.add('is-open');
+            }
+        }
+
+        function closeExportDropdown() {
+            const menu = document.getElementById('exportDropdownMenu');
+            if (menu) menu.classList.remove('is-open');
+        }
+
+        document.addEventListener('click', function(evt) {
+            const btn = document.getElementById('exportDropdownBtn');
+            const menu = document.getElementById('exportDropdownMenu');
+            if (!btn || !menu) return;
+            if (btn.contains(evt.target)) {
+                toggleExportDropdown(evt);
+                return;
+            }
+            if (!menu.contains(evt.target)) {
+                closeExportDropdown();
+            }
+        });
+
+        document.addEventListener('click', function(evt) {
+            const modal = document.getElementById('excelPreviewModal');
+            if (modal && evt.target === modal) {
+                closeExcelPreview();
+            }
+        });
+
         const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
+        const AUTO_TRACK_STORAGE_KEY = 'dhsud_auto_track_last_run_v1:' + String(currentDeptKey || 'all');
         const autoTrackLastRunByKey = new Map();
         const IMMEDIATE_TRACK_DEDUP_WINDOW_MS = 3000;
         const immediateTrackLastRunAtByKey = new Map();
         let autoTrackInProgress = false;
+
+        function loadAutoTrackCache() {
+            try {
+                const raw = localStorage.getItem(AUTO_TRACK_STORAGE_KEY);
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                if (!data || typeof data !== 'object') return;
+                Object.keys(data).forEach(function(key) {
+                    const ts = Number(data[key]) || 0;
+                    if (ts > 0) autoTrackLastRunByKey.set(key, ts);
+                });
+            } catch (e) {}
+        }
+
+        function saveAutoTrackCache() {
+            try {
+                const obj = {};
+                autoTrackLastRunByKey.forEach(function(value, key) {
+                    if (Number.isFinite(value) && value > 0) obj[key] = value;
+                });
+                localStorage.setItem(AUTO_TRACK_STORAGE_KEY, JSON.stringify(obj));
+            } catch (e) {}
+        }
+
+        loadAutoTrackCache();
 
         function findRowById(rowId) {
             const safeRowId = parseInt(rowId || '0', 10) || 0;
@@ -4756,6 +5005,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
             const throttleKey = batchId ? ('batch:' + batchId) : ('notice:' + safeNotice);
             autoTrackLastRunByKey.set(throttleKey, Date.now());
+            saveAutoTrackCache();
             runTrackingUpdate(safeNotice, {
                 silent: true,
                 force: true,
@@ -4782,11 +5032,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 if (batchId) {
                     if (seenBatchIds.has(batchId)) return;
                     seenBatchIds.add(batchId);
-                    items.push({ key: 'batch:' + batchId, noticeCode: noticeCode, rowId: rowId });
+                    const key = 'batch:' + batchId;
+                    row.dataset.autoTrackKey = key;
+                    items.push({ key: key, noticeCode: noticeCode, rowId: rowId });
                     return;
                 }
 
                 const itemKey = noticeCode ? ('notice:' + noticeCode) : ('row:' + String(rowId));
+                row.dataset.autoTrackKey = itemKey;
                 items.push({ key: itemKey, noticeCode: noticeCode, rowId: rowId });
             });
 
@@ -4812,6 +5065,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 return chain.then(function() {
                     return runTrackingUpdate(item.noticeCode, { silent: true, rowId: item.rowId }).finally(function() {
                         autoTrackLastRunByKey.set(item.key, Date.now());
+                        saveAutoTrackCache();
                     });
                 }).then(function() {
                     return new Promise(function(resolve) { setTimeout(resolve, 200); });
@@ -4819,8 +5073,55 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }, Promise.resolve())
             .finally(function() {
                 autoTrackInProgress = false;
+                refreshAutoTrackBadges();
+            });
+
+            refreshAutoTrackBadges();
+        }
+
+        function formatCheckTimes(lastRun, nextAt) {
+            const fmt = function(ts) {
+                if (!Number.isFinite(ts) || ts <= 0) return '--';
+                try {
+                    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } catch (e) {
+                    return '--';
+                }
+            };
+            return fmt(lastRun) + ' → ' + fmt(nextAt);
+        }
+
+        function refreshAutoTrackBadges() {
+            const rows = document.querySelectorAll('tr[data-notice][data-tracking-no]');
+            rows.forEach(function(row) {
+                const statusCell = row.querySelector('td[data-col="Status"]');
+                const statusText = ((statusCell && statusCell.textContent) ? statusCell.textContent : '').trim().toUpperCase();
+                const trackingNo = (row.dataset.trackingNo || '').trim();
+                const badge = row.querySelector('.track-result');
+                if (!badge) return;
+
+                if (!trackingNo || trackingNo === '0' || statusText !== 'ONGOING DELIVERY') {
+                    badge.textContent = '';
+                    badge.style.display = 'none';
+                    return;
+                }
+
+                let key = row.dataset.autoTrackKey || '';
+                if (!key) {
+                    const notice = (row.dataset.notice || '').trim();
+                    const rid = parseInt(row.dataset.id || '0', 10) || 0;
+                    key = notice ? ('notice:' + notice) : (rid ? ('row:' + rid) : '');
+                    if (key) row.dataset.autoTrackKey = key;
+                }
+                const lastRun = key ? (autoTrackLastRunByKey.get(key) || 0) : 0;
+                const nextAt = lastRun ? (lastRun + AUTO_TRACK_INTERVAL_MS) : 0;
+                badge.innerHTML = '<span>' + formatCheckTimes(lastRun, nextAt) + '</span>';
+                badge.classList.add('notif-timestamp');
+                badge.style.display = 'inline-flex';
             });
         }
+
+        setInterval(refreshAutoTrackBadges, 30000);
 
         document.addEventListener("click", function (evt) {
             const button = evt.target.closest(".btn-track");
@@ -5464,6 +5765,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             if (notifOverlayRoot && notifOverlayRoot.parentElement !== document.body) {
                 document.body.appendChild(notifOverlayRoot);
             }
+            refreshAutoTrackBadges();
             const notifBtn = document.getElementById('tableNotifBtn');
             if (notifBtn) {
                 notifBtn.addEventListener('click', function(e) {

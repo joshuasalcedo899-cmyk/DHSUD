@@ -350,6 +350,160 @@
 	margin: 0;
 	filter: brightness(0) invert(1);
 }
+.export-dropdown {
+	position: relative;
+	display: inline-block;
+}
+.export-dropdown-menu {
+	position: absolute;
+	top: 110%;
+	left: 0;
+	min-width: 190px;
+	background: #ffffff;
+	border: 1px solid #d9dfe7;
+	border-radius: 8px;
+	box-shadow: 0 10px 26px rgba(27, 39, 94, 0.18);
+	padding: 6px 0;
+	z-index: 20;
+	display: none;
+}
+.export-dropdown-menu.is-open {
+	display: block;
+}
+.export-dropdown-item {
+	width: 100%;
+	text-align: left;
+	padding: 9px 12px;
+	background: transparent;
+	border: none;
+	font-size: 0.9rem;
+	color: #1f2937;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.export-dropdown-item:hover {
+	background: #f3f4f6;
+}
+.excel-preview-modal {
+	position: fixed;
+	inset: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	background: rgba(15, 23, 42, 0.4);
+	z-index: 3000;
+	padding: 20px;
+}
+.excel-preview-panel {
+	background: #fff;
+	width: calc(90vw - 24px);
+	height: calc(90vh - 24px);
+	max-width: calc(100vw - 24px);
+	max-height: calc(100vh - 24px);
+	border-radius: 8px;
+	box-shadow: 0 10px 30px rgba(0,0,0,.28);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+.excel-preview-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 10px 12px;
+	border-bottom: 1px solid #d1d5db;
+}
+.excel-preview-title {
+	font-size: 1.2rem;
+	color: #22336A;
+	margin: 0;
+}
+.excel-preview-actions {
+	display: flex;
+	align-items: center;
+	margin-left: auto;
+}
+.excel-preview-download {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 30px;
+	padding: 0 10px;
+	border-radius: 6px;
+	border: 1px solid #22336A;
+	background: #22336A;
+	color: #fff;
+	font-size: 0.82rem;
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+	margin-right: 6px;
+}
+.excel-preview-download:hover {
+	background: #1b2a58;
+	border-color: #1b2a58;
+}
+.excel-preview-download[aria-disabled="true"] {
+	opacity: 0.5;
+	pointer-events: none;
+	cursor: default;
+}
+.excel-preview-close {
+	border: none;
+	background: none;
+	cursor: pointer;
+}
+.excel-preview-meta {
+	padding: 10px 12px 6px;
+	font-size: 0.9rem;
+	color: #4b5563;
+}
+.excel-preview-table-wrap {
+	padding: 0 12px 12px;
+	overflow: auto;
+	background: #f8fafc;
+	flex: 1;
+}
+.excel-preview-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9rem;
+	color: #0f172a;
+	min-width: 900px;
+}
+.excel-preview-table th,
+.excel-preview-table td {
+	border: 1px solid #d9e2ec;
+	padding: 7px 9px;
+	text-align: left;
+	white-space: nowrap;
+}
+.excel-preview-table th {
+	background: #eef7f1;
+	font-weight: 700;
+	position: sticky;
+	top: 0;
+	z-index: 1;
+}
+.excel-preview-table tbody tr:nth-child(odd) {
+	background: #fbfdff;
+}
+.track-result {
+	display: none;
+	margin-top: 4px;
+	padding: 0;
+	border: none;
+	background: transparent;
+	line-height: 1.2;
+}
+.tracking-present-note {
+	display: inline-block;
+	margin-top: 2px;
+	font-size: 0.78rem;
+	font-weight: 700;
+	color: #4b5563;
+}
 
 .transmittal-head-nav-btn {
 	width: 30px;
@@ -3027,7 +3181,7 @@ img {
             gap: 4px;
         }
         .notif-timestamp span:first-child {
-            font-size: 0.7rem;
+            font-size: 0.45rem;
         }
         .notif-action {
             flex-shrink: 0;
