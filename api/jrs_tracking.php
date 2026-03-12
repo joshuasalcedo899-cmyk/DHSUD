@@ -20,6 +20,28 @@ function sanitizePdfBaseName($value) {
     return $name;
 }
 
+function detectDepartmentKeyFromRow($row) {
+    $deptKey = '';
+    if (isset($row['department_key'])) {
+        $deptKey = normalizeDepartmentKey($row['department_key']);
+        if ($deptKey !== '') return $deptKey;
+    }
+
+    $sender = (string)($row['Sender Details'] ?? '');
+    if (preg_match('/\bHREDRD[-\s]*([A-Z0-9]+)\b/i', $sender, $m)) {
+        $deptKey = normalizeDepartmentKey(strtolower(trim((string)($m[1] ?? ''))));
+        if ($deptKey !== '') return $deptKey;
+    }
+
+    $notice = (string)($row['Notice/Order Code'] ?? '');
+    if (preg_match('/^([A-Z]+)-/i', $notice, $m)) {
+        $deptKey = normalizeDepartmentKey(strtolower(trim((string)($m[1] ?? ''))));
+        if ($deptKey !== '') return $deptKey;
+    }
+
+    return '';
+}
+
 if (!isset($_POST['row_ids'])) {
     http_response_code(400);
     die("No records selected.");
@@ -44,6 +66,26 @@ if (!$rows) {
     http_response_code(404);
     die("No records found.");
 }
+
+$explicitDept = normalizeDepartmentKey($_POST['dept'] ?? '');
+$shipperDeptKey = $explicitDept !== '' ? $explicitDept : 'emes';
+if ($explicitDept === '') {
+    $deptCounts = [];
+    foreach ($rows as $row) {
+        $candidate = detectDepartmentKeyFromRow($row);
+        if ($candidate === '') {
+            continue;
+        }
+        $deptCounts[$candidate] = ($deptCounts[$candidate] ?? 0) + 1;
+    }
+    if (!empty($deptCounts)) {
+        arsort($deptCounts);
+        $shipperDeptKey = array_key_first($deptCounts);
+    }
+}
+$shipperTag = getDepartmentSenderTag($shipperDeptKey);
+$officerOverride = trim((string)($_POST['officer_name'] ?? ''));
+$officerName = $officerOverride !== '' ? $officerOverride : getTransmittalOfficerName($shipperDeptKey);
 
 $transmittalName = sanitizePdfBaseName($_POST['transmittal_name'] ?? '');
 if ($transmittalName === '') {
@@ -81,7 +123,7 @@ tr, td, th { page-break-inside: avoid; break-inside: avoid; }
 </style>
 </head>
 <body>
-<center><span class="title"><p>DEPARTMENT OF HUMAN SETTLEMENTS AND URBAN DEVELOPMENT REGIONAL OFFICE 4A (CALABARZON)</span><span class="shipper-label">SHIPPER</span>: HREDRD-EMES<br><span class="date-label">DATE</span>: '.date("F-d-Y").'</p></center><br>
+<center><span class="title"><p>DEPARTMENT OF HUMAN SETTLEMENTS AND URBAN DEVELOPMENT REGIONAL OFFICE 4A (CALABARZON)</span><span class="shipper-label">SHIPPER</span>: '.htmlspecialchars($shipperTag, ENT_QUOTES, 'UTF-8').'<br><span class="date-label">DATE</span>: '.date("F-d-Y").'</p></center><br>
 
 <table>
 <tr>
@@ -154,7 +196,7 @@ $fontMetrics = $dompdf->getFontMetrics();
 $fontRegular = $fontMetrics->getFont('DejaVu Sans', 'normal');
 $fontBold = $fontMetrics->getFont('DejaVu Sans', 'bold');
 
-$canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($fontRegular, $fontBold) {
+$canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($fontRegular, $fontBold, $officerName) {
     if ($pageNumber !== $pageCount) {
         return;
     }
@@ -169,7 +211,7 @@ $canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) u
     $titleY = $boxY - 30;
 
     $canvas->text($leftX, $titleY, 'Prepared by:', $fontRegular, 8, [0, 0, 0]);
-    $canvas->text($leftX, $titleY + 13, 'Cindy A. Trasmaño', $fontBold, 8, [0, 0, 0]);
+    $canvas->text($leftX, $titleY + 13, $officerName, $fontBold, 8, [0, 0, 0]);
 
     $line1 = 'Received by:';
     $line2 = 'Date:';

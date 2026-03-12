@@ -9,6 +9,7 @@ $departmentConfig = [
     'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
     'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
     'hoa' => ['code' => 'HOA', 'sender' => getDepartmentSenderTag('hoa')],
+    'lo' => ['code' => 'LO', 'sender' => getDepartmentSenderTag('lo')],
 ];
 $currentDept = normalizeDepartmentKey($_GET['dept'] ?? 'emes');
 $currentDeptCode = $departmentConfig[$currentDept]['code'];
@@ -352,6 +353,7 @@ rsort($years);
             <a href="Tracking_Page.php?dept=elupd" class="home-sidebar-link dept-elupd<?= $currentDept === 'elupd' ? ' is-active' : '' ?>" data-dept="elupd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ELUPD</span></a>
             <a href="Tracking_Page.php?dept=ord" class="home-sidebar-link dept-ord<?= $currentDept === 'ord' ? ' is-active' : '' ?>" data-dept="ord"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>ORD</span></a>
             <a href="Tracking_Page.php?dept=hoa" class="home-sidebar-link dept-hoa<?= $currentDept === 'hoa' ? ' is-active' : '' ?>" data-dept="hoa"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>HOA</span></a>
+            <a href="Tracking_Page.php?dept=lo" class="home-sidebar-link dept-lo<?= $currentDept === 'lo' ? ' is-active' : '' ?>" data-dept="lo"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span>LO</span></a>
         </nav>
     </aside>
 

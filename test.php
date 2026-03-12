@@ -54,6 +54,9 @@
             text-align:left;
             padding:14px;
         }
+        body.is-embedded .scanner-topbar{
+            display:none;
+        }
         .scanner-shell{
             width:min(760px, 100%);
             margin:0 auto;

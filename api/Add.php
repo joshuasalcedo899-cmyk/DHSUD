@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
         'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
         'hoa' => ['code' => 'HOA', 'sender' => getDepartmentSenderTag('hoa')],
+        'lo' => ['code' => 'LO', 'sender' => getDepartmentSenderTag('lo')],
     ];
     $currentDept = normalizeDepartmentKey($_POST['department_id'] ?? $_POST['dept'] ?? 'emes');
     if (!isset($departmentConfig[$currentDept])) {

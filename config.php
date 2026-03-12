@@ -8,7 +8,7 @@ $DB_PASS = '';
 $DB_CHARSET = 'utf8mb4';
 
 // Sender contact number per department (edit these values as needed).
-// Keys should match dept query/post values (emes, prls, afd, phsd, elupd, ord, hoa).
+// Keys should match dept query/post values (emes, prls, afd, phsd, elupd, ord, hoa, lo).
 $SENDER_CONTACT_NUMBERS = [
     'default' => '0935 542 1538',
     'emes' => '0935 542 1538',
@@ -18,6 +18,7 @@ $SENDER_CONTACT_NUMBERS = [
     'elupd' => '0935 542 1538',
     'ord' => '(049) 501 6496 / 0905 775 3519',
     'hoa' => '0935 542 1538',
+    'lo' => '0935 542 1538',
 ];
 
 // Sender tag per department (used in Sender Details).
@@ -29,7 +30,13 @@ $DEPARTMENT_SENDER_TAGS = [
     'phsd' => 'HREDRD-PHSD',
     'elupd' => 'HREDRD-ELUPD',
     'ord' => 'ORD-AMAC',
-    'hoa' => 'HREDRD-HOA',
+    'hoa' => 'HOA',
+    'lo' => 'LEGAL OFFICE',
+];
+
+// Transmittal signatory per department (edit these values as needed).
+$TRANSMITTAL_OFFICER_NAMES = [
+    'default' => 'Cindy A. Trasmaño',
 ];
 
 if (!function_exists('getDepartmentSenderTag')) {
@@ -49,7 +56,7 @@ if (!function_exists('getDepartmentSenderTag')) {
 if (!function_exists('normalizeDepartmentKey')) {
     function normalizeDepartmentKey($rawValue = '') {
         $deptKey = strtolower(trim((string)$rawValue));
-        $allowed = ['emes', 'prls', 'afd', 'phsd', 'elupd', 'ord', 'hoa'];
+        $allowed = ['emes', 'prls', 'afd', 'phsd', 'elupd', 'ord', 'hoa', 'lo'];
         return in_array($deptKey, $allowed, true) ? $deptKey : 'emes';
     }
 }
@@ -65,6 +72,7 @@ if (!function_exists('getDepartmentCodeFromKey')) {
             'elupd' => 'ELUPD',
             'ord' => 'ORD',
             'hoa' => 'HOA',
+            'lo' => 'LO',
         ];
         return $map[$deptKey] ?? 'EMES';
     }
@@ -110,6 +118,20 @@ if (!function_exists('getSenderContactNumber')) {
 
         $default = trim((string)($map['default'] ?? ''));
         return ($default !== '' ? $default : '0935 542 1538');
+    }
+}
+
+if (!function_exists('getTransmittalOfficerName')) {
+    function getTransmittalOfficerName($departmentKey = '') {
+        global $TRANSMITTAL_OFFICER_NAMES;
+        $deptKey = strtolower(trim((string)$departmentKey));
+        $map = is_array($TRANSMITTAL_OFFICER_NAMES) ? $TRANSMITTAL_OFFICER_NAMES : [];
+        if ($deptKey !== '' && isset($map[$deptKey])) {
+            $value = trim((string)$map[$deptKey]);
+            if ($value !== '') return $value;
+        }
+        $default = trim((string)($map['default'] ?? ''));
+        return ($default !== '' ? $default : 'Cindy A. Trasmaño');
     }
 }
 

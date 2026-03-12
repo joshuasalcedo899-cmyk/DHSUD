@@ -13,6 +13,7 @@ $departmentConfig = [
     'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
     'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
     'hoa' => ['code' => 'HOA CDD', 'sender' => getDepartmentSenderTag('hoa')],
+    'lo' => ['code' => 'LO', 'sender' => getDepartmentSenderTag('lo')],
 ];
 $currentDept = normalizeDepartmentKey($_GET['dept'] ?? 'emes');
 $currentDeptCode = $departmentConfig[$currentDept]['code'];
@@ -354,8 +355,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             <a href="Home_Page.php?dept=elupd" class="home-sidebar-link dept-elupd<?= $currentDept === 'elupd' ? ' is-active' : '' ?>" data-dept="elupd"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>ELUPD</strong><small>Mail Tracking Records</small></span></a>
             <a href="Home_Page.php?dept=ord" class="home-sidebar-link dept-ord<?= $currentDept === 'ord' ? ' is-active' : '' ?>" data-dept="ord"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>ORD</strong><small>Mail Tracking Records</small></span></a>
             <a href="Home_Page.php?dept=hoa" class="home-sidebar-link dept-hoa<?= $currentDept === 'hoa' ? ' is-active' : '' ?>" data-dept="hoa"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>HOA CDD</strong><small>Mail Tracking Records</small></span></a>
+            <a href="Home_Page.php?dept=lo" class="home-sidebar-link dept-lo<?= $currentDept === 'lo' ? ' is-active' : '' ?>" data-dept="lo"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>LO</strong><small>Mail Tracking Records</small></span></a>
         </nav>
 
+        <button type="button" class="home-sidebar-update" id="appUpdateBtn">
+            <img src="../assets/Download_Icon.svg" alt="" aria-hidden="true">
+            <span>Update App</span>
+        </button>
         <a href="logout.php" class="home-sidebar-logout">
             <img src="../assets/Logout_Icon.svg" alt="" aria-hidden="true">
             <span>Logout</span>
@@ -589,6 +595,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 const modal = document.getElementById('scannerModal');
                 const frame = document.getElementById('scannerFrame');
                 if (!modal || !frame) return;
+                document.body.classList.add('scanner-modal-open');
                 scannerSelectedNoticeCode = (noticeCode || '').trim();
                 scannerSelectedRowId = parseInt(rowId || '0', 10) || 0;
                 if (scannerSelectedRowId <= 0) return;
@@ -613,11 +620,15 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 frame.src = 'about:blank';
                 scannerSelectedNoticeCode = '';
                 scannerSelectedRowId = 0;
+                document.body.classList.remove('scanner-modal-open');
             }
 
             let lastPdfViewerFocus = null;
             let lastOngoingDeliveryFocus = null;
             let exportPdfBlobUrl = '';
+            let pdfPreviewRowIds = [];
+            let pdfPreviewTransmittalName = '';
+            let pdfPreviewTitle = '';
 
             function normalizePdfFileName(rawName, fallbackName) {
                 let name = ((rawName || '') + '').trim();
@@ -730,6 +741,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             function closePdfViewerModal() {
                 const modal = document.getElementById('pdfViewerModal');
                 const frame = document.getElementById('pdfViewerFrame');
+                const preparedInput = document.getElementById('pdfPreparedByInput');
                 if (!modal || !frame) return;
                 if (modal.contains(document.activeElement)) {
                     if (!restoreFocus(lastPdfViewerFocus)) {
@@ -740,6 +752,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 modal.setAttribute('aria-hidden', 'true');
                 modal.setAttribute('inert', '');
                 frame.src = 'about:blank';
+                if (preparedInput) {
+                    preparedInput.value = '';
+                }
                 if (exportPdfBlobUrl) {
                     try { URL.revokeObjectURL(exportPdfBlobUrl); } catch (e) {}
                     exportPdfBlobUrl = '';
@@ -910,17 +925,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                     <td style="width:32px;">
                                         <input type="checkbox" class="row-checkbox" value="<?= (int)($row['id'] ?? 0) ?>" data-notice="<?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>">
                                     </td>
-                                    <td class="notice-code-cell">
+                                    <td class="notice-code-cell has-cell-copy">
                                         <div style="display: flex; align-items: center; gap: 0.3em;">
                                             <div class="row-menu-container">
                                                 <button class="row-menu-btn" type="button" tabindex="0" aria-label="Row menu" onclick="toggleRowMenu(event, <?= (int)($row['id'] ?? 0) ?>)">
                                                     <span style="font-size:1.5em;line-height:1;">&#8942;</span>
                                                 </button>
                                             </div>
-                                            <span>
+                                            <span class="cell-text">
                                                 <?= htmlspecialchars($row['Notice/Order Code'] ?? '') ?>
                                             </span>
                                         </div>
+                                        <button type="button" class="cell-copy-btn" aria-label="Copy cell">
+                                            <img src="../assets/copy-svgrepo-com.svg" alt="">
+                                        </button>
                                     </td>
                                 <?php foreach ($columns as $idx => $colName): ?>
                                     <?php if ($idx === 0) continue; // skip Notice/Order Code, already rendered ?>
@@ -961,8 +979,11 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                                     break;
                                             }
                                         ?>
-                                        <td class="status-cell<?= $spanToBatchEndClass ?>" data-col="Status"<?= $rowspanAttr ?>>
-                                            <span class="<?= $statusClass ?>"><?= htmlspecialchars($current) ?></span>
+                                        <td class="status-cell<?= $spanToBatchEndClass ?> has-cell-copy" data-col="Status"<?= $rowspanAttr ?>>
+                                            <span class="<?= $statusClass ?> cell-text"><?= htmlspecialchars($current) ?></span>
+                                            <button type="button" class="cell-copy-btn" aria-label="Copy cell">
+                                                <img src="../assets/copy-svgrepo-com.svg" alt="">
+                                            </button>
                                         </td>
                                     <?php else: ?>
                                         <?php
@@ -992,7 +1013,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                                 <?php endif; ?>
                                             </td>
                                         <?php else: ?>
-                                            <td data-col="<?= htmlspecialchars($colName) ?>" class="<?= trim($spanToBatchEndClass) ?>"<?= $rowspanAttr ?>><?= htmlspecialchars($cellValue) ?></td>
+                                        <td data-col="<?= htmlspecialchars($colName) ?>" class="<?= trim($spanToBatchEndClass) ?> has-cell-copy"<?= $rowspanAttr ?>>
+                                            <span class="cell-text"><?= htmlspecialchars($cellValue) ?></span>
+                                            <button type="button" class="cell-copy-btn" aria-label="Copy cell">
+                                                <img src="../assets/copy-svgrepo-com.svg" alt="">
+                                            </button>
+                                        </td>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
@@ -1089,10 +1115,17 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 </div>
             </div>
         </div>
+        <div id="copyToast" class="copy-toast" aria-live="polite" aria-atomic="true">Copied</div>
+        <?php $defaultOfficerName = getTransmittalOfficerName($currentDept); ?>
         <div id="pdfViewerModal" class="pdf-viewer-modal" aria-hidden="true" inert role="dialog" aria-modal="true">
             <div class="pdf-viewer-panel">
                 <div class="pdf-viewer-head">
                     <h3 id="pdfViewerTitle" class="pdf-viewer-title">PDF Preview</h3>
+                    <div class="pdf-viewer-prepared-group" role="group" aria-label="Prepared By">
+                        <label class="pdf-viewer-prepared" for="pdfPreparedByInput">Prepared By</label>
+                        <input id="pdfPreparedByInput" type="text" placeholder="<?= htmlspecialchars($defaultOfficerName) ?>" autocomplete="off">
+                        <button type="button" class="pdf-viewer-apply" onclick="refreshPdfPreview()">Apply</button>
+                    </div>
                     <div class="pdf-viewer-actions">
                         <a id="pdfViewerDownloadBtn" class="pdf-viewer-download is-disabled" aria-disabled="true">Save PDF</a>
                     </div>
@@ -1281,6 +1314,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             var overlay = document.getElementById('addModalOverlay');
             if (!overlay) return;
             overlay.style.display = 'flex';
+            overlay.style.pointerEvents = 'auto';
+            overlay.removeAttribute('inert');
             animateModalPanelFromTrigger(overlay, overlay.querySelector('.edit-modal'), document.activeElement);
             setTimeout(function() {
                 var firstInput = overlay.querySelector('input:not([type="hidden"]):not([readonly]), textarea:not([readonly]), select');
@@ -1290,7 +1325,11 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }, 20);
         }
         function closeAddModal() {
-            document.getElementById('addModalOverlay').style.display = 'none';
+            var overlay = document.getElementById('addModalOverlay');
+            if (!overlay) return;
+            overlay.style.display = 'none';
+            overlay.style.pointerEvents = 'none';
+            overlay.setAttribute('inert', '');
         }
         // Close modal when clicking outside
         document.addEventListener('DOMContentLoaded', function() {
@@ -1302,6 +1341,33 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     }
                 });
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const updateBtn = document.getElementById('appUpdateBtn');
+            if (!updateBtn) return;
+            updateBtn.addEventListener('click', async function() {
+                if (!window.dhsudApp || typeof window.dhsudApp.checkForUpdates !== 'function') {
+                    alert('Updates are available in the installed desktop app only.');
+                    return;
+                }
+                updateBtn.disabled = true;
+                try {
+                    const result = await window.dhsudApp.checkForUpdates();
+                    const status = result && result.status ? result.status : '';
+                    if (status === 'no-update') {
+                        alert('No updates found.');
+                    } else if (status === 'dev') {
+                        alert('Updates are only available in the installed app.');
+                    } else if (status === 'deferred') {
+                        alert('Update available. You can install it later from the same button.');
+                    }
+                } catch (e) {
+                    alert('Update check failed.');
+                } finally {
+                    updateBtn.disabled = false;
+                }
+            });
         });
         // Clear form fields
         function clearAddForm() {
@@ -1567,6 +1633,63 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             return month + '-' + day + '-' + year;
                         }
 
+                        function ensureCopyButtonForCell(cell, columnName) {
+                            if (!cell) return;
+                            if (columnName && !INLINE_EDITABLE_COLUMNS.has(columnName)) return;
+                            if (cell.classList.contains('pdf-link-cell') || cell.classList.contains('action-cell')) return;
+                            cell.classList.add('has-cell-copy');
+                            if (!cell.querySelector('.cell-copy-btn')) {
+                                const btn = document.createElement('button');
+                                btn.type = 'button';
+                                btn.className = 'cell-copy-btn';
+                                btn.setAttribute('aria-label', 'Copy cell');
+                                btn.innerHTML = '<img src="../assets/copy-svgrepo-com.svg" alt="">';
+                                cell.appendChild(btn);
+                            }
+                        }
+
+                        function copyTextToClipboard(text) {
+                            const value = ((text || '') + '').trim();
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(value).catch(function() {});
+                            } else {
+                                const temp = document.createElement('textarea');
+                                temp.value = value;
+                                temp.setAttribute('readonly', 'readonly');
+                                temp.style.position = 'fixed';
+                                temp.style.left = '-9999px';
+                                document.body.appendChild(temp);
+                                temp.select();
+                                try { document.execCommand('copy'); } catch (e) {}
+                                document.body.removeChild(temp);
+                            }
+                        }
+
+                        let copyToastTimer = null;
+                        function showCopyToast() {
+                            const toast = document.getElementById('copyToast');
+                            if (!toast) return;
+                            toast.classList.add('is-visible');
+                            if (copyToastTimer) {
+                                clearTimeout(copyToastTimer);
+                                copyToastTimer = null;
+                            }
+                            copyToastTimer = setTimeout(function() {
+                                toast.classList.remove('is-visible');
+                            }, 1200);
+                        }
+
+                        document.addEventListener('click', function(e) {
+                            const btn = e.target.closest && e.target.closest('.cell-copy-btn');
+                            if (!btn) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const cell = btn.closest('td');
+                            const textEl = cell ? cell.querySelector('.cell-text') : null;
+                            copyTextToClipboard(textEl ? textEl.textContent : '');
+                            showCopyToast();
+                        });
+
                         function updateInlineCellDisplay(cell, rowId, columnName, nextValue, originalHtml) {
                             var row = findRowById(rowId);
                             var displayValue = (columnName === 'Date released to AFD' || columnName === 'Date')
@@ -1582,7 +1705,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 if (typeof originalHtml === 'string' && originalHtml !== '') {
                                     cell.innerHTML = originalHtml;
                                 }
-                                var noticeSpan = cell.querySelector('.notice-code-cell > div > span');
+                                var noticeSpan = cell.querySelector('.notice-code-cell .cell-text');
                                 if (noticeSpan) {
                                     noticeSpan.textContent = nextValue;
                                 } else {
@@ -1591,7 +1714,12 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 return;
                             }
 
-                            cell.textContent = displayValue;
+                            var textEl = cell.querySelector('.cell-text');
+                            if (textEl) {
+                                textEl.textContent = displayValue;
+                            } else {
+                                cell.textContent = displayValue;
+                            }
                             if (cell.hasAttribute('data-search-raw-text')) {
                                 cell.setAttribute('data-search-raw-text', displayValue);
                             }
@@ -1692,6 +1820,23 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             return editor;
                         }
 
+                        function copyInlineCellValue(editor) {
+                            const text = ((editor && editor.value) ? editor.value : '');
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(text).catch(function() {});
+                            } else {
+                                const temp = document.createElement('textarea');
+                                temp.value = text;
+                                temp.setAttribute('readonly', 'readonly');
+                                temp.style.position = 'fixed';
+                                temp.style.left = '-9999px';
+                                document.body.appendChild(temp);
+                                temp.select();
+                                try { document.execCommand('copy'); } catch (e) {}
+                                document.body.removeChild(temp);
+                            }
+                        }
+
                         function cancelInlineCellEdit(options) {
                             var opts = options || {};
                             if (!inlineEditState.cell) return;
@@ -1738,7 +1883,26 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
                             cell.classList.add('is-inline-editing');
                             cell.innerHTML = '';
-                            cell.appendChild(editor);
+                            const wrap = document.createElement('div');
+                            wrap.className = 'inline-cell-editor-wrap';
+                            const copyBtn = document.createElement('button');
+                            copyBtn.type = 'button';
+                            copyBtn.className = 'inline-cell-copy-btn';
+                            copyBtn.setAttribute('aria-label', 'Copy cell');
+                            copyBtn.innerHTML = '<img src="../assets/copy-svgrepo-com.svg" alt="">';
+                            copyBtn.addEventListener('pointerdown', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            });
+                            copyBtn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                copyInlineCellValue(editor);
+                                try { editor.focus(); } catch (e2) {}
+                            });
+                            wrap.appendChild(editor);
+                            wrap.appendChild(copyBtn);
+                            cell.appendChild(wrap);
 
                             editor.addEventListener('keydown', function(e) {
                                 if (e.key === 'Escape') {
@@ -1851,7 +2015,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
                         // Save handler (AJAX)
                         document.addEventListener('DOMContentLoaded', function() {
-                            document.getElementById('editForm').addEventListener('submit', function(e) {
+                            const editForm = document.getElementById('editForm');
+                            if (!editForm) return;
+                            editForm.addEventListener('submit', function(e) {
                                 e.preventDefault();
                                 var form = e.target;
                                 var formData = new FormData(form);
@@ -2867,7 +3033,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
         function applyNoticeCellSearchHighlight(tr, searchTerm, rowObj) {
             if (!tr) return;
-            const noticeSpan = tr.querySelector('.notice-code-cell > div > span');
+            const noticeSpan = tr.querySelector('.notice-code-cell .cell-text');
             if (!noticeSpan) return;
             const sourceText = ((rowObj && rowObj['Notice/Order Code']) ? String(rowObj['Notice/Order Code']) : (tr.dataset.notice || '')).trim();
             noticeSpan.innerHTML = renderSearchHighlightedText(sourceText, searchTerm);
@@ -2875,12 +3041,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
         function applySearchHighlightToCell(cell, sourceText, searchTerm) {
             if (!cell) return;
+            const textEl = cell.querySelector('.cell-text');
+            if (!textEl) return;
             const existingRaw = cell.getAttribute('data-search-raw-text');
             const rawText = (existingRaw !== null) ? existingRaw : (sourceText || '').toString();
             if (existingRaw === null) {
                 cell.setAttribute('data-search-raw-text', rawText);
             }
-            cell.innerHTML = renderSearchHighlightedText(rawText, searchTerm);
+            textEl.innerHTML = renderSearchHighlightedText(rawText, searchTerm);
         }
 
         function applyParcelAndTrackingSearchHighlights(tr, rowObj, searchTerm) {
@@ -2956,6 +3124,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         span.className = getStatusClass(text);
                         span.textContent = text;
                         td.appendChild(span);
+                        ensureCopyButtonForCell(td, colName);
                     } else if (colName === 'File Name (PDF)') {
                         const trackingValue = ((safeRowObj['Tracking No.'] || '') + '').trim();
                         const proofAssetName = buildProofPdfAssetNameFromTracking(trackingValue);
@@ -2975,18 +3144,31 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         const shouldHighlight = (colName === 'Parcel Details' || colName === 'Tracking No.');
                         if (shouldHighlight) {
                             td.setAttribute('data-search-raw-text', text);
-                            td.innerHTML = renderSearchHighlightedText(text, searchTerm);
+                            const span = document.createElement('span');
+                            span.className = 'cell-text';
+                            span.innerHTML = renderSearchHighlightedText(text, searchTerm);
+                            td.appendChild(span);
                         } else {
-                            td.textContent = text;
+                            const span = document.createElement('span');
+                            span.className = 'cell-text';
+                            span.textContent = text;
+                            td.appendChild(span);
                         }
+                        ensureCopyButtonForCell(td, colName);
                     }
+                } else {
+                    ensureCopyButtonForCell(td, colName);
                 }
                 if (td && (colName === 'Parcel Details' || colName === 'Tracking No.')) {
                     const rawText = td.getAttribute('data-search-raw-text');
                     if (rawText === null) {
-                        td.setAttribute('data-search-raw-text', (td.textContent || '').trim());
+                        const textEl = td.querySelector('.cell-text');
+                        td.setAttribute('data-search-raw-text', (textEl ? textEl.textContent : td.textContent || '').trim());
                     }
-                    td.innerHTML = renderSearchHighlightedText(td.getAttribute('data-search-raw-text') || '', searchTerm);
+                    const textEl = td.querySelector('.cell-text');
+                    if (textEl) {
+                        textEl.innerHTML = renderSearchHighlightedText(td.getAttribute('data-search-raw-text') || '', searchTerm);
+                    }
                 }
                 if (td.hasAttribute('rowspan')) {
                     if (!td.hasAttribute('data-original-rowspan')) {
@@ -3472,6 +3654,49 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         tr.style.display = '';
                     }
                 });
+            }
+
+            if (hasTransmittalFilter || !hasTransmittalFilter) {
+                const tbody = table.querySelector('tbody');
+                if (tbody) {
+                    const visibleRows = Array.from(trs).filter(function(tr) {
+                        return tr.style.display !== 'none';
+                    });
+                    const transmittalGroups = new Map();
+                    visibleRows.forEach(function(tr) {
+                        const rowTransmittal = (tr.dataset.transmittalId || '').trim() || 'UNASSIGNED';
+                        if (!transmittalGroups.has(rowTransmittal)) {
+                            transmittalGroups.set(rowTransmittal, []);
+                        }
+                        transmittalGroups.get(rowTransmittal).push(tr);
+                    });
+
+                    const transmittalIds = Array.from(transmittalGroups.keys());
+                    if (!hasTransmittalFilter) {
+                        transmittalIds.sort(function(a, b) {
+                            return a.toLowerCase().localeCompare(b.toLowerCase());
+                        });
+                    }
+
+                    transmittalIds.forEach(function(tid) {
+                        const groupRows = transmittalGroups.get(tid) || [];
+                        groupRows.sort(function(a, b) {
+                            const aId = parseInt(a.dataset.id || '0', 10) || 0;
+                            const bId = parseInt(b.dataset.id || '0', 10) || 0;
+                            const aNotice = (a.dataset.notice || '').trim();
+                            const bNotice = (b.dataset.notice || '').trim();
+                            const aObj = rowDataById.get(aId) || rowDataByNotice.get(aNotice) || null;
+                            const bObj = rowDataById.get(bId) || rowDataByNotice.get(bNotice) || null;
+                            const aParcel = parseInt(((aObj && aObj['Parcel No.']) ? aObj['Parcel No.'] : ''), 10);
+                            const bParcel = parseInt(((bObj && bObj['Parcel No.']) ? bObj['Parcel No.'] : ''), 10);
+                            const aVal = Number.isFinite(aParcel) ? aParcel : Number.MAX_SAFE_INTEGER;
+                            const bVal = Number.isFinite(bParcel) ? bParcel : Number.MAX_SAFE_INTEGER;
+                            if (aVal !== bVal) return aVal - bVal;
+                            return aId - bId;
+                        });
+                        groupRows.forEach(function(tr) { tbody.appendChild(tr); });
+                    });
+                }
             }
 
             maybeAnimateTableSortRows(table, sortSignature);
@@ -4473,7 +4698,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }
         }
         
-        async function submitPdfExportForNoticeCodes(rowIds, modalTitle, transmittalName) {
+        async function submitPdfExportForNoticeCodes(rowIds, modalTitle, transmittalName, options) {
             if (!Array.isArray(rowIds) || rowIds.length === 0) {
                 alert("No rows available for export.");
                 return;
@@ -4484,23 +4709,40 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const title = document.getElementById('pdfViewerTitle');
             if (!modal || !frame || !title) return;
 
-            lastPdfViewerFocus = document.activeElement;
-            title.textContent = modalTitle || "Exported PDF";
-            frame.src = 'about:blank';
-            setPdfViewerDownloadTarget('', '');
-            modal.style.display = 'flex';
-            modal.setAttribute('aria-hidden', 'false');
-            modal.removeAttribute('inert');
-            animateModalPanelFromTrigger(modal, modal.querySelector('.pdf-viewer-panel'), document.activeElement);
-            const closeBtn = modal.querySelector('.pdf-viewer-close');
-            if (closeBtn) {
-                try { closeBtn.focus(); } catch (e) {}
+            const reuseModal = options && options.reuseModal;
+            pdfPreviewRowIds = Array.isArray(rowIds) ? rowIds.slice() : [];
+            pdfPreviewTransmittalName = (transmittalName || '').trim();
+            pdfPreviewTitle = modalTitle || "Exported PDF";
+            if (!reuseModal) {
+                lastPdfViewerFocus = document.activeElement;
+                title.textContent = pdfPreviewTitle;
+                frame.src = 'about:blank';
+                setPdfViewerDownloadTarget('', '');
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('inert');
+                animateModalPanelFromTrigger(modal, modal.querySelector('.pdf-viewer-panel'), document.activeElement);
+                const closeBtn = modal.querySelector('.pdf-viewer-close');
+                if (closeBtn) {
+                    try { closeBtn.focus(); } catch (e) {}
+                }
+            } else {
+                title.textContent = pdfPreviewTitle;
+                setPdfViewerDownloadTarget('', '');
             }
 
             try {
                 const formData = new URLSearchParams();
                 formData.set('row_ids', JSON.stringify(rowIds));
                 formData.set('transmittal_name', (transmittalName || '').trim());
+                formData.set('dept', String(currentDeptKey || '').trim());
+                const preparedInput = document.getElementById('pdfPreparedByInput');
+                if (preparedInput) {
+                    const preparedName = (preparedInput.value || '').trim();
+                    if (preparedName) {
+                        formData.set('officer_name', preparedName);
+                    }
+                }
 
                 const response = await fetch("../api/jrs_tracking.php", {
                     method: "POST",
@@ -4528,8 +4770,15 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             } catch (err) {
                 console.error(err);
                 alert("Failed to export PDF.");
-                closePdfViewerModal();
+                if (!reuseModal) {
+                    closePdfViewerModal();
+                }
             }
+        }
+
+        function refreshPdfPreview() {
+            if (!Array.isArray(pdfPreviewRowIds) || pdfPreviewRowIds.length === 0) return;
+            submitPdfExportForNoticeCodes(pdfPreviewRowIds, pdfPreviewTitle || 'Exported PDF', pdfPreviewTransmittalName, { reuseModal: true });
         }
 
         function collectRowIdsForTransmittal(transmittalId) {
@@ -4866,37 +5115,114 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }
         });
 
-        const AUTO_TRACK_INTERVAL_MS = 12 * 60 * 60 * 1000;
+        const AUTO_TRACK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const AUTO_TRACK_JITTER_RATIO = 0.2;
         const AUTO_TRACK_STORAGE_KEY = 'dhsud_auto_track_last_run_v1:' + String(currentDeptKey || 'all');
         const autoTrackLastRunByKey = new Map();
         const IMMEDIATE_TRACK_DEDUP_WINDOW_MS = 3000;
         const immediateTrackLastRunAtByKey = new Map();
         let autoTrackInProgress = false;
+        let autoTrackStateLoadPromise = null;
+        const pendingAutoTrackPersist = new Map();
+        let autoTrackPersistTimer = null;
 
-        function loadAutoTrackCache() {
+        function loadAutoTrackCacheLocal() {
             try {
                 const raw = localStorage.getItem(AUTO_TRACK_STORAGE_KEY);
                 if (!raw) return;
                 const data = JSON.parse(raw);
                 if (!data || typeof data !== 'object') return;
                 Object.keys(data).forEach(function(key) {
-                    const ts = Number(data[key]) || 0;
-                    if (ts > 0) autoTrackLastRunByKey.set(key, ts);
+                    const val = data[key];
+                    if (val && typeof val === 'object') {
+                        const ts = Number(val.ts) || 0;
+                        const interval = Number(val.interval) || AUTO_TRACK_INTERVAL_MS;
+                        if (ts > 0) autoTrackLastRunByKey.set(key, { ts: ts, interval: interval });
+                    } else {
+                        const ts = Number(val) || 0;
+                        if (ts > 0) autoTrackLastRunByKey.set(key, { ts: ts, interval: AUTO_TRACK_INTERVAL_MS });
+                    }
                 });
             } catch (e) {}
         }
 
-        function saveAutoTrackCache() {
+        function saveAutoTrackCacheLocal() {
             try {
                 const obj = {};
                 autoTrackLastRunByKey.forEach(function(value, key) {
-                    if (Number.isFinite(value) && value > 0) obj[key] = value;
+                    if (value && typeof value === 'object') {
+                        const ts = Number(value.ts) || 0;
+                        const interval = Number(value.interval) || AUTO_TRACK_INTERVAL_MS;
+                        if (ts > 0) obj[key] = { ts: ts, interval: interval };
+                    } else {
+                        const ts = Number(value) || 0;
+                        if (ts > 0) obj[key] = { ts: ts, interval: AUTO_TRACK_INTERVAL_MS };
+                    }
                 });
                 localStorage.setItem(AUTO_TRACK_STORAGE_KEY, JSON.stringify(obj));
             } catch (e) {}
         }
 
-        loadAutoTrackCache();
+        async function loadAutoTrackCacheFromServer() {
+            try {
+                const response = await fetch('../api/auto-track-state.php?dept=' + encodeURIComponent(currentDeptKey || ''));
+                if (!response.ok) throw new Error('auto-track state unavailable');
+                const payload = await response.json();
+                if (payload && payload.success && payload.data && typeof payload.data === 'object') {
+                    Object.keys(payload.data).forEach(function(key) {
+                        const record = payload.data[key];
+                        if (!record || typeof record !== 'object') return;
+                        const ts = Number(record.ts) || 0;
+                        const interval = Number(record.interval) || AUTO_TRACK_INTERVAL_MS;
+                        if (ts > 0) autoTrackLastRunByKey.set(key, { ts: ts, interval: interval });
+                    });
+                }
+            } catch (e) {
+                if (autoTrackLastRunByKey.size === 0) {
+                    loadAutoTrackCacheLocal();
+                }
+            }
+        }
+
+        function initAutoTrackState() {
+            if (!autoTrackStateLoadPromise) {
+                autoTrackStateLoadPromise = loadAutoTrackCacheFromServer();
+            }
+            return autoTrackStateLoadPromise;
+        }
+
+        function queueAutoTrackPersist(key, record) {
+            if (!key || !record) return;
+            pendingAutoTrackPersist.set(key, {
+                ts: Number(record.ts) || 0,
+                interval: Number(record.interval) || AUTO_TRACK_INTERVAL_MS
+            });
+            saveAutoTrackCacheLocal();
+            if (autoTrackPersistTimer) return;
+            autoTrackPersistTimer = window.setTimeout(flushAutoTrackPersist, 600);
+        }
+
+        async function flushAutoTrackPersist() {
+            if (autoTrackPersistTimer) {
+                clearTimeout(autoTrackPersistTimer);
+                autoTrackPersistTimer = null;
+            }
+            if (pendingAutoTrackPersist.size === 0) return;
+            const items = [];
+            pendingAutoTrackPersist.forEach(function(value, key) {
+                items.push({ key: key, ts: value.ts, interval: value.interval });
+            });
+            pendingAutoTrackPersist.clear();
+            try {
+                await fetch('../api/auto-track-state.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dept: String(currentDeptKey || '').trim(), items: items })
+                });
+            } catch (e) {}
+        }
+
+        initAutoTrackState();
 
         function findRowById(rowId) {
             const safeRowId = parseInt(rowId || '0', 10) || 0;
@@ -5004,8 +5330,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             immediateTrackLastRunAtByKey.set(key, now);
 
             const throttleKey = batchId ? ('batch:' + batchId) : ('notice:' + safeNotice);
-            autoTrackLastRunByKey.set(throttleKey, Date.now());
-            saveAutoTrackCache();
+            const immediateRecord = { ts: Date.now(), interval: applyAutoTrackJitter(AUTO_TRACK_INTERVAL_MS) };
+            autoTrackLastRunByKey.set(throttleKey, immediateRecord);
+            queueAutoTrackPersist(throttleKey, immediateRecord);
             runTrackingUpdate(safeNotice, {
                 silent: true,
                 force: true,
@@ -5046,14 +5373,25 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             return items;
         }
 
-        function autoTrackEligibleRows() {
+        function applyAutoTrackJitter(baseMs) {
+            const base = Math.max(60000, parseInt(baseMs, 10) || 0);
+            const delta = Math.round(base * AUTO_TRACK_JITTER_RATIO);
+            if (delta <= 0) return base;
+            const offset = Math.floor((Math.random() * (delta * 2 + 1)) - delta);
+            return Math.max(60000, base + offset);
+        }
+
+        async function autoTrackEligibleRows() {
             if (autoTrackInProgress) return;
             autoTrackInProgress = true;
 
+            await initAutoTrackState();
             const now = Date.now();
             const items = collectAutoTrackItems().filter(function(item) {
-                const lastRun = autoTrackLastRunByKey.get(item.key) || 0;
-                return (now - lastRun) >= AUTO_TRACK_INTERVAL_MS;
+                const record = autoTrackLastRunByKey.get(item.key);
+                const lastRun = (record && typeof record === 'object') ? (record.ts || 0) : (record || 0);
+                const interval = (record && typeof record === 'object') ? (record.interval || AUTO_TRACK_INTERVAL_MS) : AUTO_TRACK_INTERVAL_MS;
+                return (now - lastRun) >= interval;
             });
 
             if (items.length === 0) {
@@ -5064,8 +5402,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             items.reduce(function(chain, item) {
                 return chain.then(function() {
                     return runTrackingUpdate(item.noticeCode, { silent: true, rowId: item.rowId }).finally(function() {
-                        autoTrackLastRunByKey.set(item.key, Date.now());
-                        saveAutoTrackCache();
+                        const record = { ts: Date.now(), interval: applyAutoTrackJitter(AUTO_TRACK_INTERVAL_MS) };
+                        autoTrackLastRunByKey.set(item.key, record);
+                        queueAutoTrackPersist(item.key, record);
                     });
                 }).then(function() {
                     return new Promise(function(resolve) { setTimeout(resolve, 200); });
@@ -5113,8 +5452,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     key = notice ? ('notice:' + notice) : (rid ? ('row:' + rid) : '');
                     if (key) row.dataset.autoTrackKey = key;
                 }
-                const lastRun = key ? (autoTrackLastRunByKey.get(key) || 0) : 0;
-                const nextAt = lastRun ? (lastRun + AUTO_TRACK_INTERVAL_MS) : 0;
+                const record = key ? (autoTrackLastRunByKey.get(key) || null) : null;
+                const lastRun = (record && typeof record === 'object') ? (record.ts || 0) : (record || 0);
+                const interval = (record && typeof record === 'object') ? (record.interval || AUTO_TRACK_INTERVAL_MS) : AUTO_TRACK_INTERVAL_MS;
+                const nextAt = lastRun ? (lastRun + interval) : 0;
                 badge.innerHTML = '<span>' + formatCheckTimes(lastRun, nextAt) + '</span>';
                 badge.classList.add('notif-timestamp');
                 badge.style.display = 'inline-flex';
@@ -5152,7 +5493,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             PHSD: 'phsd',
             ELUPD: 'elupd',
             ORD: 'ord',
-            HOA: 'hoa'
+            HOA: 'hoa',
+            LO: 'lo'
         });
 
         const DEPT_KEY_TO_CODE = Object.freeze({
@@ -5162,7 +5504,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             phsd: 'PHSD',
             elupd: 'ELUPD',
             ord: 'ORD',
-            hoa: 'HOA'
+            hoa: 'HOA',
+            lo: 'LO'
         });
 
         function normalizeDepartmentKey(rawValue) {

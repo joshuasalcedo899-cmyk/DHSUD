@@ -93,6 +93,18 @@ function buildDefaultSenderDetails($dateReleasedValue, $batchId = '', $senderTag
     return $sender;
 }
 
+function buildDefaultPdfFileName($dateReleasedValue, $parcelNoValue, $departmentCode = 'EMES') {
+    $ts = strtotime((string)$dateReleasedValue);
+    if ($ts === false) return '';
+    $formattedDate = date('ymd', $ts);
+    $formattedParcelNo = sprintf('%03d', (int)$parcelNoValue);
+    $code = strtoupper(trim((string)$departmentCode));
+    if ($code === '') {
+        $code = 'EMES';
+    }
+    return $code . '-' . $formattedDate . '-' . $formattedParcelNo;
+}
+
 function sanitizeTransmittalFolderName($value) {
     $name = trim((string)$value);
     if ($name === '') return 'UNASSIGNED';
@@ -544,6 +556,7 @@ try {
         '`Tracking No.`',
         '`File Name (PDF)`',
         '`Date released to AFD`',
+        '`Parcel No.`',
         '`Status`',
         '`Notice/Order Code`',
     ];
@@ -562,8 +575,19 @@ try {
     $dateForDefaultSender = array_key_exists('Date released to AFD', $columnValues)
         ? $columnValues['Date released to AFD']
         : ($currentRecord['Date released to AFD'] ?? '');
+    $parcelForDefault = array_key_exists('Parcel No.', $columnValues)
+        ? $columnValues['Parcel No.']
+        : ($currentRecord['Parcel No.'] ?? 0);
+    $deptCodeForDefault = '';
+    if ($existingDepartmentKey !== '') {
+        $deptCodeForDefault = getDepartmentCodeFromKey($existingDepartmentKey);
+    }
+    if ($deptCodeForDefault === '') {
+        $deptCodeForDefault = extractDepartmentCodeFromSender($currentSenderDetails);
+    }
+    $defaultPdfName = buildDefaultPdfFileName($dateForDefaultSender, $parcelForDefault, $deptCodeForDefault);
 
-    // If tracking number is present but File Name is empty, auto-assign proof_<tracking>.pdf.
+    // If tracking number is present, always keep File Name at the default format.
     if ($trackingSubmitted) {
         $trackingClean = trim((string)$submittedTrackingNo);
         $fileNameCol = 'File Name (PDF)';
@@ -571,11 +595,10 @@ try {
             ? trim((string)$columnValues[$fileNameCol])
             : '';
 
-        if ($trackingClean !== '' && $trackingClean !== '0' && $currentFileNameValue === '') {
-            $autoFileName = 'proof_' . $trackingClean . '.pdf';
-            $columnValues[$fileNameCol] = $autoFileName;
+        if ($trackingClean !== '' && $trackingClean !== '0' && $defaultPdfName !== '') {
+            $columnValues[$fileNameCol] = $defaultPdfName;
             $fileParamName = ':p_' . preg_replace('/[^a-z0-9_]/i', '_', $fileNameCol);
-            $params[$fileParamName] = $autoFileName;
+            $params[$fileParamName] = $defaultPdfName;
 
             $hasFileNameUpdate = false;
             foreach ($updates as $u) {
@@ -587,6 +610,8 @@ try {
             if (!$hasFileNameUpdate) {
                 $updates[] = '`' . $fileNameCol . '` = ' . $fileParamName;
             }
+        } elseif ($trackingClean !== '' && $trackingClean !== '0' && $defaultPdfName === '' && $currentFileNameValue !== '') {
+            // Keep existing file name if a default can't be computed.
         }
     }
 
@@ -721,34 +746,29 @@ try {
         }
         
         if ($affected === 0) {
-            $pdo->rollBack();
-            
-            // Debug: Check if record exists at all
+            // If record exists, treat as no-op instead of 404.
             $checkSql = 'SELECT `id` FROM mailtracking WHERE `id` = :check_id LIMIT 1';
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute([':check_id' => $originalId]);
             $recordExists = $checkStmt->fetch() !== false;
-            
-            // Try to find similar records
-            $allSql = 'SELECT `id`, `Notice/Order Code` FROM mailtracking ORDER BY `id` LIMIT 10';
-            $allStmt = $pdo->query($allSql);
-            $allRecords = $allStmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $debugInfo = [
-                'row_id_sent' => $originalId,
-                'notice_code_sent' => $originalNotice,
-                'notice_code_length' => strlen($originalNotice),
-                'record_found' => $recordExists,
-                'sample_records' => $allRecords
-            ];
-            
-            error_log('UPDATE 0 rows - Debug: ' . json_encode($debugInfo));
-            
+
+            if ($recordExists) {
+                $pdo->commit();
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'No changes applied',
+                    'affected' => 0,
+                    'pdfGenerated' => false,
+                    'pdfWarning' => ''
+                ]);
+                exit;
+            }
+
+            $pdo->rollBack();
             http_response_code(404);
             echo json_encode([
                 'success' => false,
-                'message' => 'Record not found',
-                'debug' => $debugInfo
+                'message' => 'Record not found'
             ]);
             exit;
         }
@@ -760,11 +780,11 @@ try {
         $pdfWarning = '';
         if ($trackingSubmitted) {
             $trackingClean = trim($submittedTrackingNo);
-            $proofFileName = 'proof_' . $trackingClean . '.pdf';
+            $proofFileName = $defaultPdfName;
             $proofTargets = resolveArchiveTargetsForTracking($pdo, $trackingClean, (int)$originalId);
             $proofDeptFolder = sanitizeDepartmentFolderName(((is_array($proofTargets[0] ?? null) ? ($proofTargets[0]['department'] ?? '') : '')));
             $proofTransmittalFolder = sanitizeTransmittalFolderName(((is_array($proofTargets[0] ?? null) ? ($proofTargets[0]['transmittal'] ?? '') : '')));
-            $proofFilePath = __DIR__ . '/../JRS_PDFs/' . $proofDeptFolder . '/' . $proofTransmittalFolder . '/' . $proofFileName;
+            $proofFilePath = __DIR__ . '/../JRS_PDFs/' . $proofDeptFolder . '/' . $proofTransmittalFolder . '/proof_' . $trackingClean . '.pdf';
             $finalStatus = array_key_exists('Status', $columnValues) ? $columnValues['Status'] : $existingStatus;
             $statusAllowsPdf = isPdfEligibleStatus($finalStatus);
             $trackingChanged = ($trackingClean !== '' && $trackingClean !== $existingTrackingNo);
@@ -782,7 +802,7 @@ try {
 
             // Apply generated/existing proof file name to all affected rows.
             // For batches: all rows with same Batch ID. For non-batch: only edited row.
-            if ($trackingClean !== '' && $trackingClean !== '0' && $statusAllowsPdf && file_exists($proofFilePath)) {
+            if ($trackingClean !== '' && $trackingClean !== '0' && $statusAllowsPdf && $proofFileName !== '' && file_exists($proofFilePath)) {
                 if ($batchId !== '') {
                     $fileStmt = $pdo->prepare('UPDATE mailtracking SET `File Name (PDF)` = :file_name WHERE `Sender Details` LIKE :batch_like');
                     $fileStmt->execute([
