@@ -86,6 +86,20 @@ if ($explicitDept === '') {
 $shipperTag = getDepartmentSenderTag($shipperDeptKey);
 $officerOverride = trim((string)($_POST['officer_name'] ?? ''));
 $officerName = $officerOverride !== '' ? $officerOverride : getTransmittalOfficerName($shipperDeptKey);
+$deptThemeMap = [
+    'emes' => ['header' => '#23366A', 'border' => '#8fa0c7', 'text' => '#ffffff'],
+    'prls' => ['header' => '#FFCC00', 'border' => '#e8c84f', 'text' => '#1a1a1a'],
+    'afd' => ['header' => '#FF8D28', 'border' => '#e8ad70', 'text' => '#1a1a1a'],
+    'phsd' => ['header' => '#00C8B3', 'border' => '#7fd9cd', 'text' => '#1a1a1a'],
+    'elupd' => ['header' => '#6155F5', 'border' => '#a4a0eb', 'text' => '#ffffff'],
+    'ord' => ['header' => '#CB30E0', 'border' => '#cc88d5', 'text' => '#ffffff'],
+    'hoa' => ['header' => '#2F7D32', 'border' => '#90c48f', 'text' => '#ffffff'],
+    'lo' => ['header' => '#0B6C8C', 'border' => '#86b9c9', 'text' => '#ffffff'],
+];
+$deptTheme = $deptThemeMap[$shipperDeptKey] ?? $deptThemeMap['emes'];
+$themeHeader = $deptTheme['header'];
+$themeBorder = $deptTheme['border'];
+$themeText = $deptTheme['text'];
 
 $transmittalName = sanitizePdfBaseName($_POST['transmittal_name'] ?? '');
 if ($transmittalName === '') {
@@ -111,9 +125,9 @@ $html = '
 }
 
 body { font-family: DejaVu Sans, sans-serif; font-size: 11px; }
-h2 { text-align:center; color:#22336A; }
+h2 { text-align:center; color:' . $themeHeader . '; }
 table { width:100%; border-collapse: collapse; }
-th { background:#22336A; color:white; padding:5px; font-size:10px; line-height: 1.15; }
+th { background:' . $themeHeader . '; color:' . $themeText . '; padding:5px; font-size:10px; line-height: 1.15; }
 td { max-width: 200px; border:1px solid #000; padding:3px 4px; font-size:9px; line-height: 1.15; word-wrap:break-word; word-break: break-word; white-space: normal; text-align:center; }
 tr, td, th { page-break-inside: avoid; break-inside: avoid; }
 .shipper-label { font-weight: bold; }

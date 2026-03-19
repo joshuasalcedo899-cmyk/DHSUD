@@ -11,6 +11,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireCsrfToken();
 }
 
+function extractBatchIdFromSenderDetails($senderDetails) {
+    $text = trim((string)$senderDetails);
+    if ($text === '') return '';
+    if (preg_match('/Batch ID:\s*([A-Za-z0-9\-]+)/i', $text, $m)) {
+        return trim($m[1]);
+    }
+    return '';
+}
+
 // Handle AJAX requests (return JSON)
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest';
 
@@ -47,7 +56,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $recipientDetails = trim($_POST['Recipient Details'] ?? $_POST['recipientDetails'] ?? '');
     $customSenderDetails = trim($_POST['Sender Details'] ?? $_POST['senderDetails'] ?? '');
     $trackingNo = trim($_POST['Tracking No.'] ?? $_POST['trackingNo'] ?? '');
+    $statusValue = trim($_POST['Status'] ?? $_POST['status'] ?? '');
+    $remarksValue = trim($_POST['Transmittal Remarks/Received By'] ?? $_POST['transmittalRemarks'] ?? '');
+    $eventDateValue = trim($_POST['Date'] ?? $_POST['eventDate'] ?? '');
+    $evaluatorValue = trim($_POST['Evaluator'] ?? $_POST['evaluator'] ?? '');
     $transmittalId = trim($_POST['transmittal_id'] ?? $_POST['Transmittal ID'] ?? '');
+    $requestedBatchId = trim($_POST['batch_id'] ?? $_POST['Batch ID'] ?? '');
+    $batchSourceRowId = (int)($_POST['batch_source_row_id'] ?? $_POST['batchSourceRowId'] ?? 0);
 
     // Backward-compatible single inputs
     $singleNoticeCode = trim($_POST['Notice/Order Code'] ?? $_POST['notice_Code'] ?? '');
@@ -111,31 +126,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $senderDetailsBase = "Department of Human Settlements and Urban Development Region 4A\n" . $currentDeptSenderTag . "\n" . $senderContactNo . "\n\n" . "(" . $formattedDate . ")";
             $newFormatDate = date('ymd', $st);
 
+            $parcelScopeTransmittalId = ($transmittalId !== '' ? $transmittalId : '');
+            $departmentScope = buildMailtrackingDepartmentScope($currentDept);
+            $batchParcelNo = null;
+            $batchRow = null;
+            if ($batchSourceRowId > 0) {
+                $batchStmt = $pdo->prepare(
+                    'SELECT `Parcel No.`, `Transmittal ID`, `Date released to AFD`, `Recipient Details`, `Sender Details`,
+                            `File Name (PDF)`, `Tracking No.`, `Status`, `Transmittal Remarks/Received By`, `Date`, `Evaluator`
+                     FROM mailtracking
+                     WHERE id = :id
+                     LIMIT 1'
+                );
+                $batchStmt->execute([':id' => $batchSourceRowId]);
+                $batchRow = $batchStmt->fetch(PDO::FETCH_ASSOC);
+                if ($batchRow) {
+                    $batchParcelNo = (int)($batchRow['Parcel No.'] ?? 0);
+                    if ($transmittalId === '' && !empty($batchRow['Transmittal ID'])) {
+                        $transmittalId = trim((string)$batchRow['Transmittal ID']);
+                        $parcelScopeTransmittalId = $transmittalId;
+                    }
+                    if ($dateReleased === '') $dateReleased = trim((string)($batchRow['Date released to AFD'] ?? ''));
+                    if ($recipientDetails === '') $recipientDetails = trim((string)($batchRow['Recipient Details'] ?? ''));
+                    if ($trackingNo === '') $trackingNo = trim((string)($batchRow['Tracking No.'] ?? ''));
+                    if ($statusValue === '') $statusValue = trim((string)($batchRow['Status'] ?? ''));
+                    if ($remarksValue === '') $remarksValue = trim((string)($batchRow['Transmittal Remarks/Received By'] ?? ''));
+                    if ($eventDateValue === '') $eventDateValue = trim((string)($batchRow['Date'] ?? ''));
+                    if ($evaluatorValue === '') $evaluatorValue = trim((string)($batchRow['Evaluator'] ?? ''));
+                }
+            }
+
             $batchId = null;
-            if (count($pairs) > 1) {
+            $existingBatchId = '';
+            if ($batchRow) {
+                $existingBatchId = extractBatchIdFromSenderDetails($batchRow['Sender Details'] ?? '');
+            }
+            if ($requestedBatchId !== '') {
+                $batchId = $requestedBatchId;
+            } elseif ($existingBatchId !== '') {
+                $batchId = $existingBatchId;
+            } elseif ($batchSourceRowId > 0) {
+                $batchId = 'BATCH-' . date('Ymd-His') . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
+            } elseif (count($pairs) > 1) {
                 $batchId = 'BATCH-' . date('Ymd-His') . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
             }
 
             $pdo->beginTransaction();
 
-            $parcelScopeTransmittalId = ($transmittalId !== '' ? $transmittalId : '');
-            $departmentScope = buildMailtrackingDepartmentScope($currentDept);
-            $maxParcelStmt = $pdo->prepare(
-                'SELECT COALESCE(MAX(`Parcel No.`), 0)
-                 FROM mailtracking
-                 WHERE `Transmittal ID` = :transmittal_id
-                   AND ' . $departmentScope['sql']
-            );
-            $parcelParams = $departmentScope['params'];
-            $parcelParams[':transmittal_id'] = $parcelScopeTransmittalId;
-            $maxParcelStmt->execute($parcelParams);
-            $maxParcelNo = (int)$maxParcelStmt->fetchColumn();
-            if ($maxParcelNo < 0) {
-                $maxParcelNo = 0;
+            if ($batchSourceRowId > 0 && $batchRow && $existingBatchId === '' && $batchId) {
+                $currentSender = trim((string)($batchRow['Sender Details'] ?? ''));
+                $updatedSender = $currentSender !== '' ? ($currentSender . "\nBatch ID: " . $batchId) : ("Batch ID: " . $batchId);
+                $updStmt = $pdo->prepare('UPDATE mailtracking SET `Sender Details` = :sender WHERE id = :row_id');
+                $updStmt->execute([':sender' => $updatedSender, ':row_id' => $batchSourceRowId]);
             }
-            $parcelNo = $maxParcelNo + 1;
+
+            if ($batchParcelNo === null && $requestedBatchId !== '') {
+                $batchLookup = $pdo->prepare(
+                    'SELECT `Parcel No.`
+                     FROM mailtracking
+                     WHERE `Transmittal ID` = :transmittal_id
+                       AND ' . $departmentScope['sql'] . '
+                       AND `Sender Details` LIKE :batch_pattern
+                     ORDER BY id ASC
+                     LIMIT 1'
+                );
+                $batchParams = $departmentScope['params'];
+                $batchParams[':transmittal_id'] = $parcelScopeTransmittalId;
+                $batchParams[':batch_pattern'] = '%Batch ID: ' . $requestedBatchId . '%';
+                $batchLookup->execute($batchParams);
+                $batchParcelNo = $batchLookup->fetchColumn();
+                if ($batchParcelNo !== false) {
+                    $batchParcelNo = (int)$batchParcelNo;
+                } else {
+                    $batchParcelNo = null;
+                }
+            }
+            if ($batchParcelNo !== null) {
+                $parcelNo = $batchParcelNo;
+            } else {
+                $maxParcelStmt = $pdo->prepare(
+                    'SELECT COALESCE(MAX(`Parcel No.`), 0)
+                     FROM mailtracking
+                     WHERE `Transmittal ID` = :transmittal_id
+                       AND ' . $departmentScope['sql']
+                );
+                $parcelParams = $departmentScope['params'];
+                $parcelParams[':transmittal_id'] = $parcelScopeTransmittalId;
+                $maxParcelStmt->execute($parcelParams);
+                $maxParcelNo = (int)$maxParcelStmt->fetchColumn();
+                if ($maxParcelNo < 0) {
+                    $maxParcelNo = 0;
+                }
+                $parcelNo = $maxParcelNo + 1;
+            }
             $formattedParcelNo = sprintf("%03d", $parcelNo);
             $baseFileName = $currentDeptCode . "-" . $newFormatDate . "-" . $formattedParcelNo;
+
+            if ($statusValue === '') $statusValue = '';
+            if ($remarksValue === '') $remarksValue = '';
+            if ($eventDateValue === '') $eventDateValue = '0000-00-00';
+            if ($evaluatorValue === '') $evaluatorValue = '';
 
             $insertColumns = [
                 '`Notice/Order Code`',
@@ -146,6 +236,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 '`Sender Details`',
                 '`File Name (PDF)`',
                 '`Tracking No.`',
+                '`Status`',
+                '`Transmittal Remarks/Received By`',
+                '`Date`',
+                '`Evaluator`',
             ];
             $insertValues = [
                 ':notice_code',
@@ -156,6 +250,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':sender_details',
                 ':file_name',
                 ':tracking_no',
+                ':status_value',
+                ':remarks_value',
+                ':event_date',
+                ':evaluator',
             ];
             if (mailtrackingHasDepartmentKey()) {
                 $insertColumns[] = '`department_key`';
@@ -188,6 +286,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':sender_details' => $senderDetails,
                     ':file_name' => $baseFileName,
                     ':tracking_no' => $trackingNo,
+                    ':status_value' => $statusValue,
+                    ':remarks_value' => $remarksValue,
+                    ':event_date' => $eventDateValue,
+                    ':evaluator' => $evaluatorValue,
                     ':transmittal_id' => ($transmittalId !== '' ? $transmittalId : '')
                 ];
                 if (mailtrackingHasDepartmentKey()) {

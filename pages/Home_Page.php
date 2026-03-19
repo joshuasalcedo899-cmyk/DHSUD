@@ -195,11 +195,12 @@ function normalizedCellValueForMerge($row, $colName) {
 }
 
 // Build rowspan metadata for consecutive batch rows.
-// Cells are merged only when same batch ID and same displayed value.
+// In batch mode, every column except Notice/Order Code and Parcel Details
+// is merged into a single cell across the batch.
 $mergeSkip = [];
 $mergeRowspan = [];
 $mergeColumns = array_values(array_filter($columns, function($c) {
-    return $c !== 'Notice/Order Code';
+    return $c !== 'Notice/Order Code' && $c !== 'Parcel Details';
 }));
 $mergeColumns[] = '__ACTION__';
 
@@ -209,32 +210,28 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
     if ($batchId === '' || (($batchIdCounts[$batchId] ?? 0) <= 1)) {
         continue;
     }
-
+    $prevBatchId = '';
+    if ($ri > 0) {
+        $prevBatchId = extractBatchIdFromSenderDetails($rows[$ri - 1]['Sender Details'] ?? '');
+    }
+    if ($prevBatchId === $batchId) {
+        continue;
+    }
+    $span = 1;
+    for ($rj = $ri + 1; $rj < $rowCount; $rj++) {
+        $nextBatchId = extractBatchIdFromSenderDetails($rows[$rj]['Sender Details'] ?? '');
+        if ($nextBatchId !== $batchId) {
+            break;
+        }
+        $span++;
+    }
+    if ($span <= 1) {
+        continue;
+    }
     foreach ($mergeColumns as $colName) {
-        if (!empty($mergeSkip[$ri][$colName])) {
-            continue;
-        }
-
-        $baseValue = normalizedCellValueForMerge($rows[$ri], $colName);
-        $span = 1;
-
-        for ($rj = $ri + 1; $rj < $rowCount; $rj++) {
-            $nextBatchId = extractBatchIdFromSenderDetails($rows[$rj]['Sender Details'] ?? '');
-            if ($nextBatchId !== $batchId) {
-                break;
-            }
-
-            $nextValue = normalizedCellValueForMerge($rows[$rj], $colName);
-            if ($nextValue !== $baseValue) {
-                break;
-            }
-
-            $span++;
+        $mergeRowspan[$ri][$colName] = $span;
+        for ($rj = $ri + 1; $rj < $ri + $span; $rj++) {
             $mergeSkip[$rj][$colName] = true;
-        }
-
-        if ($span > 1) {
-            $mergeRowspan[$ri][$colName] = $span;
         }
     }
 }
@@ -315,10 +312,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         }
         /* Keep other data columns from overflowing on long values. */
         .tracking-table td[data-col]:not(.notice-code-cell) {
-            white-space: pre-wrap;
+            white-space: pre-line;
             word-break: break-word;
             overflow-wrap: anywhere;
-            max-width: 0;
         }
 
     </style>
@@ -358,25 +354,31 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             <a href="Home_Page.php?dept=lo" class="home-sidebar-link dept-lo<?= $currentDept === 'lo' ? ' is-active' : '' ?>" data-dept="lo"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>LO</strong><small>Mail Tracking Records</small></span></a>
         </nav>
 
-        <button type="button" class="home-sidebar-update" id="appUpdateBtn">
-            <img src="../assets/Download_Icon.svg" alt="" aria-hidden="true">
-            <span>Update App</span>
-        </button>
         <a href="logout.php" class="home-sidebar-logout">
             <img src="../assets/Logout_Icon.svg" alt="" aria-hidden="true">
             <span>Logout</span>
         </a>
+        <button type="button" class="home-sidebar-update" id="appUpdateBtn">
+            <img src="../assets/Download_Icon.svg" alt="" aria-hidden="true">
+            <span>Update App</span>
+        </button>
     </aside>
-        <div id="addModalOverlay" class="edit-modal-overlay" style="display:none;">
+        <div id="addModalOverlay" class="edit-modal-overlay" data-add-mode="default" style="display:none;">
             <div class="edit-modal add-modal-scrollable" id="addModal">
 <button class="modal-close" onclick="closeAddModal()" title="Close">&times;</button>
-                <h2>ADD RECORD</h2>
+                <h2 id="addModalTitle">ADD RECORD</h2>
                 <form id="addForm" action="../api/Add.php" method="post" autocomplete="off">
                     <input type="hidden" name="department_id" value="<?= htmlspecialchars($currentDept) ?>">
                     <input type="hidden" name="transmittal_id" id="addTransmittalId">
+                    <input type="hidden" name="batch_id" id="addBatchId">
+                    <input type="hidden" name="batch_source_row_id" id="addBatchSourceRowId">
+                    <input type="hidden" name="status" id="addStatus">
+                    <input type="hidden" name="transmittalRemarks" id="addTransmittalRemarks">
+                    <input type="hidden" name="eventDate" id="addEventDate">
+                    <input type="hidden" name="evaluator" id="addEvaluator">
 
                     <div style="display:contents">
-                        <div style="grid-column:1/span 2;">
+                        <div style="grid-column:1/span 2;" class="add-field add-field-pairs">
                             <div id="addPairRows" class="add-pairs-grid">
                                 <div class="add-pair-row">
                                     <div>
@@ -426,33 +428,33 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 });
                             });
                             </script>
-                        <div>
+                        <div class="add-field add-field-date">
                             <label for="addDateAfd">Date Released to AFD*</label>
                             <input type="date" name="dateReleased" id="addDateAfd" required>
                         </div>
-                        <div>
+                        <div class="add-field add-field-parcel">
                             <label for="addParcelNo">Parcel No.</label>
                             <input type="number" name="parcelNo" id="addParcelNo" readonly>
                         </div>
-                        <div style="grid-column:1/span 2;">
+                        <div style="grid-column:1/span 2;" class="add-field add-field-tracking">
                             <label for="addTrackingNo">Tracking No.</label>
                             <input type="text" name="trackingNo" id="addTrackingNo">
                         </div>
-                        <div style="grid-column:1/span 2;">
+                        <div style="grid-column:1/span 2;" class="add-field add-field-recipient">
                             <label for="addRecipient">Recipient Details</label>
                             <textarea name="recipientDetails" rows="2" id="addRecipient"></textarea>
                         </div>
-                        <div style="grid-column:1/span 2;">
+                        <div style="grid-column:1/span 2;" class="add-field add-field-sender">
                             <label for="addSender">Sender Details</label>
                             <textarea name="senderDetails" rows="2" id="addSender" placeholder="Optional additional sender details"></textarea>
                         </div>
-                        <div style="grid-column:1/span 2;">
+                        <div style="grid-column:1/span 2;" class="add-field add-field-file">
                             <label for="addFileName">File Name (PDF)</label>
                             <input type="text" name="fileName" id="addFileName">
                         </div>
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" class="modal-btn save">Add Record</button>
+                        <button type="submit" class="modal-btn save" id="addModalSubmit">Add Record</button>
                         <button type="button" class="modal-btn cancel" onclick="clearAddForm()">Clear Form</button>
                     </div>
                 </form>
@@ -484,48 +486,52 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             rsort($years);
             ?>
             <div class="table-sort-bar top-main-table-controls">
-                <div class="table-year-month-filter" id="tableYearMonthFilter">
-                    <button type="button" id="tableSortYearTrigger" class="table-year-trigger" aria-haspopup="true" aria-expanded="false">
-                        <span id="tableSortYearLabel">Year</span>
-                        <span class="table-year-trigger-icon" aria-hidden="true"></span>
-                    </button>
-                    <div id="tableYearMonthDropdown" class="table-year-month-dropdown" hidden>
-                        <div id="tableYearList" class="table-year-list" role="listbox" aria-label="Year options">
-                            <button type="button" class="table-year-option is-active" data-year="all">All</button>
-                            <?php foreach ($years as $year): ?>
-                                <button type="button" class="table-year-option" data-year="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></button>
-                            <?php endforeach; ?>
+                <div class="table-controls-group">
+                    <div class="table-year-month-filter" id="tableYearMonthFilter">
+                        <button type="button" id="tableSortYearTrigger" class="table-year-trigger" aria-haspopup="true" aria-expanded="false">
+                            <span id="tableSortYearLabel">Year</span>
+                            <span class="table-year-trigger-icon" aria-hidden="true"></span>
+                        </button>
+                        <div id="tableYearMonthDropdown" class="table-year-month-dropdown" hidden>
+                            <div id="tableYearList" class="table-year-list" role="listbox" aria-label="Year options">
+                                <button type="button" class="table-year-option is-active" data-year="all">All</button>
+                                <?php foreach ($years as $year): ?>
+                                    <button type="button" class="table-year-option" data-year="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></button>
+                                <?php endforeach; ?>
+                            </div>
+                            <div id="tableMonthGrid" class="table-month-grid" aria-label="Month options" aria-hidden="true">
+                                <button type="button" class="table-month-option" data-month="01">Jan</button>
+                                <button type="button" class="table-month-option" data-month="02">Feb</button>
+                                <button type="button" class="table-month-option" data-month="03">Mar</button>
+                                <button type="button" class="table-month-option" data-month="04">Apr</button>
+                                <button type="button" class="table-month-option" data-month="05">May</button>
+                                <button type="button" class="table-month-option" data-month="06">Jun</button>
+                                <button type="button" class="table-month-option" data-month="07">Jul</button>
+                                <button type="button" class="table-month-option" data-month="08">Aug</button>
+                                <button type="button" class="table-month-option" data-month="09">Sep</button>
+                                <button type="button" class="table-month-option" data-month="10">Oct</button>
+                                <button type="button" class="table-month-option" data-month="11">Nov</button>
+                                <button type="button" class="table-month-option" data-month="12">Dec</button>
+                            </div>
                         </div>
-                        <div id="tableMonthGrid" class="table-month-grid" aria-label="Month options" aria-hidden="true">
-                            <button type="button" class="table-month-option" data-month="01">Jan</button>
-                            <button type="button" class="table-month-option" data-month="02">Feb</button>
-                            <button type="button" class="table-month-option" data-month="03">Mar</button>
-                            <button type="button" class="table-month-option" data-month="04">Apr</button>
-                            <button type="button" class="table-month-option" data-month="05">May</button>
-                            <button type="button" class="table-month-option" data-month="06">Jun</button>
-                            <button type="button" class="table-month-option" data-month="07">Jul</button>
-                            <button type="button" class="table-month-option" data-month="08">Aug</button>
-                            <button type="button" class="table-month-option" data-month="09">Sep</button>
-                            <button type="button" class="table-month-option" data-month="10">Oct</button>
-                            <button type="button" class="table-month-option" data-month="11">Nov</button>
-                            <button type="button" class="table-month-option" data-month="12">Dec</button>
-                        </div>
+                        <select id="tableSortYear" class="table-sort-select table-sort-select-native" required style="min-width:65px;">
+                            <option value="" disabled hidden>Year</option>
+                            <option value="all" selected>All</option>
+                            <?php
+                            foreach ($years as $year) {
+                                echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
+                            }
+                            ?>
+                        </select>
+                        <input type="hidden" id="tableSortMonth" value="">
                     </div>
-                    <select id="tableSortYear" class="table-sort-select table-sort-select-native" required style="min-width:65px;">
-                        <option value="" disabled hidden>Year</option>
-                        <option value="all" selected>All</option>
-                        <?php
-                        foreach ($years as $year) {
-                            echo '<option value="' . htmlspecialchars($year) . '">' . htmlspecialchars($year) . '</option>';
-                        }
-                        ?>
-                    </select>
-                    <input type="hidden" id="tableSortMonth" value="">
+                    <div class="table-search-wrap">
+                        <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
+                        <button class="table-search-btn" id="tableSearchBtn" aria-label="Search">
+                            <img src="../assets/Search Icon.svg" alt="">
+                        </button>
+                    </div>
                 </div>
-                <input type="text" id="tableSearchInput" class="table-search-input" placeholder="Search">
-                <button class="table-search-btn" id="tableSearchBtn">
-                    <img src="../assets/Search Icon.svg" alt="Search">
-                </button>
                 <button class="table-notif-btn" id="tableNotifBtn" title="Tracking Status Notifications">
                     <img src="../assets/Notif_Icon.svg" alt="Notifications">
                     <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
@@ -1065,6 +1071,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             </div>
         </div>
         <div id="rowMenuDropdown" class="row-menu-dropdown" style="display:none; position:fixed; left:0; top:0; min-width:120px; background:#fff; border:1px solid #d1d5db; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-radius:6px; z-index:1000; padding:0.3em 0;">
+            <button id="rowMenuAddBatchBtn" class="row-menu-item" onclick="addBatchRowFromMenu()" style="display:none;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
+                <img src="../assets/Add_Icon.svg" alt="Add" style="width:20px;height:20px;"> Add Batch Item
+            </button>
             <button class="row-menu-item" onclick="deleteRecordFromMenu()" style="display:flex;align-items:center;gap:0.5em;padding:8px 18px;width:100%;background:none;border:none;cursor:pointer;color:#22336a;font-size:1em;font-weight:600;text-align:left;">
                 <img src="../assets/Delete_Icon.svg" alt="Delete" style="width:20px;height:20px;"> Delete
             </button>
@@ -1191,6 +1200,17 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             })();
 
             var currentRowMenuId = 0;
+            function getRowElementById(rowId) {
+                var safeRowId = parseInt(rowId, 10) || 0;
+                if (safeRowId <= 0) return null;
+                return document.querySelector('tr[data-id="' + String(safeRowId) + '"]');
+            }
+            function isBatchRowElement(rowEl) {
+                if (!rowEl) return false;
+                if (rowEl.classList.contains('batch-row')) return true;
+                var batchId = ((rowEl.dataset.batchId || '') + '').trim();
+                return batchId !== '';
+            }
             function hideRowMenuDropdown() {
                 var dropdown = document.getElementById('rowMenuDropdown');
                 if (dropdown) dropdown.style.display = 'none';
@@ -1206,6 +1226,10 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     return;
                 }
                 currentRowMenuId = safeRowId;
+                var addBatchBtn = document.getElementById('rowMenuAddBatchBtn');
+                if (addBatchBtn) {
+                    addBatchBtn.style.display = 'flex';
+                }
                 dropdown.style.display = 'block';
                 var scrollArea = event.currentTarget.closest('.table-scroll-area') || document.querySelector('.admin-table-container .table-scroll-area');
                 var rect = event.currentTarget.getBoundingClientRect();
@@ -1239,6 +1263,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 hideRowMenuDropdown();
                 if (rowId > 0) {
                     deleteRecord(rowId);
+                }
+            }
+            function addBatchRowFromMenu() {
+                var rowId = currentRowMenuId;
+                hideRowMenuDropdown();
+                if (rowId > 0) {
+                    openAddModal({ mode: 'batch', rowId: rowId });
                 }
             }
             function deleteRecord(rowId) {
@@ -1306,10 +1337,137 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             var nextNo = getNextParcelNoForTransmittal(activeTransmittalId);
             input.value = String(nextNo);
         }
+        function syncAddParcelNoFieldForTransmittal(transmittalId) {
+            var input = document.getElementById('addParcelNo');
+            if (!input) return;
+            var nextNo = getNextParcelNoForTransmittal(transmittalId);
+            input.value = String(nextNo);
+        }
+        var currentAddMode = 'default';
+        var currentBatchSourceRowId = 0;
+        function getAddModalMode() {
+            var overlay = document.getElementById('addModalOverlay');
+            if (!overlay) return 'default';
+            return overlay.getAttribute('data-add-mode') || 'default';
+        }
+        function setAddModalMode(mode) {
+            var overlay = document.getElementById('addModalOverlay');
+            if (!overlay) return;
+            var safeMode = (mode === 'batch') ? 'batch' : 'default';
+            overlay.setAttribute('data-add-mode', safeMode);
+            currentAddMode = safeMode;
+            var title = document.getElementById('addModalTitle');
+            var submitBtn = document.getElementById('addModalSubmit');
+            if (safeMode === 'batch') {
+                if (title) title.textContent = 'ADD BATCH ITEM';
+                if (submitBtn) submitBtn.textContent = 'Add Batch Item';
+            } else {
+                if (title) title.textContent = 'ADD RECORD';
+                if (submitBtn) submitBtn.textContent = 'Add Record';
+            }
+        }
+        function extractCustomSenderDetails(senderDetails) {
+            var text = ((senderDetails || '') + '').trim();
+            if (!text) return '';
+            var marker = 'Department of Human Settlements and Urban Development Region 4A';
+            var idx = text.indexOf(marker);
+            if (idx > 0) {
+                return text.slice(0, idx).trim();
+            }
+            return '';
+        }
+        function getBatchIdForRow(rowId, rowData) {
+            var rowEl = getRowElementById(rowId);
+            var batchId = rowEl ? (((rowEl.dataset.batchId || '') + '').trim()) : '';
+            if (batchId) return batchId;
+            var senderDetails = ((rowData && rowData['Sender Details']) ? String(rowData['Sender Details']) : '').trim();
+            var match = senderDetails.match(/Batch ID:\s*([A-Za-z0-9\-]+)/i);
+            return match ? ((match[1] || '') + '').trim() : '';
+        }
+        function buildBatchSenderDetails(rowData, batchId) {
+            var senderDetails = ((rowData && rowData['Sender Details']) ? String(rowData['Sender Details']) : '');
+            var custom = extractCustomSenderDetails(senderDetails);
+            var parts = [];
+            if (custom) parts.push(custom);
+            if (batchId) parts.push('Batch ID: ' + batchId);
+            return parts.join('\n');
+        }
+        function resetAddPairRows() {
+            var rowsWrap = document.getElementById('addPairRows');
+            if (!rowsWrap) return;
+            rowsWrap.innerHTML = '';
+            addAddPairRow();
+            refreshAddPairButtons();
+        }
+        function prepareBatchAddModal(rowId) {
+            var form = document.getElementById('addForm');
+            if (form) form.reset();
+            resetAddPairRows();
+            var rowData = getRowDataForInlineEdit(rowId);
+            if (!rowData) {
+                syncAddTransmittalField();
+                syncAddParcelNoField();
+                return;
+            }
+            var transmittalId = ((rowData['Transmittal ID'] || '') + '').trim();
+            var transmittalInput = document.getElementById('addTransmittalId');
+            if (transmittalInput) transmittalInput.value = transmittalId;
+            var batchInput = document.getElementById('addBatchId');
+            if (batchInput) {
+                batchInput.value = getBatchIdForRow(rowId, rowData);
+            }
+            var batchSourceInput = document.getElementById('addBatchSourceRowId');
+            if (batchSourceInput) {
+                batchSourceInput.value = String(parseInt(rowId || '0', 10) || 0);
+            }
+            syncAddParcelNoFieldForTransmittal(transmittalId);
+            var dateInput = document.getElementById('addDateAfd');
+            if (dateInput) dateInput.value = normalizeDateForInput(rowData['Date released to AFD'] || '');
+            var recipientInput = document.getElementById('addRecipient');
+            if (recipientInput) recipientInput.value = ((rowData['Recipient Details'] || '') + '').trim();
+            var trackingInput = document.getElementById('addTrackingNo');
+            if (trackingInput) trackingInput.value = ((rowData['Tracking No.'] || '') + '').trim();
+            var fileInput = document.getElementById('addFileName');
+            if (fileInput) fileInput.value = ((rowData['File Name (PDF)'] || '') + '').trim();
+            var senderInput = document.getElementById('addSender');
+            if (senderInput) {
+                var senderDetails = ((rowData['Sender Details'] || '') + '').trim();
+                senderInput.value = extractCustomSenderDetails(senderDetails);
+            }
+            var statusInput = document.getElementById('addStatus');
+            if (statusInput) statusInput.value = ((rowData['Status'] || '') + '').trim();
+            var remarksInput = document.getElementById('addTransmittalRemarks');
+            if (remarksInput) remarksInput.value = ((rowData['Transmittal Remarks/Received By'] || '') + '').trim();
+            var eventDateInput = document.getElementById('addEventDate');
+            if (eventDateInput) eventDateInput.value = ((rowData['Date'] || '') + '').trim();
+            var evaluatorInput = document.getElementById('addEvaluator');
+            if (evaluatorInput) evaluatorInput.value = ((rowData['Evaluator'] || '') + '').trim();
+        }
         // Add Modal logic
-        function openAddModal() {
-            syncAddTransmittalField();
-            syncAddParcelNoField();
+        function openAddModal(options) {
+            var opts = options || {};
+            var mode = (opts.mode === 'batch') ? 'batch' : 'default';
+            setAddModalMode(mode);
+            if (mode === 'batch') {
+                currentBatchSourceRowId = parseInt(opts.rowId || '0', 10) || 0;
+                prepareBatchAddModal(currentBatchSourceRowId);
+            } else {
+                currentBatchSourceRowId = 0;
+                var batchInput = document.getElementById('addBatchId');
+                if (batchInput) batchInput.value = '';
+                var batchSourceInput = document.getElementById('addBatchSourceRowId');
+                if (batchSourceInput) batchSourceInput.value = '';
+                var statusInput = document.getElementById('addStatus');
+                if (statusInput) statusInput.value = '';
+                var remarksInput = document.getElementById('addTransmittalRemarks');
+                if (remarksInput) remarksInput.value = '';
+                var eventDateInput = document.getElementById('addEventDate');
+                if (eventDateInput) eventDateInput.value = '';
+                var evaluatorInput = document.getElementById('addEvaluator');
+                if (evaluatorInput) evaluatorInput.value = '';
+                syncAddTransmittalField();
+                syncAddParcelNoField();
+            }
             hideRowMenuDropdown();
             var overlay = document.getElementById('addModalOverlay');
             if (!overlay) return;
@@ -1330,6 +1488,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             overlay.style.display = 'none';
             overlay.style.pointerEvents = 'none';
             overlay.setAttribute('inert', '');
+            setAddModalMode('default');
+            currentBatchSourceRowId = 0;
         }
         // Close modal when clicking outside
         document.addEventListener('DOMContentLoaded', function() {
@@ -1371,8 +1531,25 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         });
         // Clear form fields
         function clearAddForm() {
+            var mode = getAddModalMode();
+            if (mode === 'batch') {
+                prepareBatchAddModal(currentBatchSourceRowId);
+                return;
+            }
             var form = document.getElementById('addForm');
             if (form) form.reset();
+            var batchInput = document.getElementById('addBatchId');
+            if (batchInput) batchInput.value = '';
+            var batchSourceInput = document.getElementById('addBatchSourceRowId');
+            if (batchSourceInput) batchSourceInput.value = '';
+            var statusInput = document.getElementById('addStatus');
+            if (statusInput) statusInput.value = '';
+            var remarksInput = document.getElementById('addTransmittalRemarks');
+            if (remarksInput) remarksInput.value = '';
+            var eventDateInput = document.getElementById('addEventDate');
+            if (eventDateInput) eventDateInput.value = '';
+            var evaluatorInput = document.getElementById('addEvaluator');
+            if (evaluatorInput) evaluatorInput.value = '';
             syncAddTransmittalField();
             syncAddParcelNoField();
             var rowsWrap = document.getElementById('addPairRows');
@@ -1381,6 +1558,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 addAddPairRow();
             }
             refreshAddPairButtons();
+            setAddModalMode('default');
         }
 
         function addAddPairRow(noticeValue = '', parcelValue = '') {
@@ -1441,7 +1619,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 refreshAddPairButtons();
                 addForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    syncAddTransmittalField();
+                    if (getAddModalMode() !== 'batch') {
+                        syncAddTransmittalField();
+                    }
                     var formData = new FormData(addForm);
                     formData.set('csrf_token', CSRF_TOKEN);
 
@@ -3053,8 +3233,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
         function applyParcelAndTrackingSearchHighlights(tr, rowObj, searchTerm) {
             if (!tr) return;
+            const recipientCell = tr.querySelector('td[data-col="Recipient Details"]');
             const parcelCell = tr.querySelector('td[data-col="Parcel Details"]');
             const trackingCell = tr.querySelector('td[data-col="Tracking No."]');
+
+            if (recipientCell) {
+                const recipientText = ((rowObj && rowObj['Recipient Details']) ? String(rowObj['Recipient Details']) : recipientCell.textContent || '').trim();
+                applySearchHighlightToCell(recipientCell, recipientText, searchTerm);
+            }
 
             if (parcelCell) {
                 const parcelText = ((rowObj && rowObj['Parcel Details']) ? String(rowObj['Parcel Details']) : parcelCell.textContent || '').trim();
@@ -3141,7 +3327,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                             td.appendChild(link);
                         }
                     } else {
-                        const shouldHighlight = (colName === 'Parcel Details' || colName === 'Tracking No.');
+                        const shouldHighlight = (colName === 'Recipient Details' || colName === 'Parcel Details' || colName === 'Tracking No.');
                         if (shouldHighlight) {
                             td.setAttribute('data-search-raw-text', text);
                             const span = document.createElement('span');
@@ -3159,7 +3345,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 } else {
                     ensureCopyButtonForCell(td, colName);
                 }
-                if (td && (colName === 'Parcel Details' || colName === 'Tracking No.')) {
+                if (td && (colName === 'Recipient Details' || colName === 'Parcel Details' || colName === 'Tracking No.')) {
                     const rawText = td.getAttribute('data-search-raw-text');
                     if (rawText === null) {
                         const textEl = td.querySelector('.cell-text');
@@ -3453,7 +3639,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
 
 
-        // Table search and sort functionality (filter by Notice/Order Code, Parcel Details, Tracking No., and year)
+        // Table search and sort functionality (filter by Notice/Order Code, Recipient Details, Parcel Details, Tracking No., and year)
         // Keep checked rows visible regardless of filter, except when a status button filter is active.
         let selectedStatusFilter = 'ALL';
 
@@ -3608,12 +3794,14 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     return;
                 }
 
+                const recipientDetails = ((rowObj && rowObj['Recipient Details']) ? String(rowObj['Recipient Details']) : '').trim();
                 const parcelDetails = ((rowObj && rowObj['Parcel Details']) ? String(rowObj['Parcel Details']) : '').trim();
                 const trackingNo = ((rowObj && (rowObj['Tracking No.'] ?? rowObj['Tracking No'] ?? rowObj['tracking_no'] ?? rowObj['TrackingNo'])) ? String(rowObj['Tracking No.'] ?? rowObj['Tracking No'] ?? rowObj['tracking_no'] ?? rowObj['TrackingNo']) : (tr.dataset.trackingNo || '')).trim();
                 const codeMatch = notice.toLowerCase().indexOf(filter) > -1;
+                const recipientMatch = recipientDetails.toLowerCase().indexOf(filter) > -1;
                 const parcelMatch = parcelDetails.toLowerCase().indexOf(filter) > -1;
                 const trackingMatch = trackingNo.toLowerCase().indexOf(filter) > -1;
-                const searchMatch = codeMatch || parcelMatch || trackingMatch;
+                const searchMatch = codeMatch || recipientMatch || parcelMatch || trackingMatch;
                 const rowTransmittal = ((rowObj && rowObj['Transmittal ID']) ? String(rowObj['Transmittal ID']) : (tr.dataset.transmittalId || '')).trim();
                 const transmittalMatch = !hasTransmittalFilter || rowTransmittal === activeTransmittal;
 
@@ -4014,7 +4202,9 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 tile.appendChild(folder);
                 tile.appendChild(name);
                 tile.appendChild(count);
-                tile.addEventListener('click', function() {
+                tile.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     closeTransmittalTileMenus();
                     openTransmittalDetail(tid, tile);
                 });

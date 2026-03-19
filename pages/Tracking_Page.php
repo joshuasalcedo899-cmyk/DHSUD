@@ -258,7 +258,7 @@ rsort($years);
         }
 
         .tracking-table td[data-col]:not(.notice-code-cell) {
-            white-space: pre-wrap;
+            white-space: pre-line;
             word-break: break-word;
             overflow-wrap: anywhere;
         }
@@ -269,9 +269,9 @@ rsort($years);
         }
 
         .tracking-view-shell .tracking-table {
-            table-layout: fixed;
+            table-layout: auto;
             width: 100%;
-            min-width: 1760px;
+            min-width: 100%;
             border-collapse: collapse;
         }
 
