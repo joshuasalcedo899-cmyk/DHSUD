@@ -415,9 +415,9 @@ rsort($years);
                     <table class="listview-table tracking-table">
                         <thead>
                             <tr>
-                                <?php foreach ($columns as $header): ?>
-                                    <th><?= htmlspecialchars($header) ?></th>
-                                <?php endforeach; ?>
+                            <?php foreach ($columns as $header): ?>
+                                <th data-col="<?= htmlspecialchars($header) ?>"><?= htmlspecialchars($header) ?></th>
+                            <?php endforeach; ?>
                             </tr>
                         </thead>
                         <tbody id="trackingTableBody">
@@ -531,6 +531,16 @@ rsort($years);
                     Non-delivery Rate
                     <div class="stat-count"><?= htmlspecialchars((string)$ndrPercent) ?>%</div>
                 </button>
+            </div>
+        </div>
+
+        <div id="rowDetailModal" class="row-detail-modal-overlay" hidden aria-hidden="true">
+            <div class="row-detail-modal" role="dialog" aria-modal="true" aria-labelledby="rowDetailTitle">
+                <div class="row-detail-header">
+                    <h2 id="rowDetailTitle">Record Details</h2>
+                    <button type="button" class="row-detail-close" aria-label="Close" onclick="closeRowDetailModal()">×</button>
+                </div>
+                <div class="row-detail-body" id="rowDetailBody"></div>
             </div>
         </div>
     </div>
@@ -876,6 +886,84 @@ rsort($years);
                     closeHomeSidebar();
                 });
             }
+
+            function isRowDetailMobileView() {
+                return !!(window.matchMedia && window.matchMedia('(max-width: 640px)').matches);
+            }
+
+            function closeRowDetailModal() {
+                const modal = document.getElementById('rowDetailModal');
+                if (!modal) return;
+                modal.hidden = true;
+                modal.setAttribute('aria-hidden', 'true');
+                modal.classList.remove('is-open');
+                document.body.classList.remove('row-detail-open');
+            }
+
+            function openRowDetailModalFromRow(row) {
+                const modal = document.getElementById('rowDetailModal');
+                const body = document.getElementById('rowDetailBody');
+                const title = document.getElementById('rowDetailTitle');
+                const table = document.querySelector('.tracking-view-shell .tracking-table');
+                if (!modal || !body || !table || !row) return;
+
+                const headers = Array.from(table.querySelectorAll('thead th')).map(function(th) {
+                    return ((th.getAttribute('data-col') || th.textContent || '') + '').trim();
+                });
+                const cells = Array.from(row.children);
+
+                body.innerHTML = '';
+                headers.forEach(function(label, idx) {
+                    if (!label) return;
+                    const cell = cells[idx];
+                    const value = cell ? ((cell.textContent || '') + '').trim() : '';
+                    const item = document.createElement('div');
+                    item.className = 'row-detail-item';
+                    const labelEl = document.createElement('div');
+                    labelEl.className = 'row-detail-label';
+                    labelEl.textContent = label;
+                    const valueEl = document.createElement('div');
+                    valueEl.className = 'row-detail-value';
+                    valueEl.textContent = value || '—';
+                    item.appendChild(labelEl);
+                    item.appendChild(valueEl);
+                    body.appendChild(item);
+                });
+
+                const titleText = cells[0] ? ((cells[0].textContent || '') + '').trim() : '';
+                if (title) {
+                    title.textContent = titleText ? ('Record ' + titleText) : 'Record Details';
+                }
+
+                modal.hidden = false;
+                modal.setAttribute('aria-hidden', 'false');
+                modal.classList.add('is-open');
+                document.body.classList.add('row-detail-open');
+            }
+
+            window.closeRowDetailModal = closeRowDetailModal;
+
+            document.addEventListener('click', function(evt) {
+                if (!isRowDetailMobileView()) return;
+                const modal = document.getElementById('rowDetailModal');
+                if (modal && modal.classList.contains('is-open') && evt.target === modal) {
+                    closeRowDetailModal();
+                }
+            });
+
+            document.addEventListener('click', function(evt) {
+                if (!isRowDetailMobileView()) return;
+                const row = evt.target.closest('#trackingTableBody tr');
+                if (!row) return;
+                if (evt.target.closest('a, button, input, select, textarea')) return;
+                openRowDetailModalFromRow(row);
+            });
+
+            document.addEventListener('keydown', function(evt) {
+                if (evt.key === 'Escape') {
+                    closeRowDetailModal();
+                }
+            });
 
             updateStatusFilterButtonsUI();
             rebuildYearMonthFilterOptionsFromSelect();

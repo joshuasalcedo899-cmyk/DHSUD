@@ -328,7 +328,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     <img src="../assets/Sidebar_Menu_Icon.svg" alt="" aria-hidden="true">
                 </button>
             </div>
-            <img src="../assets/DHSUD_Header.svg" alt="Admin Home Header" class="admin-home-header-img">
+            <img src="../assets/DHSUD_Header.webp" alt="Admin Home Header" class="admin-home-header-img">
         </div>
         <div class="admin-home-header-border"></div>
     </div>
@@ -895,7 +895,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                 </div>
                             </th>
                             <?php foreach ($columns as $h): ?>
-                                <th><?= htmlspecialchars($h) ?></th>
+                                <th data-col="<?= htmlspecialchars($h) ?>"><?= htmlspecialchars($h) ?></th>
                             <?php endforeach; ?>
                             <th>Action</th>
                         </tr>
@@ -1155,6 +1155,16 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     <img src="../assets/Tracking_Icon.svg" alt="" class="ongoing-delivery-icon">
                 </div>
                 <div class="ongoing-delivery-bottom-bar"></div>
+            </div>
+        </div>
+
+        <div id="rowDetailModal" class="row-detail-modal-overlay" hidden aria-hidden="true">
+            <div class="row-detail-modal" role="dialog" aria-modal="true" aria-labelledby="rowDetailTitle">
+                <div class="row-detail-header">
+                    <h2 id="rowDetailTitle">Record Details</h2>
+                    <button type="button" class="row-detail-close" aria-label="Close" onclick="closeRowDetailModal()">×</button>
+                </div>
+                <div class="row-detail-body" id="rowDetailBody"></div>
             </div>
         </div>
 
@@ -2331,6 +2341,80 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             window.mailRows = rows;
             rebuildMailRowIndexes(rows);
         }
+
+        function isRowDetailMobileView() {
+            return !!(window.matchMedia && window.matchMedia('(max-width: 640px)').matches);
+        }
+
+        function closeRowDetailModal() {
+            const modal = document.getElementById('rowDetailModal');
+            if (!modal) return;
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            modal.classList.remove('is-open');
+            document.body.classList.remove('row-detail-open');
+        }
+
+        function openRowDetailModal(rowId) {
+            const safeRowId = parseInt(rowId || 0, 10) || 0;
+            if (safeRowId <= 0) return;
+            const modal = document.getElementById('rowDetailModal');
+            const body = document.getElementById('rowDetailBody');
+            const title = document.getElementById('rowDetailTitle');
+            if (!modal || !body) return;
+
+            const rowData = getRowDataFromTable(safeRowId) || (mailRowIndexById.get(safeRowId) || null);
+            const fields = ['Notice/Order Code'].concat(Array.isArray(tableDataColumns) ? tableDataColumns : []);
+
+            body.innerHTML = '';
+            fields.forEach(function(key) {
+                const raw = (rowData && Object.prototype.hasOwnProperty.call(rowData, key)) ? rowData[key] : '';
+                const value = (raw == null ? '' : String(raw)).trim();
+                const item = document.createElement('div');
+                item.className = 'row-detail-item';
+                const label = document.createElement('div');
+                label.className = 'row-detail-label';
+                label.textContent = key;
+                const val = document.createElement('div');
+                val.className = 'row-detail-value';
+                val.textContent = value || '—';
+                item.appendChild(label);
+                item.appendChild(val);
+                body.appendChild(item);
+            });
+
+            const noticeTitle = (rowData && rowData['Notice/Order Code']) ? String(rowData['Notice/Order Code']).trim() : '';
+            if (title) {
+                title.textContent = noticeTitle ? ('Record ' + noticeTitle) : 'Record Details';
+            }
+
+            modal.hidden = false;
+            modal.setAttribute('aria-hidden', 'false');
+            modal.classList.add('is-open');
+            document.body.classList.add('row-detail-open');
+        }
+
+        document.addEventListener('click', function(evt) {
+            if (!isRowDetailMobileView()) return;
+            const modal = document.getElementById('rowDetailModal');
+            if (modal && modal.classList.contains('is-open') && evt.target === modal) {
+                closeRowDetailModal();
+            }
+        });
+
+        document.addEventListener('click', function(evt) {
+            if (!isRowDetailMobileView()) return;
+            const tr = evt.target.closest('.admin-table-container table tbody tr[data-id]');
+            if (!tr) return;
+            if (evt.target.closest('button, a, input, select, textarea, .row-menu-btn, .cell-copy-btn')) return;
+            openRowDetailModal(tr.dataset.id || 0);
+        });
+
+        document.addEventListener('keydown', function(evt) {
+            if (evt.key === 'Escape') {
+                closeRowDetailModal();
+            }
+        });
 
         function refreshHomeDataFull(options = {}) {
             const focusNotice = (options.focusNotice || '').trim();

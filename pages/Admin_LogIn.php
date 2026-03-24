@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="admin-login-bg admin-login-page">
     <div class="bottom-container admin-login-shell">
         <div class="admin-login-branding">
-            <img src="../assets/DHSUD_Logo.svg" alt="DHSUD Logo" class="admin-login-logo">
+            <img src="../assets/DHSUD_Logo.webp" alt="DHSUD Logo" class="admin-login-logo">
             <h1>MAIL TRACKING SYSTEM</h1>
         </div>
         <form class="login-form" method="post" action="Admin_LogIn.php">

@@ -9,7 +9,7 @@
 </head>
 <body class="home-landing">
     <div class="button-container home-landing-buttons">
-        <img src="assets/DHSUD_Logo.svg" alt="DHSUD Logo" class="home-landing-logo">
+        <img src="assets/DHSUD_Logo.webp" alt="DHSUD Logo" class="home-landing-logo">
         <a href="pages/Admin_LogIn.php"><button>ADMIN</button></a>
         <a href="pages/Tracking_Page.php"><button >TRACKING RECORDS</button></a>
     </div>
