@@ -14,6 +14,7 @@ $departmentConfig = [
     'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
     'hoa' => ['code' => 'HOA CDD', 'sender' => getDepartmentSenderTag('hoa')],
     'lo' => ['code' => 'LO', 'sender' => getDepartmentSenderTag('lo')],
+    'philpost' => ['code' => 'PHILPOST', 'sender' => getDepartmentSenderTag('philpost')],
 ];
 $currentDept = normalizeDepartmentKey($_GET['dept'] ?? 'emes');
 $currentDeptCode = $departmentConfig[$currentDept]['code'];
@@ -352,6 +353,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             <a href="Home_Page.php?dept=ord" class="home-sidebar-link dept-ord<?= $currentDept === 'ord' ? ' is-active' : '' ?>" data-dept="ord"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>ORD</strong><small>Mail Tracking Records</small></span></a>
             <a href="Home_Page.php?dept=hoa" class="home-sidebar-link dept-hoa<?= $currentDept === 'hoa' ? ' is-active' : '' ?>" data-dept="hoa"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>HOA CDD</strong><small>Mail Tracking Records</small></span></a>
             <a href="Home_Page.php?dept=lo" class="home-sidebar-link dept-lo<?= $currentDept === 'lo' ? ' is-active' : '' ?>" data-dept="lo"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>LO</strong><small>Mail Tracking Records</small></span></a>
+            <a href="Home_Page.php?dept=philpost" class="home-sidebar-link dept-philpost<?= $currentDept === 'philpost' ? ' is-active' : '' ?>" data-dept="philpost"><img src="../assets/Department_File_Icon.svg" alt="" aria-hidden="true"><span class="home-sidebar-link-text"><strong>PHILPOST</strong><small>Mail Tracking Records</small></span></a>
         </nav>
 
         <a href="logout.php" class="home-sidebar-logout">
@@ -532,6 +534,15 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         </button>
                     </div>
                 </div>
+                <div class="export-dropdown export-dropdown-main">
+                    <button type="button" class="transmittal-head-export-btn js-export-dropdown-btn" id="mainExportDropdownBtn" data-menu-id="mainExportDropdownMenu" aria-label="Export options" title="Export options">
+                        <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
+                    </button>
+                    <div class="export-dropdown-menu" id="mainExportDropdownMenu" role="menu" aria-label="Export options">
+                        <button type="button" class="export-dropdown-item" onclick="handleExportOption('pdf')" role="menuitem">Export (PDF)</button>
+                        <button type="button" class="export-dropdown-item" onclick="handleExportOption('excel')" role="menuitem">Export as Excel</button>
+                    </div>
+                </div>
                 <button class="table-notif-btn" id="tableNotifBtn" title="Tracking Status Notifications">
                     <img src="../assets/Notif_Icon.svg" alt="Notifications">
                     <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
@@ -578,6 +589,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             let scannerSelectedRowId = 0;
             let activeTransmittalId = '';
             const pendingTransmittals = new Set();
+            let addTransmittalWrap = null;
+            let addTransmittalDateInput = null;
 
             function seedPendingRecoveredTransmittalsFromUrl() {
                 let url;
@@ -866,7 +879,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     <div class="transmittal-table-headbar" id="transmittalTableHeadbar">
                         <div class="transmittal-table-headbar-left">
                             <div class="export-dropdown">
-                                <button type="button" class="transmittal-head-export-btn" id="exportDropdownBtn" aria-label="Export options" title="Export options">
+                                <button type="button" class="transmittal-head-export-btn js-export-dropdown-btn" id="exportDropdownBtn" data-menu-id="exportDropdownMenu" aria-label="Export options" title="Export options">
                                     <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
                                 </button>
                                 <div class="export-dropdown-menu" id="exportDropdownMenu" role="menu" aria-label="Export options">
@@ -1517,11 +1530,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             const updateBtn = document.getElementById('appUpdateBtn');
             if (!updateBtn) return;
             updateBtn.addEventListener('click', async function() {
+                const originalLabel = updateBtn.innerHTML;
                 if (!window.dhsudApp || typeof window.dhsudApp.checkForUpdates !== 'function') {
                     alert('Updates are available in the installed desktop app only.');
                     return;
                 }
                 updateBtn.disabled = true;
+                updateBtn.innerHTML = '<span>Checking...</span>';
                 try {
                     const result = await window.dhsudApp.checkForUpdates();
                     const status = result && result.status ? result.status : '';
@@ -1531,11 +1546,20 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         alert('Updates are only available in the installed app.');
                     } else if (status === 'deferred') {
                         alert('Update available. You can install it later from the same button.');
+                    } else if (status === 'launching') {
+                        alert('Installer launched. The app will close so the update can continue.');
+                    } else if (status === 'error') {
+                        alert((result && result.message) ? result.message : 'Update check failed.');
+                    } else if (status === 'available') {
+                        alert('Update available.');
+                    } else {
+                        alert('Update check finished.');
                     }
                 } catch (e) {
                     alert('Update check failed.');
                 } finally {
                     updateBtn.disabled = false;
+                    updateBtn.innerHTML = originalLabel;
                 }
             });
         });
@@ -2139,6 +2163,11 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
 
                             var nextValue = ((editor.value || '') + '').trim();
                             var originalValue = ((inlineEditState.originalValue || '') + '').trim();
+                            if (columnName === 'Status' && nextValue === '') {
+                                alert('No status selected.');
+                                try { editor.focus(); } catch (e) {}
+                                return;
+                            }
                             if (normalizeInlineCompareValue(columnName, nextValue) === normalizeInlineCompareValue(columnName, originalValue)) {
                                 cancelInlineCellEdit();
                                 return;
@@ -3981,6 +4010,63 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             return ('000000' + raw).slice(-size);
         }
 
+        function formatDateInputValue(dateObj) {
+            if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return '';
+            const year = dateObj.getFullYear();
+            const month = padTransmittalNum(dateObj.getMonth() + 1, 2);
+            const day = padTransmittalNum(dateObj.getDate(), 2);
+            return year + '-' + month + '-' + day;
+        }
+
+        function parseDateInputValue(value) {
+            const raw = ((value || '') + '').trim();
+            const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+            if (!match) return null;
+            const year = parseInt(match[1], 10) || 0;
+            const month = parseInt(match[2], 10) || 0;
+            const day = parseInt(match[3], 10) || 0;
+            if (!year || !month || !day) return null;
+            const dateObj = new Date(year, month - 1, day);
+            if (Number.isNaN(dateObj.getTime())) return null;
+            if (dateObj.getFullYear() !== year || dateObj.getMonth() !== (month - 1) || dateObj.getDate() !== day) {
+                return null;
+            }
+            return dateObj;
+        }
+
+        function getDefaultTransmittalDateValue() {
+            return formatDateInputValue(new Date());
+        }
+
+        function openAddTransmittalPopover() {
+            if (!addTransmittalWrap) return;
+            const popover = addTransmittalWrap.querySelector('.transmittal-add-popover');
+            addTransmittalWrap.classList.add('is-open');
+            if (popover) popover.hidden = false;
+            if (addTransmittalDateInput) {
+                if (!addTransmittalDateInput.value) {
+                    addTransmittalDateInput.value = getDefaultTransmittalDateValue();
+                }
+                addTransmittalDateInput.focus();
+            }
+        }
+
+        function closeAddTransmittalPopover() {
+            if (!addTransmittalWrap) return;
+            const popover = addTransmittalWrap.querySelector('.transmittal-add-popover');
+            addTransmittalWrap.classList.remove('is-open');
+            if (popover) popover.hidden = true;
+        }
+
+        function toggleAddTransmittalPopover() {
+            if (!addTransmittalWrap) return;
+            if (addTransmittalWrap.classList.contains('is-open')) {
+                closeAddTransmittalPopover();
+            } else {
+                openAddTransmittalPopover();
+            }
+        }
+
         function parseTransmittalIdParts(id) {
             const raw = (id || '').trim();
             const match = /^TR-(\d{8})-(\d{3})$/i.exec(raw);
@@ -4242,15 +4328,93 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             addTile.appendChild(addFolder);
             addTile.appendChild(addName);
             addTile.appendChild(addMeta);
-            addTile.addEventListener('click', function() {
-                const newId = generateNewTransmittalId();
+
+            const addPopover = document.createElement('div');
+            addPopover.className = 'transmittal-add-popover';
+            addPopover.setAttribute('role', 'dialog');
+            addPopover.setAttribute('aria-label', 'Set transmittal date');
+            addPopover.hidden = true;
+
+            const addTitle = document.createElement('div');
+            addTitle.className = 'transmittal-add-title';
+            addTitle.textContent = 'Pick transmittal date';
+
+            const addRow = document.createElement('div');
+            addRow.className = 'transmittal-add-row';
+
+            const addLabel = document.createElement('label');
+            addLabel.className = 'transmittal-add-label';
+            addLabel.setAttribute('for', 'transmittalAddDate');
+            addLabel.textContent = 'Date';
+
+            const addDate = document.createElement('input');
+            addDate.type = 'date';
+            addDate.id = 'transmittalAddDate';
+            addDate.className = 'transmittal-add-date';
+            addDate.value = getDefaultTransmittalDateValue();
+
+            const addHint = document.createElement('div');
+            addHint.className = 'transmittal-add-hint';
+            addHint.textContent = 'Default: Today';
+
+            const addActions = document.createElement('div');
+            addActions.className = 'transmittal-add-actions';
+
+            const addCancel = document.createElement('button');
+            addCancel.type = 'button';
+            addCancel.className = 'transmittal-add-cancel';
+            addCancel.textContent = 'Cancel';
+
+            const addConfirm = document.createElement('button');
+            addConfirm.type = 'button';
+            addConfirm.className = 'transmittal-add-btn transmittal-add-confirm';
+            addConfirm.textContent = 'Create';
+
+            addCancel.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeAddTransmittalPopover();
+            });
+
+            addConfirm.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const safeValue = parseDateInputValue(addDate.value) ? addDate.value : getDefaultTransmittalDateValue();
+                addDate.value = safeValue;
+                const newId = generateNewTransmittalId(safeValue);
                 pendingTransmittals.add(newId);
+                closeAddTransmittalPopover();
                 openTransmittalDetail(newId, addTile);
+            });
+
+            addDate.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addConfirm.click();
+                }
+            });
+
+            addRow.appendChild(addLabel);
+            addRow.appendChild(addDate);
+            addActions.appendChild(addCancel);
+            addActions.appendChild(addConfirm);
+            addPopover.appendChild(addTitle);
+            addPopover.appendChild(addRow);
+            addPopover.appendChild(addHint);
+            addPopover.appendChild(addActions);
+
+            addTile.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleAddTransmittalPopover();
             });
             const addTileWrap = document.createElement('div');
             addTileWrap.className = 'transmittal-tile-wrap transmittal-tile-wrap-new';
             addTileWrap.appendChild(addTile);
+            addTileWrap.appendChild(addPopover);
             grid.appendChild(addTileWrap);
+            addTransmittalWrap = addTileWrap;
+            addTransmittalDateInput = addDate;
 
             if (filteredIds.length === 0) {
                 const empty = document.createElement('div');
@@ -4411,9 +4575,15 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             });
         }
 
-        function generateNewTransmittalId() {
-            const now = new Date();
-            const ymd = String(now.getFullYear()) + padTransmittalNum(now.getMonth() + 1, 2) + padTransmittalNum(now.getDate(), 2);
+        function generateNewTransmittalId(dateValue) {
+            let dateObj = null;
+            if (dateValue instanceof Date) {
+                dateObj = dateValue;
+            } else if (typeof dateValue === 'string') {
+                dateObj = parseDateInputValue(dateValue);
+            }
+            if (!dateObj) dateObj = new Date();
+            const ymd = String(dateObj.getFullYear()) + padTransmittalNum(dateObj.getMonth() + 1, 2) + padTransmittalNum(dateObj.getDate(), 2);
             let maxSeq = 0;
             const rows = Array.isArray(window.mailRows) ? window.mailRows : [];
             rows.forEach(function(r) {
@@ -4634,9 +4804,18 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                     closeTransmittalTileMenus();
                 }
             });
+            document.addEventListener('click', function(e) {
+                if (!addTransmittalWrap || !addTransmittalWrap.classList.contains('is-open')) return;
+                const inPopover = e.target.closest && e.target.closest('.transmittal-add-popover');
+                const inAddTile = e.target.closest && e.target.closest('.transmittal-tile-wrap-new');
+                if (!inPopover && !inAddTile) {
+                    closeAddTransmittalPopover();
+                }
+            });
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
                     closeTransmittalTileMenus();
+                    closeAddTransmittalPopover();
                 }
             });
             window.addEventListener('scroll', hideRowMenuDropdown, true);
@@ -5345,7 +5524,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
         }
 
         function handleExportOption(type) {
-            closeExportDropdown();
+            closeExportDropdowns();
             if (type === 'pdf') {
                 exportSelectedToPDF();
             } else if (type === 'excel') {
@@ -5353,32 +5532,41 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             }
         }
 
-        function toggleExportDropdown(event) {
-            event.stopPropagation();
-            const menu = document.getElementById('exportDropdownMenu');
-            if (!menu) return;
-            const isOpen = menu.classList.contains('is-open');
-            closeExportDropdown();
-            if (!isOpen) {
-                menu.classList.add('is-open');
+        function getExportDropdownMenuForButton(btn) {
+            if (!btn) return null;
+            const menuId = (btn.getAttribute('data-menu-id') || '').trim();
+            if (menuId) {
+                const menu = document.getElementById(menuId);
+                if (menu) return menu;
             }
+            const wrap = btn.closest ? btn.closest('.export-dropdown') : null;
+            if (!wrap) return null;
+            return wrap.querySelector('.export-dropdown-menu');
         }
 
-        function closeExportDropdown() {
-            const menu = document.getElementById('exportDropdownMenu');
-            if (menu) menu.classList.remove('is-open');
+        function closeExportDropdowns() {
+            document.querySelectorAll('.export-dropdown-menu.is-open').forEach(function(menu) {
+                menu.classList.remove('is-open');
+            });
+        }
+
+        function toggleExportDropdownForButton(event, btn) {
+            if (event) event.stopPropagation();
+            const menu = getExportDropdownMenuForButton(btn);
+            if (!menu) return;
+            const isOpen = menu.classList.contains('is-open');
+            closeExportDropdowns();
+            if (!isOpen) menu.classList.add('is-open');
         }
 
         document.addEventListener('click', function(evt) {
-            const btn = document.getElementById('exportDropdownBtn');
-            const menu = document.getElementById('exportDropdownMenu');
-            if (!btn || !menu) return;
-            if (btn.contains(evt.target)) {
-                toggleExportDropdown(evt);
+            const btn = evt.target.closest ? evt.target.closest('.js-export-dropdown-btn') : null;
+            if (btn) {
+                toggleExportDropdownForButton(evt, btn);
                 return;
             }
-            if (!menu.contains(evt.target)) {
-                closeExportDropdown();
+            if (!evt.target.closest || !evt.target.closest('.export-dropdown-menu')) {
+                closeExportDropdowns();
             }
         });
 
@@ -5768,7 +5956,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             ELUPD: 'elupd',
             ORD: 'ord',
             HOA: 'hoa',
-            LO: 'lo'
+            LO: 'lo',
+            PHILPOST: 'philpost'
         });
 
         const DEPT_KEY_TO_CODE = Object.freeze({
@@ -5779,7 +5968,8 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
             elupd: 'ELUPD',
             ord: 'ORD',
             hoa: 'HOA',
-            lo: 'LO'
+            lo: 'LO',
+            philpost: 'PHILPOST'
         });
 
         function normalizeDepartmentKey(rawValue) {

@@ -78,6 +78,7 @@ try {
             'ELUPD' => 'elupd',
             'ORD' => 'ord',
             'HOA' => 'hoa',
+            'PHILPOST' => 'philpost',
         ];
         return $deptMap[$code] ?? 'emes';
     };

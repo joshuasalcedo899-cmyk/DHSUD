@@ -10,6 +10,7 @@ $departmentConfig = [
     'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
     'hoa' => ['code' => 'HOA', 'sender' => getDepartmentSenderTag('hoa')],
     'lo' => ['code' => 'LO', 'sender' => getDepartmentSenderTag('lo')],
+    'philpost' => ['code' => 'PHILPOST', 'sender' => getDepartmentSenderTag('philpost')],
 ];
 $currentDept = normalizeDepartmentKey($_GET['dept'] ?? 'emes');
 $currentDeptCode = $departmentConfig[$currentDept]['code'];
@@ -366,6 +367,15 @@ rsort($years);
             </div>
             <div class="top-bar-title"><?= htmlspecialchars($currentDeptCode) ?> MAIL TRACKING RECORDS</div>
             <div class="table-sort-bar">
+                <div class="export-dropdown">
+                    <button type="button" class="transmittal-head-export-btn js-export-dropdown-btn" id="trackingExportDropdownBtn" data-menu-id="trackingExportDropdownMenu" aria-label="Export options" title="Export options">
+                        <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
+                    </button>
+                    <div class="export-dropdown-menu" id="trackingExportDropdownMenu" role="menu" aria-label="Export options">
+                        <button type="button" class="export-dropdown-item" onclick="handleTrackingExportOption('pdf')" role="menuitem">Export (PDF)</button>
+                        <button type="button" class="export-dropdown-item" onclick="handleTrackingExportOption('excel')" role="menuitem">Export as Excel</button>
+                    </div>
+                </div>
                 <div class="table-year-month-filter" id="tableYearMonthFilter">
                     <button type="button" id="tableSortYearTrigger" class="table-year-trigger" aria-haspopup="true" aria-expanded="false">
                         <span id="tableSortYearLabel">Year</span>
@@ -415,6 +425,11 @@ rsort($years);
                     <table class="listview-table tracking-table">
                         <thead>
                             <tr>
+                            <th style="width:40px;">
+                                <div class="checkbox-header-tools">
+                                    <input type="checkbox" id="selectAllCheckbox" onclick="toggleAllCheckboxes(this)">
+                                </div>
+                            </th>
                             <?php foreach ($columns as $header): ?>
                                 <th data-col="<?= htmlspecialchars($header) ?>"><?= htmlspecialchars($header) ?></th>
                             <?php endforeach; ?>
@@ -423,7 +438,7 @@ rsort($years);
                         <tbody id="trackingTableBody">
                             <?php if (empty($rows)): ?>
                                 <tr>
-                                    <td colspan="<?= count($columns) ?>">No records found.</td>
+                                    <td colspan="<?= count($columns) + 1 ?>">No records found.</td>
                                 </tr>
                             <?php else: ?>
                                 <?php foreach ($rows as $row): ?>
@@ -463,6 +478,11 @@ rsort($years);
                                     $rowBatchId = extractBatchIdFromSenderDetails($row['Sender Details'] ?? '');
                                     ?>
                                     <tr data-year="<?= htmlspecialchars($rowYear) ?>" data-month="<?= htmlspecialchars($rowMonth) ?>" data-search="<?= htmlspecialchars($rowTextSearch) ?>" data-status="<?= htmlspecialchars($statusValue) ?>" data-batch-id="<?= htmlspecialchars($rowBatchId) ?>">
+                                        <td style="width:40px;">
+                                            <div class="checkbox-cell">
+                                                <input type="checkbox" class="row-checkbox" data-row-id="<?= (int)($row['id'] ?? 0) ?>">
+                                            </div>
+                                        </td>
                                         <?php foreach ($columns as $idx => $colName): ?>
                                             <?php
                                             $cellValue = $row[$colName] ?? '';
@@ -547,6 +567,7 @@ rsort($years);
 
     <script>
         (function () {
+            const currentDeptKey = "<?= htmlspecialchars($currentDept) ?>";
             const yearSelect = document.getElementById('tableSortYear');
             const monthInput = document.getElementById('tableSortMonth');
             const yearTrigger = document.getElementById('tableSortYearTrigger');
@@ -970,6 +991,149 @@ rsort($years);
             filterRows();
             closeYearMonthDropdown();
             initHomeSidebar();
+
+            function getExportDropdownMenuForButton(btn) {
+                if (!btn) return null;
+                const menuId = (btn.getAttribute('data-menu-id') || '').trim();
+                if (menuId) {
+                    const menu = document.getElementById(menuId);
+                    if (menu) return menu;
+                }
+                const wrap = btn.closest ? btn.closest('.export-dropdown') : null;
+                if (!wrap) return null;
+                return wrap.querySelector('.export-dropdown-menu');
+            }
+
+            function closeExportDropdowns() {
+                document.querySelectorAll('.export-dropdown-menu.is-open').forEach(function(menu) {
+                    menu.classList.remove('is-open');
+                });
+            }
+
+            function toggleExportDropdownForButton(event, btn) {
+                if (event) event.stopPropagation();
+                const menu = getExportDropdownMenuForButton(btn);
+                if (!menu) return;
+                const isOpen = menu.classList.contains('is-open');
+                closeExportDropdowns();
+                if (!isOpen) menu.classList.add('is-open');
+            }
+
+            document.addEventListener('click', function(evt) {
+                const btn = evt.target.closest ? evt.target.closest('.js-export-dropdown-btn') : null;
+                if (btn) {
+                    toggleExportDropdownForButton(evt, btn);
+                    return;
+                }
+                if (!evt.target.closest || !evt.target.closest('.export-dropdown-menu')) {
+                    closeExportDropdowns();
+                }
+            });
+
+            function toggleAllCheckboxes(master) {
+                const checked = !!(master && master.checked);
+                document.querySelectorAll('#trackingTableBody .row-checkbox').forEach(function(cb) {
+                    cb.checked = checked;
+                });
+            }
+            window.toggleAllCheckboxes = toggleAllCheckboxes;
+
+            function escapeTsvValue(val) {
+                const safe = (val || '').toString().replace(/\s+/g, ' ').trim();
+                if (/[\t\n\r"]/.test(safe)) {
+                    return '\"' + safe.replace(/\"/g, '\"\"') + '\"';
+                }
+                return safe;
+            }
+
+            async function exportSelectedToPDF() {
+                const selected = Array.from(document.querySelectorAll('#trackingTableBody .row-checkbox:checked'));
+                if (selected.length === 0) {
+                    alert('Please check at least one checkbox before exporting.');
+                    return;
+                }
+                const rowIds = [];
+                const seen = new Set();
+                selected.forEach(function(cb) {
+                    const rowId = parseInt(cb.getAttribute('data-row-id') || '0', 10) || 0;
+                    if (rowId <= 0 || seen.has(rowId)) return;
+                    seen.add(rowId);
+                    rowIds.push(rowId);
+                });
+                if (rowIds.length === 0) {
+                    alert('Selected rows have no valid ID.');
+                    return;
+                }
+
+                try {
+                    const formData = new URLSearchParams();
+                    formData.set('row_ids', JSON.stringify(rowIds));
+                    formData.set('dept', String(currentDeptKey || '').trim());
+                    const response = await fetch('../api/jrs_tracking.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                        body: formData.toString()
+                    });
+                    if (!response.ok) {
+                        throw new Error('PDF export failed');
+                    }
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = (String(currentDeptKey || 'tracking') || 'tracking') + '_export.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(function() { try { URL.revokeObjectURL(url); } catch (e) {} }, 2000);
+                } catch (err) {
+                    console.error(err);
+                    alert('Failed to export PDF.');
+                }
+            }
+
+            function exportSelectedToExcel() {
+                const selectedRows = Array.from(document.querySelectorAll('#trackingTableBody tr')).filter(function(tr) {
+                    const cb = tr.querySelector('.row-checkbox');
+                    return !!(cb && cb.checked);
+                });
+                if (selectedRows.length === 0) {
+                    alert('Please check at least one checkbox before exporting.');
+                    return;
+                }
+                const table = document.querySelector('.tracking-view-shell .tracking-table');
+                if (!table) {
+                    alert('Export failed: table not found.');
+                    return;
+                }
+                const headerCells = Array.from(table.querySelectorAll('thead th')).slice(1); // skip checkbox
+                const headers = headerCells.map(function(th) { return (th.textContent || '').trim(); });
+                const dataRows = selectedRows.map(function(tr) {
+                    const cells = Array.from(tr.querySelectorAll('td')).slice(1); // skip checkbox
+                    return cells.map(function(td) { return (td.innerText || td.textContent || ''); });
+                });
+                const lines = [];
+                lines.push(headers.map(escapeTsvValue).join('\t'));
+                dataRows.forEach(function(r) { lines.push(r.map(escapeTsvValue).join('\t')); });
+                const blob = new Blob([lines.join('\r\n')], { type: 'application/vnd.ms-excel' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = (String(currentDeptKey || 'tracking') || 'tracking') + '_export.xls';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(function() { try { URL.revokeObjectURL(url); } catch (e) {} }, 2000);
+            }
+
+            window.handleTrackingExportOption = function(type) {
+                closeExportDropdowns();
+                if (type === 'pdf') {
+                    exportSelectedToPDF();
+                } else if (type === 'excel') {
+                    exportSelectedToExcel();
+                }
+            };
         })();
     </script>
 </body>

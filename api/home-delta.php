@@ -23,11 +23,12 @@ function resolveDepartmentScope($deptKeyRaw) {
         'prls' => ['code' => 'PRLS', 'sender' => getDepartmentSenderTag('prls')],
         'afd' => ['code' => 'AFD', 'sender' => getDepartmentSenderTag('afd')],
         'phsd' => ['code' => 'PHSD', 'sender' => getDepartmentSenderTag('phsd')],
-    'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
-    'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
-    'hoa' => ['code' => 'HOA', 'sender' => getDepartmentSenderTag('hoa')],
-    'lo' => ['code' => 'LO', 'sender' => getDepartmentSenderTag('lo')],
-];
+        'elupd' => ['code' => 'ELUPD', 'sender' => getDepartmentSenderTag('elupd')],
+        'ord' => ['code' => 'ORD', 'sender' => getDepartmentSenderTag('ord')],
+        'hoa' => ['code' => 'HOA', 'sender' => getDepartmentSenderTag('hoa')],
+        'lo' => ['code' => 'LO', 'sender' => getDepartmentSenderTag('lo')],
+        'philpost' => ['code' => 'PHILPOST', 'sender' => getDepartmentSenderTag('philpost')],
+    ];
     return $deptMap[$deptKey];
 }
 

@@ -1158,8 +1158,7 @@
 	width: 100vw;
 	height: 6px;
 	background: #22336a;
-	margin-top: 1.2rem;
-	margin-bottom: 1.5rem;
+	margin-top: 0.4rem;
 }
 .admin-home-container {
 	margin-top: 120px;
@@ -1562,6 +1561,106 @@
 	color: #5b647a;
 }
 
+.transmittal-tile-wrap-new {
+	position: relative;
+	flex-direction: column;
+	height: auto;
+	min-height: 154px;
+	gap: 0.6rem;
+}
+
+.transmittal-tile-wrap-new .transmittal-tile {
+	flex: 0 0 154px;
+	height: 154px;
+}
+
+.transmittal-add-popover {
+	position: absolute;
+	left: 0;
+	top: -1%;
+	right: auto;
+	bottom: auto;
+	transform: none;
+	min-width: 220px;
+	z-index: 60;
+	border: 1px solid #d1d5db;
+	background: #fff;
+	border-radius: 12px;
+	padding: 0.75rem 0.8rem;
+	box-shadow: 0 12px 26px rgba(0,0,0,0.14);
+	display: none;
+	flex-direction: column;
+	gap: 0.45rem;
+}
+
+.transmittal-tile-wrap-new.is-open .transmittal-add-popover {
+	display: flex;
+}
+
+.transmittal-add-title {
+	font-size: 0.82rem;
+	font-weight: 700;
+	color: #22336a;
+}
+
+.transmittal-add-row {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.transmittal-add-label {
+	font-size: 0.66rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	font-weight: 700;
+	color: #5b647a;
+}
+
+.transmittal-add-date {
+	width: 100%;
+	height: 36px;
+	border: 1px solid #c7d0e5;
+	border-radius: 8px;
+	padding: 0 0.55rem;
+	font-weight: 600;
+	color: #22336a;
+	background: #f8f9fb;
+}
+
+.transmittal-add-hint {
+	font-size: 0.7rem;
+	color: #6b7280;
+}
+
+.transmittal-add-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+.transmittal-add-cancel {
+	border: 1px solid #c6cbd9;
+	background: #fff;
+	color: #4b5563;
+	padding: 0.3rem 0.65rem;
+	border-radius: 8px;
+	font-size: 0.74rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.transmittal-add-confirm {
+	background: #22336a;
+	color: #fff;
+	border-color: #22336a;
+	font-size: 0.74rem;
+}
+
+.transmittal-add-confirm:hover {
+	background: #1b2a5a;
+}
+
 .transmittal-empty {
 	padding: 1rem;
 	color: #6b7280;
@@ -1735,14 +1834,7 @@
 		width: 100%;
 		height: auto;
 		display: block;
-	}
-	.admin-home-header-border {
-		width: 100vw;
-		height: 6px;
-		background: #22336a;
-		margin-top: 1.2rem;
-		margin-bottom: 0.1rem;
-	}
+	}  
 .admin-login-bg {
 	background: url('assets/DHSUD_Background.svg') no-repeat center center fixed;
 	background-size: cover;
@@ -2658,7 +2750,7 @@ img {
         }
         .edit-modal textarea {
             resize: vertical;
-            min-height: 42px;
+            min-height: 36.5px;
         }
         .edit-modal select {
             background: #b6bed3;
@@ -2750,6 +2842,7 @@ img {
             cursor: pointer;
             line-height: 1;
             padding: 0;
+            margin-top: 15px;
         }
         .pair-row-btn:hover {
             background: #22336A;
@@ -4289,6 +4382,12 @@ body.admin-login-page .return-button img {
     background: #0B6C8C;
 }
 
+.home-sidebar-link.dept-philpost:hover,
+.home-sidebar-link.dept-philpost:focus-visible,
+.home-sidebar-link.dept-philpost.is-active {
+    background: #D32F2F;
+}
+
 body.dept-theme-emes {
     --dept-theme-color: #23366A;
     --dept-theme-border: #8fa0c7;
@@ -4333,6 +4432,12 @@ body.dept-theme-hoa {
 body.dept-theme-lo {
     --dept-theme-color: #0B6C8C;
     --dept-theme-border: #86b9c9;
+    --dept-theme-header-text: #ffffff;
+}
+
+body.dept-theme-philpost {
+    --dept-theme-color: #D32F2F;
+    --dept-theme-border: #e2a2a2;
     --dept-theme-header-text: #ffffff;
 }
 

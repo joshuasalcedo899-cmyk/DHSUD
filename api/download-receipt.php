@@ -107,7 +107,7 @@ function extractDepartmentCodeFromSender($senderText) {
         if ($dept !== '') return $dept;
     }
 
-    $known = ['EMES', 'PRLS', 'AFD', 'PHSD', 'ELUPD', 'ORD'];
+    $known = ['EMES', 'PRLS', 'AFD', 'PHSD', 'ELUPD', 'ORD', 'HOA', 'LO', 'PHILPOST'];
     foreach ($known as $code) {
         if (strpos($raw, $code) !== false) return $code;
     }

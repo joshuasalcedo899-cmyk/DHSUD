@@ -1,14 +1,20 @@
 <?php
 // config.php — PDO MySQL connection
-// Update these values for your environment
-$DB_HOST = '127.0.0.1';
-$DB_NAME = 'dshudmail_db';
-$DB_USER = 'root';
-$DB_PASS = '';
+// Update these values for your environment.
+// Prefer environment variables for secrets (especially DB passwords).
+$DB_HOST = getenv('DHSUD_DB_HOST');
+$DB_NAME = getenv('DHSUD_DB_NAME');
+$DB_USER = getenv('DHSUD_DB_USER');
+$DB_PASS = getenv('DHSUD_DB_PASS');
+
+if ($DB_HOST === false || trim((string)$DB_HOST) === '') $DB_HOST = '127.0.0.1';
+if ($DB_NAME === false || trim((string)$DB_NAME) === '') $DB_NAME = 'dshudmail_db';
+if ($DB_USER === false || trim((string)$DB_USER) === '') $DB_USER = 'root';
+if ($DB_PASS === false) $DB_PASS = 'dhsudr4a2019';
 $DB_CHARSET = 'utf8mb4';
 
 // Sender contact number per department (edit these values as needed).
-// Keys should match dept query/post values (emes, prls, afd, phsd, elupd, ord, hoa, lo).
+// Keys should match dept query/post values (emes, prls, afd, phsd, elupd, ord, hoa, lo, philpost).
 $SENDER_CONTACT_NUMBERS = [
     'default' => '0935 542 1538',
     'emes' => '0935 542 1538',
@@ -19,6 +25,7 @@ $SENDER_CONTACT_NUMBERS = [
     'ord' => '(049) 501 6496 / 0905 775 3519',
     'hoa' => '0935 542 1538',
     'lo' => '0935 542 1538',
+    'philpost' => '0935 542 1538',
 ];
 
 // Sender tag per department (used in Sender Details).
@@ -32,6 +39,7 @@ $DEPARTMENT_SENDER_TAGS = [
     'ord' => 'ORD-AMAC',
     'hoa' => 'HOA',
     'lo' => 'LEGAL OFFICE',
+    'philpost' => 'PHILPOST',
 ];
 
 // Transmittal signatory per department (edit these values as needed).
@@ -56,7 +64,7 @@ if (!function_exists('getDepartmentSenderTag')) {
 if (!function_exists('normalizeDepartmentKey')) {
     function normalizeDepartmentKey($rawValue = '') {
         $deptKey = strtolower(trim((string)$rawValue));
-        $allowed = ['emes', 'prls', 'afd', 'phsd', 'elupd', 'ord', 'hoa', 'lo'];
+        $allowed = ['emes', 'prls', 'afd', 'phsd', 'elupd', 'ord', 'hoa', 'lo', 'philpost'];
         return in_array($deptKey, $allowed, true) ? $deptKey : 'emes';
     }
 }
@@ -73,6 +81,7 @@ if (!function_exists('getDepartmentCodeFromKey')) {
             'ord' => 'ORD',
             'hoa' => 'HOA',
             'lo' => 'LO',
+            'philpost' => 'PHILPOST',
         ];
         return $map[$deptKey] ?? 'EMES';
     }

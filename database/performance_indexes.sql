@@ -12,6 +12,7 @@ SET `department_key` = CASE
   WHEN UPPER(COALESCE(`Sender Details`, '')) LIKE '%HREDRD-ELUPD%' OR UPPER(COALESCE(`Notice/Order Code`, '')) LIKE 'ELUPD-%' THEN 'elupd'
   WHEN UPPER(COALESCE(`Sender Details`, '')) LIKE '%ORD-AMAC%' OR UPPER(COALESCE(`Sender Details`, '')) LIKE '%HREDRD-ORD%' OR UPPER(COALESCE(`Notice/Order Code`, '')) LIKE 'ORD-%' THEN 'ord'
   WHEN UPPER(COALESCE(`Sender Details`, '')) LIKE '%HOA CDD%' OR UPPER(COALESCE(`Notice/Order Code`, '')) LIKE 'HOA-%' THEN 'hoa'
+  WHEN UPPER(COALESCE(`Sender Details`, '')) LIKE '%PHILPOST%' OR UPPER(COALESCE(`Notice/Order Code`, '')) LIKE 'PHILPOST-%' THEN 'philpost'
   ELSE 'emes'
 END
 WHERE COALESCE(`department_key`, '') = '';
@@ -24,6 +25,7 @@ SET `department_key` = CASE
   WHEN UPPER(COALESCE(`Sender Details`, '')) LIKE '%HREDRD-ELUPD%' OR UPPER(COALESCE(`Notice/Order Code`, '')) LIKE 'ELUPD-%' THEN 'elupd'
   WHEN UPPER(COALESCE(`Sender Details`, '')) LIKE '%ORD-AMAC%' OR UPPER(COALESCE(`Sender Details`, '')) LIKE '%HREDRD-ORD%' OR UPPER(COALESCE(`Notice/Order Code`, '')) LIKE 'ORD-%' THEN 'ord'
   WHEN UPPER(COALESCE(`Sender Details`, '')) LIKE '%HOA CDD%' OR UPPER(COALESCE(`Notice/Order Code`, '')) LIKE 'HOA-%' THEN 'hoa'
+  WHEN UPPER(COALESCE(`Sender Details`, '')) LIKE '%PHILPOST%' OR UPPER(COALESCE(`Notice/Order Code`, '')) LIKE 'PHILPOST-%' THEN 'philpost'
   ELSE 'emes'
 END
 WHERE COALESCE(`department_key`, '') = '';

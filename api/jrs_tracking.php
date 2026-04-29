@@ -95,6 +95,7 @@ $deptThemeMap = [
     'ord' => ['header' => '#CB30E0', 'border' => '#cc88d5', 'text' => '#ffffff'],
     'hoa' => ['header' => '#2F7D32', 'border' => '#90c48f', 'text' => '#ffffff'],
     'lo' => ['header' => '#0B6C8C', 'border' => '#86b9c9', 'text' => '#ffffff'],
+    'philpost' => ['header' => '#D32F2F', 'border' => '#e2a2a2', 'text' => '#ffffff'],
 ];
 $deptTheme = $deptThemeMap[$shipperDeptKey] ?? $deptThemeMap['emes'];
 $themeHeader = $deptTheme['header'];

@@ -55,7 +55,7 @@ function detectSenderTag($senderDetails, $noticeCode = '') {
         if ($resolved !== '') return $resolved;
     }
 
-    foreach (['emes', 'prls', 'afd', 'phsd', 'elupd', 'ord', 'hoa'] as $deptKey) {
+    foreach (['emes', 'prls', 'afd', 'phsd', 'elupd', 'ord', 'hoa', 'lo', 'philpost'] as $deptKey) {
         $configuredTag = getDepartmentSenderTag($deptKey);
         if ($configuredTag !== '' && stripos($senderText, $configuredTag) !== false) {
             return $configuredTag;
@@ -130,7 +130,7 @@ function extractDepartmentCodeFromSender($senderText) {
         if ($dept !== '') return $dept;
     }
 
-    $known = ['EMES', 'PRLS', 'AFD', 'PHSD', 'ELUPD', 'ORD'];
+    $known = ['EMES', 'PRLS', 'AFD', 'PHSD', 'ELUPD', 'ORD', 'HOA', 'LO', 'PHILPOST'];
     foreach ($known as $code) {
         if (strpos($raw, $code) !== false) return $code;
     }
@@ -471,6 +471,8 @@ try {
     $columnValues = [];
     $trackingSubmitted = false;
     $submittedTrackingNo = '';
+    $statusSubmitted = false;
+    $submittedStatusValue = null;
 
     // Process each editable column
     foreach ($columns as $col => $postKeys) {
@@ -517,8 +519,19 @@ try {
             $trackingSubmitted = true;
             $submittedTrackingNo = (string)$val;
         }
+        if ($col === 'Status') {
+            $statusSubmitted = true;
+            $submittedStatusValue = (string)$val;
+        }
         
         error_log("  Column '{$col}' (POST key: '{$foundKey}') = '{$val}'");
+    }
+
+    $isTrackingExplicitlyCleared = $trackingSubmitted && (trim($submittedTrackingNo) === '' || trim($submittedTrackingNo) === '0');
+    if ($statusSubmitted && trim((string)$submittedStatusValue) === '' && !$isTrackingExplicitlyCleared) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'No status selected.']);
+        exit;
     }
 
     // Check if Notice/Order Code was provided and is different from original
@@ -616,7 +629,7 @@ try {
     }
 
     // If tracking number is explicitly cleared, also clear tracking-derived fields.
-    if ($trackingSubmitted && (trim($submittedTrackingNo) === '' || trim($submittedTrackingNo) === '0')) {
+    if ($isTrackingExplicitlyCleared) {
         $dependentTrackingFields = [
             'Status' => '',
             'Date' => '',
