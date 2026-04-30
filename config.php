@@ -5,7 +5,9 @@
 $DB_HOST = getenv('DHSUD_DB_HOST');
 $DB_NAME = getenv('DHSUD_DB_NAME');
 $DB_USER = getenv('DHSUD_DB_USER');
-$DB_PASS = getenv('DHSUD_DB_PASS');
+$DB_PASS_RAW = getenv('DHSUD_DB_PASS');
+$DB_PASS_FROM_ENV = ($DB_PASS_RAW !== false);
+$DB_PASS = $DB_PASS_RAW;
 
 if ($DB_HOST === false || trim((string)$DB_HOST) === '') $DB_HOST = '127.0.0.1';
 if ($DB_NAME === false || trim((string)$DB_NAME) === '') $DB_NAME = 'dshudmail_db';
@@ -155,11 +157,39 @@ $options = [
 try {
     $pdo = new PDO($dsn, $DB_USER, $DB_PASS, $options);
 } catch (PDOException $e) {
-    // In development show error; in production, log and show generic message
-    if (php_sapi_name() === 'cli' || getenv('APP_ENV') === 'development') {
-        echo "DB connection failed: " . $e->getMessage();
+    $fallbackOk = false;
+    $lastError = $e;
+
+    // Desktop/Electron bundles often ship MySQL with an empty root password.
+    // If no explicit DHSUD_DB_PASS is configured, try the common empty-password fallback
+    // for localhost/root setups so the desktop app doesn't get stuck on a blank page.
+    $hostNorm = strtolower(trim((string)$DB_HOST));
+    $userNorm = strtolower(trim((string)$DB_USER));
+    if (
+        !$DB_PASS_FROM_ENV &&
+        $userNorm === 'root' &&
+        ($hostNorm === '127.0.0.1' || $hostNorm === 'localhost') &&
+        (string)$DB_PASS === 'dhsudr4a2019'
+    ) {
+        try {
+            $pdo = new PDO($dsn, $DB_USER, '', $options);
+            $fallbackOk = true;
+            $DB_PASS = '';
+        } catch (PDOException $e2) {
+            $lastError = $e2;
+        }
     }
-    exit;
+
+    if (!$fallbackOk) {
+        // In development show error; in production, log and show generic message
+        if (php_sapi_name() === 'cli' || getenv('APP_ENV') === 'development') {
+            echo "DB connection failed: " . $lastError->getMessage();
+        } else if (!headers_sent()) {
+            http_response_code(500);
+            echo "Database connection failed.";
+        }
+        exit;
+    }
 }
 
 if (!function_exists('dbColumnExists')) {

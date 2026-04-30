@@ -358,7 +358,7 @@ rsort($years);
         </nav>
     </aside>
 
-    <div class="tracking-view-shell admin-table-container">
+    <div class="tracking-view-shell admin-table-container has-transmittal-headbar">
         <div class="top-bar">
             <div class="top-bar-left">
                 <a href="../index.php" class="tracking-return-link">
@@ -367,15 +367,6 @@ rsort($years);
             </div>
             <div class="top-bar-title"><?= htmlspecialchars($currentDeptCode) ?> MAIL TRACKING RECORDS</div>
             <div class="table-sort-bar">
-                <div class="export-dropdown">
-                    <button type="button" class="transmittal-head-export-btn js-export-dropdown-btn" id="trackingExportDropdownBtn" data-menu-id="trackingExportDropdownMenu" aria-label="Export options" title="Export options">
-                        <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
-                    </button>
-                    <div class="export-dropdown-menu" id="trackingExportDropdownMenu" role="menu" aria-label="Export options">
-                        <button type="button" class="export-dropdown-item" onclick="handleTrackingExportOption('pdf')" role="menuitem">Export (PDF)</button>
-                        <button type="button" class="export-dropdown-item" onclick="handleTrackingExportOption('excel')" role="menuitem">Export as Excel</button>
-                    </div>
-                </div>
                 <div class="table-year-month-filter" id="tableYearMonthFilter">
                     <button type="button" id="tableSortYearTrigger" class="table-year-trigger" aria-haspopup="true" aria-expanded="false">
                         <span id="tableSortYearLabel">Year</span>
@@ -421,6 +412,21 @@ rsort($years);
 
         <div class="table-scroll-area">
             <div class="tracking-table-container">
+                <div class="transmittal-table-headbar" id="transmittalTableHeadbar">
+                    <div class="transmittal-table-headbar-left">
+                        <div class="export-dropdown">
+                            <button type="button" class="transmittal-head-export-btn js-export-dropdown-btn" id="trackingExportDropdownBtn" data-menu-id="trackingExportDropdownMenu" aria-label="Export options" title="Export options">
+                                <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
+                            </button>
+                            <div class="export-dropdown-menu" id="trackingExportDropdownMenu" role="menu" aria-label="Export options">
+                                <button type="button" class="export-dropdown-item" onclick="handleTrackingExportOption('pdf')" role="menuitem">Export (PDF)</button>
+                                <button type="button" class="export-dropdown-item" onclick="handleTrackingExportOption('excel')" role="menuitem">Export as Excel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="transmittal-table-headbar-title" id="transmittalTableBarTitle"><?= htmlspecialchars($currentDeptCode) ?> TRACKING TABLE</div>
+                    <div class="transmittal-table-headbar-right"></div>
+                </div>
                 <div class="tracking-table-scroll">
                     <table class="listview-table tracking-table">
                         <thead>

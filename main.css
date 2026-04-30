@@ -46,10 +46,12 @@
 	background: var(--dept-theme-color, #22336A);
 	box-shadow: 0 2px 2px -1px rgba(0,0,0,0.15);
 }
-.admin-table-container[data-transmittal-view="detail"] .table-scroll-area .tracking-table-container .listview-table.tracking-table thead th,
-.admin-table-container[data-transmittal-view="detail"] .table-scroll-area .listview-table.tracking-table thead th {
-	top: var(--transmittal-headbar-height);
+.admin-table-container.has-transmittal-headbar:not([data-transmittal-view="grid"]) .table-scroll-area .tracking-table-container .listview-table.tracking-table thead th,
+.admin-table-container.has-transmittal-headbar:not([data-transmittal-view="grid"]) .table-scroll-area .listview-table.tracking-table thead th {
+	top: calc(var(--transmittal-headbar-height) - 1px);
 	z-index: 3;
+	border-top: 0;
+	box-shadow: none;
 }
 
 .archive-btn{
@@ -296,10 +298,10 @@
 	display: none;
 }
 
-.admin-table-container[data-transmittal-view="detail"] {
-	--transmittal-headbar-height: 36px;
+.admin-table-container.has-transmittal-headbar:not([data-transmittal-view="grid"]) {
+	--transmittal-headbar-height: 44px;
 }
-.admin-table-container[data-transmittal-view="detail"] .transmittal-table-headbar {
+.admin-table-container.has-transmittal-headbar:not([data-transmittal-view="grid"]) .transmittal-table-headbar {
 	display: grid;
 	grid-template-columns: 76px 1fr 76px;
 	align-items: center;
@@ -310,7 +312,7 @@
 	position: sticky;
 	top: 0;
 	z-index: 4;
-	min-height: var(--transmittal-headbar-height);
+	min-height: calc(var(--transmittal-headbar-height) - 8px);
 }
 
 .transmittal-table-headbar-left {
@@ -1275,11 +1277,6 @@
 
 .admin-table-container[data-transmittal-view="detail"] .table-footer-section .add-btn {
 	display: inline-block;
-}
-
-.admin-table-container:not(.tracking-view-shell):not([data-transmittal-view="detail"]) .tracking-table thead th:first-child,
-.admin-table-container:not(.tracking-view-shell):not([data-transmittal-view="detail"]) .tracking-table tbody tr[data-notice] td:first-child {
-	display: none;
 }
 
 .admin-table-container[data-transmittal-view="grid"] .transmittal-manager {

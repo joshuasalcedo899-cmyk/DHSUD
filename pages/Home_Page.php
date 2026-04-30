@@ -462,7 +462,7 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                 </form>
             </div>
         </div>
-    <div class="admin-table-container">
+    <div class="admin-table-container has-transmittal-headbar">
         <div class="top-bar">
         <div class="top-bar-left">
             <button class="transmittal-btn" aria-pressed="true" aria-label="Table Module">
@@ -532,15 +532,6 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                         <button class="table-search-btn" id="tableSearchBtn" aria-label="Search">
                             <img src="../assets/Search Icon.svg" alt="">
                         </button>
-                    </div>
-                </div>
-                <div class="export-dropdown export-dropdown-main">
-                    <button type="button" class="transmittal-head-export-btn js-export-dropdown-btn" id="mainExportDropdownBtn" data-menu-id="mainExportDropdownMenu" aria-label="Export options" title="Export options">
-                        <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
-                    </button>
-                    <div class="export-dropdown-menu" id="mainExportDropdownMenu" role="menu" aria-label="Export options">
-                        <button type="button" class="export-dropdown-item" onclick="handleExportOption('pdf')" role="menuitem">Export (PDF)</button>
-                        <button type="button" class="export-dropdown-item" onclick="handleExportOption('excel')" role="menuitem">Export as Excel</button>
                     </div>
                 </div>
                 <button class="table-notif-btn" id="tableNotifBtn" title="Tracking Status Notifications">
@@ -883,20 +874,13 @@ for ($ri = 0; $ri < $rowCount; $ri++) {
                                     <img src="../assets/export.svg" alt="" class="transmittal-head-export-icon" aria-hidden="true">
                                 </button>
                                 <div class="export-dropdown-menu" id="exportDropdownMenu" role="menu" aria-label="Export options">
-                                    <button type="button" class="export-dropdown-item" onclick="handleExportOption('pdf')" role="menuitem">Export Transmittal (PDF)</button>
+                                    <button type="button" class="export-dropdown-item" onclick="handleExportOption('pdf')" role="menuitem">Export (PDF)</button>
                                     <button type="button" class="export-dropdown-item" onclick="handleExportOption('excel')" role="menuitem">Export as Excel</button>
                                 </div>
                             </div>
                         </div>
                         <div class="transmittal-table-headbar-title" id="transmittalTableBarTitle"></div>
-                        <div class="transmittal-table-headbar-right">
-                            <button type="button" class="transmittal-head-nav-btn" id="transmittalPrevBtn" aria-label="Previous transmittal" title="Previous transmittal">
-                                <span class="transmittal-head-nav-icon" aria-hidden="true">&#8249;</span>
-                        </button>
-                        <button type="button" class="transmittal-head-nav-btn" id="transmittalNextBtn" aria-label="Next transmittal" title="Next transmittal">
-                            <span class="transmittal-head-nav-icon" aria-hidden="true">&#8250;</span>
-                        </button>
-                    </div>
+                        <div class="transmittal-table-headbar-right"></div>
                 </div>
                 <div class="tracking-table-scroll">
                     <table class="listview-table tracking-table">
